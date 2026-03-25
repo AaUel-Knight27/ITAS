@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.aauelknight.itas_backend.controller.FaqControllerTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.913 s -- in com.aauelknight.itas_backend.controller.FaqControllerTest

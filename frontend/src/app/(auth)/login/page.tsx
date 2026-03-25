@@ -1,0 +1,225 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Building2, Eye, EyeOff, Lock, User } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { useSession } from "next-auth/react";
+
+const loginSchema = z.object({
+  username: z.string().min(1, "Username is required."),
+  password: z.string().min(1, "Password is required."),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+
+export default function LoginPage() {
+  const router = useRouter();
+  const { data: session, status } = useSession();
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
+  });
+
+  useEffect(() => {
+    if (status === "authenticated" && session?.user) {
+      router.replace("/dashboard");
+    }
+  }, [status, session, router]);
+
+  const onSubmit = async (values: LoginFormValues) => {
+    setAuthError(null);
+
+    const result = await signIn("credentials", {
+      username: values.username,
+      password: values.password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      setAuthError("Invalid username or password.");
+      return;
+    }
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === "authenticated") {
+    return null;
+  }
+
+  return (
+    <main className="flex min-h-screen">
+      {/* Left Panel - Branding */}
+      <div className="hidden w-1/2 flex-col justify-between bg-primary p-12 lg:flex">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-foreground/10 text-primary-foreground">
+            <Building2 className="h-6 w-6" />
+          </div>
+          <span className="text-xl font-semibold text-primary-foreground">
+            Taxpayer Education Portal
+          </span>
+        </div>
+
+        <div className="space-y-6">
+          <h2 className="text-4xl font-bold leading-tight text-primary-foreground text-balance">
+            Empowering taxpayers through education and knowledge.
+          </h2>
+          <p className="text-lg text-primary-foreground/80">
+            Access courses, webinars, and resources designed to help you understand tax obligations and compliance.
+          </p>
+          <div className="flex gap-8 pt-4">
+            <div>
+              <p className="text-3xl font-bold text-primary-foreground">500+</p>
+              <p className="text-sm text-primary-foreground/70">Learning Resources</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-primary-foreground">50K+</p>
+              <p className="text-sm text-primary-foreground/70">Active Learners</p>
+            </div>
+            <div>
+              <p className="text-3xl font-bold text-primary-foreground">98%</p>
+              <p className="text-sm text-primary-foreground/70">Satisfaction Rate</p>
+            </div>
+          </div>
+        </div>
+
+        <p className="text-sm text-primary-foreground/60">
+          Ministry of Revenue - Education Division
+        </p>
+      </div>
+
+      {/* Right Panel - Login Form */}
+      <div className="flex w-full flex-col items-center justify-center px-6 py-12 lg:w-1/2">
+        <div className="w-full max-w-md space-y-8">
+          {/* Mobile Logo */}
+          <div className="flex items-center justify-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Building2 className="h-6 w-6" />
+            </div>
+            <span className="text-xl font-semibold text-foreground">TEP</span>
+          </div>
+
+          <div className="text-center lg:text-left">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Welcome back
+            </h1>
+            <p className="mt-2 text-muted-foreground">
+              Sign in to your account to continue learning
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="username" className="text-sm font-medium text-foreground">
+                Username
+              </label>
+              <div className="relative">
+                <User className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="username"
+                  type="text"
+                  {...register("username")}
+                  className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-4 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  placeholder="Enter your username"
+                />
+              </div>
+              {errors.username && (
+                <p className="text-sm text-destructive">{errors.username.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="password" className="text-sm font-medium text-foreground">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  {...register("password")}
+                  className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-12 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
+                  placeholder="Password@123"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <p className="text-sm text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+
+            {authError && (
+              <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3">
+                <p className="text-sm font-medium text-destructive">{authError}</p>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="relative h-11 w-full rounded-lg bg-primary font-semibold text-primary-foreground transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
+                  Signing in...
+                </span>
+              ) : (
+                "Sign in"
+              )}
+            </button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-background px-4 text-xs text-muted-foreground">
+                Need help?
+              </span>
+            </div>
+          </div>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Contact your administrator if you need assistance with your account.
+          </p>
+        </div>
+      </div>
+    </main>
+  );
+}
