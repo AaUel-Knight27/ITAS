@@ -1,0 +1,72 @@
+# Compiled class files and build outputs
+target/
+build/
+!.mvn/wrapper/maven-wrapper.jar
+!.gradle/wrapper/gradle-wrapper.jar
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Gradle
+.gradle/
+gradlew
+gradlew.bat
+
+# Spring Boot specific
+/logs/
+*.log
+*.log.*
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# IDE files
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+uploads/
+
+# Eclipse / STS
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Environment / sensitive files
+.env
+.env.local
+.env.*.local
+application-*.yml
+application-*.properties
+!application.yml
+!application.properties
+
+# Other
+*.jar
+*.war
+*.ear
+*.class
