@@ -79,7 +79,7 @@ export default function LoginPage() {
             <Building2 className="h-6 w-6" />
           </div>
           <span className="text-xl font-semibold text-primary-foreground">
-            Taxpayer Education Portal
+            ITAS Learning Management System
           </span>
         </div>
 
@@ -162,7 +162,7 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   {...register("password")}
                   className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-12 text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-2 focus:ring-ring/20"
-                  placeholder="Password@123"
+                  placeholder="Password"
                 />
                 <button
                   type="button"

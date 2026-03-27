@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
+import CourseThumbnail from "@/components/course/CourseThumbnail";
 import type { SearchResultDto } from "@/lib/types";
-import { getFileUrl } from "@/lib/utils";
 
 interface Props {
   result: SearchResultDto;
@@ -25,24 +25,19 @@ export default function SearchResultCard({ result }: Props) {
     >
       {result.type === "COURSE" ? (
         <div className="h-16 w-24 shrink-0 overflow-hidden rounded-lg bg-gray-100">
-          {result.thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={getFileUrl(result.thumbnailUrl) || ""}
-              alt={result.title}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
-              <span className="text-xl text-white">📚</span>
-            </div>
-          )}
+          <CourseThumbnail
+            title={result.title}
+            thumbnailUrl={result.thumbnailUrl}
+            className="h-full w-full object-cover"
+            fallbackClassName="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600"
+            iconClassName="h-6 w-6 text-white"
+          />
         </div>
       ) : null}
 
       {result.type === "LECTURE" ? (
         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-purple-100">
-          <span className="text-2xl">🎬</span>
+          <span className="text-2xl">Lecture</span>
         </div>
       ) : null}
 

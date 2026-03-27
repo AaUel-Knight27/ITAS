@@ -1,11 +1,14 @@
 package com.aauelknight.itas_backend.controller;
 
+import com.aauelknight.itas_backend.dto.AssessmentDto;
+import com.aauelknight.itas_backend.dto.CompletionDto;
 import com.aauelknight.itas_backend.dto.CourseProgressDto;
 import com.aauelknight.itas_backend.dto.EnrollRequest;
 import com.aauelknight.itas_backend.dto.EnrollmentDto;
 import com.aauelknight.itas_backend.dto.VideoProgressRequest;
 import com.aauelknight.itas_backend.entity.User;
 import com.aauelknight.itas_backend.entity.VideoProgress;
+import com.aauelknight.itas_backend.service.AssessmentService;
 import com.aauelknight.itas_backend.service.EnrollmentService;
 import com.aauelknight.itas_backend.service.VideoProgressService;
 import jakarta.validation.Valid;
@@ -15,6 +18,8 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,10 +34,14 @@ import org.springframework.web.server.ResponseStatusException;
 public class LmsController {
 
     private final EnrollmentService enrollmentService;
+    private final AssessmentService assessmentService;
     private final VideoProgressService videoProgressService;
 
-    public LmsController(EnrollmentService enrollmentService, VideoProgressService videoProgressService) {
+    public LmsController(EnrollmentService enrollmentService,
+                         AssessmentService assessmentService,
+                         VideoProgressService videoProgressService) {
         this.enrollmentService = enrollmentService;
+        this.assessmentService = assessmentService;
         this.videoProgressService = videoProgressService;
     }
 
@@ -55,6 +64,13 @@ public class LmsController {
         return enrollmentService.calculateProgress(requireUserId(authentication), courseId);
     }
 
+    @GetMapping("/my-completions/{courseId}")
+    @PreAuthorize("isAuthenticated()")
+    public List<CompletionDto> getMyCompletions(@PathVariable Long courseId,
+                                                @AuthenticationPrincipal UserDetails userDetails) {
+        return enrollmentService.getMyCompletions(courseId, userDetails.getUsername());
+    }
+
     @GetMapping("/course-progress")
     @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER','CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN','SYSTEM_ADMIN')")
     public List<CourseProgressDto> courseProgressByQuery(Authentication authentication) {
@@ -67,7 +83,20 @@ public class LmsController {
         return enrollmentService.markLectureComplete(requireUserId(authentication), lectureId);
     }
 
-    @PostMapping("/content/video/{id}/progress")
+    @GetMapping("/assessment/lecture/{lectureId}")
+    @PreAuthorize("isAuthenticated()")
+    public AssessmentDto getByLecture(@PathVariable Long lectureId) {
+        return assessmentService.getByLectureId(lectureId);
+    }
+
+    @GetMapping("/assessment/course/{courseId}")
+    @PreAuthorize("isAuthenticated()")
+    public AssessmentDto getByCourse(@PathVariable Long courseId) {
+        return assessmentService.getByCourseId(courseId);
+    }
+
+    @PostMapping("/video/{id}/progress")
+    @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER')")
     public Map<String, Object> saveVideoProgress(@PathVariable("id") Long lectureId,
                                                  @Valid @RequestBody VideoProgressRequest request,
                                                  Authentication authentication) {

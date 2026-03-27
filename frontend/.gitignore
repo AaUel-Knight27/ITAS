@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Production build
+.next/
+
+# Optional: Turbopack / dev cache specifically
+.next/dev/cache/
+
+# Misc
+*.env.local
+*.env
+.DS_Store

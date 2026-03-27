@@ -12,6 +12,8 @@ public interface LectureRepository extends JpaRepository<Lecture, Long> {
 
     List<Lecture> findBySectionIdOrderByOrderIndexAsc(Long sectionId);
 
+    List<Lecture> findBySectionCourseIdOrderBySectionOrderIndexAscOrderIndexAsc(Long courseId);
+
     long countBySectionCourseId(Long courseId);
 
     java.util.Optional<Lecture> findByIdAndSectionId(Long id, Long sectionId);

@@ -10,6 +10,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -63,6 +64,10 @@ public class SecurityConfig {
                         ).authenticated()
 
                         .requestMatchers(
+                                HttpMethod.POST, "/lms/video/*/progress"
+                        ).hasAnyRole("TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER")
+
+                        .requestMatchers(
                                 HttpMethod.OPTIONS, "/**"
                         ).permitAll()
 
@@ -108,6 +113,19 @@ public class SecurityConfig {
                         ).hasAnyRole("COMMUNICATION", "WEB_ADMIN")
 
                         // ?????? Learner endpoints ???????????????????????????????????????????????????????????????????????????
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/lms/assessment/lecture/*",
+                                "/lms/assessment/course/*",
+                                "/lms/assessment/result/*"
+                        ).hasAnyRole(
+                                "TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER"
+                        )
+                        .requestMatchers(
+                                HttpMethod.POST, "/lms/assessment/submit"
+                        ).hasAnyRole(
+                                "TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER"
+                        )
                         .requestMatchers(
                                 "/lms/assessment/create",
                                 "/lms/assessment/*/questions",
@@ -280,6 +298,11 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return web -> web.ignoring().requestMatchers("/uploads/**");
     }
 
     @Bean

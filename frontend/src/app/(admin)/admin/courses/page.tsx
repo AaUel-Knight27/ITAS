@@ -7,6 +7,7 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Plus, Upload, Edit, Eye, EyeOff, Trash2, BookOpen, Search, CheckCircle } from "lucide-react";
 
+import CourseThumbnail from "@/components/course/CourseThumbnail";
 import { useAuthStore, useUIStore } from "@/lib/store";
 import { uploadContent } from "@/lib/api/content";
 import { deleteCourse, getAdminCourses, publishCourse, unpublishCourse } from "@/lib/api/admin-courses";
@@ -257,14 +258,13 @@ function AdminCoursesPageContent() {
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                          {course.thumbnailUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={course.thumbnailUrl} alt={course.title} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                              <BookOpen className="h-5 w-5" />
-                            </div>
-                          )}
+                          <CourseThumbnail
+                            title={course.title}
+                            thumbnailUrl={course.thumbnailUrl}
+                            className="h-full w-full object-cover"
+                            fallbackClassName="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700"
+                            iconClassName="h-5 w-5 text-white"
+                          />
                         </div>
                         <span className="font-medium text-card-foreground">{course.title}</span>
                       </div>

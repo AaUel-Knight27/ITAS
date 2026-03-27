@@ -15,6 +15,7 @@ import com.aauelknight.itas_backend.entity.AssessmentQuestion;
 import com.aauelknight.itas_backend.entity.Lecture;
 import com.aauelknight.itas_backend.entity.LectureType;
 import com.aauelknight.itas_backend.entity.User;
+import com.aauelknight.itas_backend.exception.ResourceNotFoundException;
 import com.aauelknight.itas_backend.repository.AssessmentAttemptRepository;
 import com.aauelknight.itas_backend.repository.AssessmentQuestionRepository;
 import com.aauelknight.itas_backend.repository.AssessmentRepository;
@@ -137,18 +138,23 @@ public class AssessmentService {
     @Transactional(readOnly = true)
     public AssessmentDto getAssessment(Long assessmentId) {
         Assessment assessment = findAssessment(assessmentId);
-        List<AssessmentQuestion> questions = assessmentQuestionRepository.findByAssessmentIdOrderByIdAsc(assessmentId);
+        return toDto(assessment);
+    }
 
-        return AssessmentDto.builder()
-                .id(assessment.getId())
-                .courseId(assessment.getCourse().getId())
-                .sectionId(assessment.getSection() != null ? assessment.getSection().getId() : null)
-                .title(assessment.getTitle())
-                .passingScore(assessment.getPassingScore())
-                .maxAttempts(assessment.getMaxAttempts())
-                .createdAt(assessment.getCreatedAt())
-                .questions(questions.stream().map(this::toQuestionDto).toList())
-                .build();
+    @Transactional(readOnly = true)
+    public AssessmentDto getByLectureId(Long lectureId) {
+        return assessmentRepository.findByLectureId(lectureId)
+                .map(this::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException("No assessment for lecture: " + lectureId));
+    }
+
+    @Transactional(readOnly = true)
+    public AssessmentDto getByCourseId(Long courseId) {
+        return assessmentRepository.findByCourseId(courseId)
+                .stream()
+                .findFirst()
+                .map(this::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException("No assessment for course: " + courseId));
     }
 
     @Transactional
@@ -235,6 +241,21 @@ public class AssessmentService {
     private Assessment findAssessment(Long assessmentId) {
         return assessmentRepository.findById(assessmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assessment not found"));
+    }
+
+    private AssessmentDto toDto(Assessment assessment) {
+        List<AssessmentQuestion> questions = assessmentQuestionRepository.findByAssessmentIdOrderByIdAsc(assessment.getId());
+
+        return AssessmentDto.builder()
+                .id(assessment.getId())
+                .courseId(assessment.getCourse().getId())
+                .sectionId(assessment.getSection() != null ? assessment.getSection().getId() : null)
+                .title(assessment.getTitle())
+                .passingScore(assessment.getPassingScore())
+                .maxAttempts(assessment.getMaxAttempts())
+                .createdAt(assessment.getCreatedAt())
+                .questions(questions.stream().map(this::toQuestionDto).toList())
+                .build();
     }
 
     private AssessmentQuestionDto toQuestionDto(AssessmentQuestion question) {

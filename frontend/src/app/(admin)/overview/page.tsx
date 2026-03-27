@@ -277,7 +277,7 @@ export default function ProjectOverviewPage() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-800 text-blue-100 text-xs font-semibold mb-4 border border-blue-700">
             Internal Wiki
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Taxpayer Education Portal LMS</h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">ITAS Learning Management System LMS</h1>
           <p className="mt-3 text-blue-100 text-lg max-w-2xl font-medium">
             Project Overview, Development Progress, and Architecture Reference (v1.0-alpha)
           </p>

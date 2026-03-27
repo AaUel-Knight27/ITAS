@@ -3,6 +3,7 @@ package com.aauelknight.itas_backend.exception;
 import com.aauelknight.itas_backend.dto.ErrorResponse;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.apache.catalina.connector.ClientAbortException;
 import org.hibernate.LazyInitializationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -169,15 +170,22 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotWritableException.class)
     public ResponseEntity<ErrorResponse> handleNotWritable(HttpMessageNotWritableException ex) {
         log.error("HttpMessageNotWritableException: {}", ex.getMessage(), ex);
-        return ResponseEntity.status(500)
-                .body(new ErrorResponse(
-                        500,
-                        "Response write error",
-                        "The server could not serialize the response. Please try again."));
+        return ResponseEntity.status(500).build();
+    }
+
+    @ExceptionHandler(ClientAbortException.class)
+    public ResponseEntity<Void> handleClientAbort(ClientAbortException ex) {
+        log.debug("Client aborted response stream: {}", ex.getMessage());
+        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleAll(Exception ex) {
+        if (ex instanceof ClientAbortException || ex.getCause() instanceof ClientAbortException) {
+            log.debug("Client aborted response stream: {}", ex.getMessage());
+            return ResponseEntity.noContent().build();
+        }
+
         log.error("Unhandled exception: ", ex);
         return ResponseEntity.status(500)
                 .body(new ErrorResponse(

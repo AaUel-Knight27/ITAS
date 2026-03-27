@@ -13,12 +13,13 @@
 
     <groupId>com.aauel-knight</groupId>
     <artifactId>itas_backend</artifactId>
+    <packaging>jar</packaging>
     <version>0.0.1-SNAPSHOT</version>
     <name>itas_backend</name>
     <description>Taxpayer Education Portal LMS backend</description>
 
     <properties>
-        <java.version>25</java.version>
+        <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
         <jjwt.version>0.12.7</jjwt.version>
         <lombok.version>1.18.38</lombok.version>
@@ -141,6 +142,14 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
             </plugin>
         </plugins>
     </build>

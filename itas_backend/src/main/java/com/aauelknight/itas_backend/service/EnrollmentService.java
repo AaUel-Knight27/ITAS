@@ -1,5 +1,6 @@
 package com.aauelknight.itas_backend.service;
 
+import com.aauelknight.itas_backend.dto.CompletionDto;
 import com.aauelknight.itas_backend.dto.CourseProgressDto;
 import com.aauelknight.itas_backend.dto.EnrollmentDto;
 import com.aauelknight.itas_backend.entity.Course;
@@ -13,6 +14,7 @@ import com.aauelknight.itas_backend.repository.EnrollmentRepository;
 import com.aauelknight.itas_backend.repository.LectureCompletionRepository;
 import com.aauelknight.itas_backend.repository.LectureRepository;
 import com.aauelknight.itas_backend.repository.UserRepository;
+import com.aauelknight.itas_backend.repository.VideoProgressRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -28,17 +30,20 @@ public class EnrollmentService {
     private final CourseRepository courseRepository;
     private final LectureRepository lectureRepository;
     private final LectureCompletionRepository lectureCompletionRepository;
+    private final VideoProgressRepository videoProgressRepository;
 
     public EnrollmentService(EnrollmentRepository enrollmentRepository,
                              UserRepository userRepository,
                              CourseRepository courseRepository,
                              LectureRepository lectureRepository,
-                             LectureCompletionRepository lectureCompletionRepository) {
+                             LectureCompletionRepository lectureCompletionRepository,
+                             VideoProgressRepository videoProgressRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.lectureRepository = lectureRepository;
         this.lectureCompletionRepository = lectureCompletionRepository;
+        this.videoProgressRepository = videoProgressRepository;
     }
 
     @Transactional
@@ -75,6 +80,22 @@ public class EnrollmentService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<CompletionDto> getMyCompletions(Long courseId, String username) {
+        Long userId = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"))
+                .getId();
+
+        return lectureCompletionRepository.findCompletedLectureIdsByUserAndCourse(userId, courseId).stream()
+                .distinct()
+                .map(lectureId -> CompletionDto.builder()
+                        .lectureId(lectureId)
+                        .completed(true)
+                        .completedAt(null)
+                        .build())
+                .toList();
+    }
+
     @Transactional
     public CourseProgressDto calculateProgress(Long userId, Long courseId) {
         CourseEnrollment enrollment = enrollmentRepository.findByUserIdAndCourseId(userId, courseId)
@@ -86,6 +107,11 @@ public class EnrollmentService {
         double progressPercent = totalLectures == 0
                 ? 0.0
                 : Math.min(100.0, (completedLectures * 100.0) / totalLectures);
+        List<Long> completedLectureIds = lectureCompletionRepository.findCompletedLectureIdsByUserAndCourse(userId, courseId)
+                .stream()
+                .distinct()
+                .toList();
+        Long lastLectureId = resolveLastLectureId(userId, courseId);
 
         enrollment.setProgressPercent(progressPercent);
         if (progressPercent >= 100.0) {
@@ -104,6 +130,8 @@ public class EnrollmentService {
                 .totalLectures(totalLectures)
                 .completedLectures(completedLectures)
                 .progressPercent(progressPercent)
+                .completedLectureIds(completedLectureIds)
+                .lastLectureId(lastLectureId)
                 .status(enrollment.getStatus())
                 .build();
     }
@@ -166,16 +194,33 @@ public class EnrollmentService {
     }
 
     private EnrollmentDto toEnrollmentDto(CourseEnrollment enrollment) {
+        String thumbnailUrl = enrollment.getCourse().getThumbnailUrl();
         return EnrollmentDto.builder()
                 .id(enrollment.getId())
                 .courseId(enrollment.getCourse().getId())
                 .courseTitle(enrollment.getCourse().getTitle())
                 .courseSlug(enrollment.getCourse().getSlug())
-                .thumbnailUrl(enrollment.getCourse().getThumbnailUrl())
+                .courseThumbnail(thumbnailUrl)
+                .courseThumbnailUrl(thumbnailUrl)
+                .thumbnailUrl(thumbnailUrl)
                 .status(enrollment.getStatus())
                 .progressPercent(enrollment.getProgressPercent())
+                .lastLectureId(resolveLastLectureId(enrollment.getUser().getId(), enrollment.getCourse().getId()))
                 .enrolledAt(enrollment.getEnrolledAt())
                 .completedAt(enrollment.getCompletedAt())
                 .build();
+    }
+
+    private Long resolveLastLectureId(Long userId, Long courseId) {
+        return lectureCompletionRepository
+                .findTopByUserIdAndLectureSectionCourseIdAndCompletedTrueOrderByCompletedAtDesc(userId, courseId)
+                .map(completion -> completion.getLecture().getId())
+                .or(() -> videoProgressRepository.findTopByUserIdAndLectureSectionCourseIdOrderByUpdatedAtDesc(userId, courseId)
+                        .map(progress -> progress.getLecture().getId()))
+                .or(() -> lectureRepository.findBySectionCourseIdOrderBySectionOrderIndexAscOrderIndexAsc(courseId)
+                        .stream()
+                        .findFirst()
+                        .map(Lecture::getId))
+                .orElse(null);
     }
 }

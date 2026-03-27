@@ -43,11 +43,13 @@ export async function getAllCourseProgress(): Promise<CourseProgress[]> {
 export async function saveVideoProgress(
   lectureId: number | string,
   watchedSeconds: number,
-  lastPosition: number
+  lastPosition: number,
+  completionPercentage?: number
 ): Promise<VideoProgress> {
-  const response = await api.post<VideoProgress | ApiResponse<VideoProgress>>(`/content/video/${lectureId}/progress`, {
+  const response = await api.post<VideoProgress | ApiResponse<VideoProgress>>(`/lms/video/${lectureId}/progress`, {
     watchedSeconds,
     lastPosition,
+    completionPercentage,
   });
 
   return unwrap(response.data);

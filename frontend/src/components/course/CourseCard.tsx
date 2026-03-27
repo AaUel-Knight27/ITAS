@@ -1,8 +1,9 @@
 "use client";
 
-import { Clock, BookOpen, Users } from "lucide-react";
+import { Clock, Users } from "lucide-react";
 import Link from "next/link";
 
+import CourseThumbnail from "@/components/course/CourseThumbnail";
 import type { Course } from "@/types";
 
 type CourseCardProps = {
@@ -52,18 +53,13 @@ export default function CourseCard({ course, highlightTerm }: CourseCardProps) {
     >
       {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-muted">
-        {course.thumbnailUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={course.thumbnailUrl}
-            alt={course.title}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center text-muted-foreground">
-            <BookOpen className="h-12 w-12" />
-          </div>
-        )}
+        <CourseThumbnail
+          title={course.title}
+          thumbnailUrl={course.thumbnailUrl}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          fallbackClassName="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700"
+          iconClassName="h-12 w-12 text-white"
+        />
         {/* Overlay gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
       </div>

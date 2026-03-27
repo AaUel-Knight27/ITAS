@@ -5,6 +5,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import java.util.Date;
+import jakarta.annotation.PostConstruct;
 import javax.crypto.SecretKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -15,18 +16,22 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class JwtUtil {
 
-    private final SecretKey signingKey;
-    private final long expirationMs;
+    @Value("${app.jwt.secret}")
+    private String jwtSecret;
 
-    public JwtUtil(@Value("${jwt.secret}") String secret,
-                   @Value("${jwt.expiration-ms}") long expirationMs) {
-        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
-        this.expirationMs = expirationMs;
+    @Value("${app.jwt.expiration-ms}")
+    private Long jwtExpirationMs;
+
+    private SecretKey signingKey;
+
+    @PostConstruct
+    void initializeSigningKey() {
+        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
     }
 
     public String generateToken(UserDetails userDetails) {
         Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expirationMs);
+        Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
         io.jsonwebtoken.JwtBuilder builder = Jwts.builder()
                 .subject(userDetails.getUsername())
@@ -62,7 +67,7 @@ public class JwtUtil {
     }
 
     public long getExpirationMs() {
-        return expirationMs;
+        return jwtExpirationMs;
     }
 
     private Claims extractAllClaims(String token) {

@@ -4,6 +4,8 @@ export interface Enrollment {
   courseSlug: string;
   courseTitle: string;
   courseThumbnailUrl?: string;
+  courseThumbnail?: string;
+  thumbnailUrl?: string;
   progressPercent: number;
   lastLectureId?: number | string;
   enrolledAt?: string;
@@ -26,7 +28,8 @@ export interface LectureCompletion {
 
 export interface CourseProgress {
   courseId: number | string;
-  percent: number;
+  percent?: number;
+  progressPercent?: number;
   totalLectures?: number;
   completedLectures?: number;
   completedLectureIds?: Array<number | string>;

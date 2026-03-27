@@ -1,6 +1,7 @@
 package com.aauelknight.itas_backend.dto;
 
 import com.aauelknight.itas_backend.entity.EnrollmentStatus;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,5 +19,7 @@ public class CourseProgressDto {
     private long totalLectures;
     private long completedLectures;
     private double progressPercent;
+    private List<Long> completedLectureIds;
+    private Long lastLectureId;
     private EnrollmentStatus status;
 }

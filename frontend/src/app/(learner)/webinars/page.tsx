@@ -31,15 +31,22 @@ export default function WebinarsPage() {
     setLoading(true);
     setError("");
     try {
-      const [upcomingRes, pastRes, myRes] = await Promise.all([
+      const [upcomingRes, pastRes] = await Promise.all([
         webinarApi.getUpcoming(),
         webinarApi.getPast(),
-        webinarApi.getMyRegistrations().catch(() => ({ data: [] as WebinarDto[] })),
       ]);
 
       setUpcoming(upcomingRes.data);
       setPast(pastRes.data);
-      setMyRegistrations((myRes.data || []).map((webinar) => webinar.id));
+
+      try {
+        const myRes = await webinarApi.getMyRegistrations();
+        setMyRegistrations((myRes.data || []).map((webinar) => webinar.id));
+      } catch (regErr: unknown) {
+        const status = (regErr as { response?: { status?: number } })?.response?.status;
+        console.warn("Could not load registrations:", status);
+        setMyRegistrations([]);
+      }
     } catch (error) {
       setError(getErrorMessage(error) || "Could not load webinars. Please refresh the page.");
     } finally {

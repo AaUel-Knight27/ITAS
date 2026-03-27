@@ -19,9 +19,12 @@ public class EnrollmentDto {
     private Long courseId;
     private String courseTitle;
     private String courseSlug;
+    private String courseThumbnail;
+    private String courseThumbnailUrl;
     private String thumbnailUrl;
     private EnrollmentStatus status;
     private Double progressPercent;
+    private Long lastLectureId;
     private LocalDateTime enrolledAt;
     private LocalDateTime completedAt;
 }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import CourseCard from "@/components/dashboard/shared/CourseCard";
 import StatCard from "@/components/dashboard/shared/StatCard";
 import { learnerApi, webinarApi } from "@/lib/api";
+import { getCourseLearnHref } from "@/lib/learn";
 import type { EnrollmentDto, WebinarDto } from "@/lib/types";
 
 export default function TaxpayerDashboard() {
@@ -79,7 +80,7 @@ export default function TaxpayerDashboard() {
             </div>
             <button
               type="button"
-              onClick={() => router.push(`/courses/${lastActive.courseSlug}/learn`)}
+              onClick={() => router.push(getCourseLearnHref(lastActive.courseSlug, lastActive.lastLectureId))}
               className="shrink-0 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
               Resume

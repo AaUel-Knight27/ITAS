@@ -54,7 +54,7 @@ export const NAV_LINKS: Record<string, NavLink[]> = {
 
   [TRAINING_ADMIN]: [
     { label: "Dashboard", href: "/dashboard" },
-    { label: "Webinars", href: "/admin/webinars" },
+    { label: "Webinars", href: "/webinars" },
   ],
 
   [COMMUNICATION]: [

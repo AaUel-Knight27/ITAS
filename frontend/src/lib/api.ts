@@ -53,6 +53,8 @@ type AxiosConfigWithSuppressedStatuses = {
   suppressErrorStatuses?: number[];
 };
 
+const API_BASE_URL = API_BASE;
+
 function readAccessTokenFromStorage(): string | undefined {
   if (typeof window === "undefined") {
     return undefined;
@@ -72,7 +74,7 @@ function readAccessTokenFromStorage(): string | undefined {
 }
 
 export const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -302,6 +304,7 @@ export const versionApi = {
     api.get<ContentVersionDto[]>(
       `/courses/${courseId}/sections/${sectionId}/lectures/${lectureId}/versions`
     ),
+
 
   uploadNewVersion: (
     courseId: number,

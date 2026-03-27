@@ -11,6 +11,7 @@ import ProgressBar from "@/components/course/ProgressBar";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 import { getCourseBySlug } from "@/lib/api/courses";
 import { enrollCourse, getCourseProgress } from "@/lib/api/enrollment";
+import { getCourseLearnHref } from "@/lib/learn";
 import { canAccessCourses } from "@/lib/roles";
 import type { Course, CourseProgress, CourseSection, Lecture } from "@/types";
 
@@ -115,7 +116,7 @@ export default function CourseDetailPage() {
       setCourse((prev) => (prev ? { ...prev, enrolled: true } : prev));
 
       if (firstLecture) {
-        router.push(`/courses/${course.slug}/learn/${firstLecture}`);
+        router.push(getCourseLearnHref(course.slug, firstLecture));
         return;
       }
     } catch {
@@ -165,7 +166,7 @@ export default function CourseDetailPage() {
 
           {isEnrolled && progress ? (
             <div className="mt-5 max-w-md">
-              <ProgressBar percent={progress.percent ?? 0} />
+              <ProgressBar percent={progress.progressPercent ?? 0} />
             </div>
           ) : null}
 
@@ -174,7 +175,7 @@ export default function CourseDetailPage() {
               {isEnrolled ? (
                 continueLecture ? (
                   <Link
-                    href={`/courses/${course.slug}/learn/${continueLecture}`}
+                    href={getCourseLearnHref(course.slug, continueLecture)}
                     className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
                   >
                     Continue Learning
@@ -232,7 +233,7 @@ export default function CourseDetailPage() {
                             </div>
                           ) : (
                             <Link
-                              href={`/courses/${course.slug}/learn/${lecture.id}`}
+                              href={getCourseLearnHref(course.slug, lecture.id)}
                               className="flex items-center justify-between"
                             >
                               <div className="flex items-center gap-2 text-sm text-slate-700">

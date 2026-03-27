@@ -46,31 +46,73 @@ export default function DashboardPage() {
     return null;
   }
 
-  let dashboard = null;
-
   if (isManagerRole(normalizedRole)) {
-    dashboard = <ManagerDashboard />;
-  } else if (isContentAdminRole(normalizedRole)) {
-    dashboard = <ContentAdminDashboard />;
-  } else if (isTrainingAdminRole(normalizedRole)) {
-    dashboard = <TrainingAdminDashboard />;
-  } else if (isCommunicationRole(normalizedRole)) {
-    dashboard = <CommunicationDashboard />;
-  } else if (isWebAdminRole(normalizedRole)) {
-    dashboard = <WebAdminDashboard />;
-  } else if (normalizedRole === "TAXPAYER") {
-    dashboard = <TaxpayerDashboard />;
-  } else if (normalizedRole === "TAX_AGENT") {
-    dashboard = <TaxAgentDashboard />;
-  } else if (normalizedRole === "MOR_STAFF") {
-    dashboard = <MorStaffDashboard />;
-  } else {
-    dashboard = <TaxpayerDashboard />;
+    return (
+      <ErrorBoundary>
+        <ManagerDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (isContentAdminRole(normalizedRole)) {
+    return (
+      <ErrorBoundary>
+        <ContentAdminDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (normalizedRole === "TRAINING_ADMIN" || isTrainingAdminRole(normalizedRole)) {
+    return (
+      <ErrorBoundary>
+        <TrainingAdminDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (isCommunicationRole(normalizedRole)) {
+    return (
+      <ErrorBoundary>
+        <CommunicationDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (isWebAdminRole(normalizedRole)) {
+    return (
+      <ErrorBoundary>
+        <WebAdminDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (normalizedRole === "TAXPAYER") {
+    return (
+      <ErrorBoundary>
+        <TaxpayerDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (normalizedRole === "TAX_AGENT") {
+    return (
+      <ErrorBoundary>
+        <TaxAgentDashboard />
+      </ErrorBoundary>
+    );
+  }
+
+  if (normalizedRole === "MOR_STAFF") {
+    return (
+      <ErrorBoundary>
+        <MorStaffDashboard />
+      </ErrorBoundary>
+    );
   }
 
   return (
     <ErrorBoundary>
-      {dashboard}
+      <TaxpayerDashboard />
     </ErrorBoundary>
   );
 }

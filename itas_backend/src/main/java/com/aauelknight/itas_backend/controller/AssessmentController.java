@@ -36,6 +36,7 @@ public class AssessmentController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER','CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN')")
     public AssessmentDto getAssessment(@PathVariable Long id) {
         return assessmentService.getAssessment(id);
     }
@@ -67,6 +68,7 @@ public class AssessmentController {
     }
 
     @PostMapping("/submit")
+    @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER')")
     public AssessmentResultDto submit(@Valid @RequestBody AssessmentSubmitRequest request,
                                       Authentication authentication) {
         Long userId = requireUserId(authentication);
@@ -74,11 +76,13 @@ public class AssessmentController {
     }
 
     @GetMapping("/result/{attemptId}")
+    @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER')")
     public AssessmentResultDto getResult(@PathVariable Long attemptId) {
         return assessmentService.getAttemptResult(attemptId);
     }
 
     @GetMapping("/attempts/{assessmentId}")
+    @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER')")
     public List<AssessmentAttemptDto> getAttempts(@PathVariable Long assessmentId, Authentication authentication) {
         return assessmentService.getUserAttempts(requireUserId(authentication), assessmentId);
     }

@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
-import { getFileUrl } from "@/lib/utils";
+import CourseThumbnail from "@/components/course/CourseThumbnail";
+import { getCourseLearnHref } from "@/lib/learn";
 import type { EnrollmentDto } from "@/lib/types";
 
 interface Props {
@@ -13,9 +14,10 @@ interface Props {
 export default function CourseCard({ enrollment, showCertBadge = false }: Props) {
   const router = useRouter();
   const progress = enrollment.progressPercent;
+  const thumbnail = enrollment.courseThumbnail ?? enrollment.courseThumbnailUrl ?? enrollment.thumbnailUrl;
 
   const handleClick = () => {
-    router.push(`/courses/${enrollment.courseSlug}/learn`);
+    router.push(getCourseLearnHref(enrollment.courseSlug, enrollment.lastLectureId));
   };
 
   return (
@@ -24,23 +26,18 @@ export default function CourseCard({ enrollment, showCertBadge = false }: Props)
       className="group cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:shadow-md"
     >
       <div className="relative h-36 bg-gray-100">
-        {enrollment.courseThumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={getFileUrl(enrollment.courseThumbnail) || ""}
-            alt={enrollment.courseTitle}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700">
-            <span className="text-3xl text-white">📚</span>
-          </div>
-        )}
+        <CourseThumbnail
+          title={enrollment.courseTitle}
+          thumbnailUrl={thumbnail}
+          className="h-full w-full object-cover"
+          fallbackClassName="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700"
+          iconClassName="h-10 w-10 text-white"
+        />
 
         <div className="absolute right-2 top-2">
           {enrollment.status === "COMPLETED" ? (
             <span className="rounded-full bg-green-500 px-2 py-1 text-xs font-medium text-white">
-              ✓ Completed
+              Completed
             </span>
           ) : (
             <span className="rounded-full bg-blue-500 px-2 py-1 text-xs font-medium text-white">
@@ -52,7 +49,7 @@ export default function CourseCard({ enrollment, showCertBadge = false }: Props)
         {showCertBadge && enrollment.status === "COMPLETED" && (
           <div className="absolute left-2 top-2">
             <span className="rounded-full bg-yellow-500 px-2 py-1 text-xs font-medium text-white">
-              🏆 Certified
+              Certified
             </span>
           </div>
         )}

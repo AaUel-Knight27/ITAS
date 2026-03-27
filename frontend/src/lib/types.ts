@@ -102,9 +102,12 @@ export interface EnrollmentDto {
   courseId: number;
   courseTitle: string;
   courseThumbnail: string | null;
+  courseThumbnailUrl?: string | null;
+  thumbnailUrl?: string | null;
   courseSlug: string;
   status: "ACTIVE" | "COMPLETED" | "DROPPED";
   progressPercent: number;
+  lastLectureId?: number | null;
   enrolledAt: string;
   completedAt: string | null;
 }
@@ -120,6 +123,7 @@ export interface CertificateDto {
 export interface CourseProgressDto {
   courseId: number;
   progressPercent: number;
+  completedLectureIds?: number[];
   lastLectureId: number | null;
   lastLectureTitle: string | null;
   courseSlug: string | null;

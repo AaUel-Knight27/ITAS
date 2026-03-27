@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "ITAS Taxpayer Education Portal",
+    default: "ITAS Learning Management System",
     template: "%s | ITAS Portal",
   },
   description: "Online education and training platform for taxpayers and tax professionals.",

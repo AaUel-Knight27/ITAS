@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
-import WebinarFormModal from "@/components/webinars/WebinarFormModal";
 import AttendeesModal from "@/components/webinars/AttendeesModal";
+import WebinarFormModal from "@/components/webinars/WebinarFormModal";
 import { webinarApi } from "@/lib/api";
-import { getErrorMessage } from "@/lib/errors";
 import type { WebinarDto, WebinarRequest } from "@/lib/types";
 
-const STATUS_COLORS: Record<WebinarDto["status"], string> = {
+const STATUS_COLORS: Record<string, string> = {
   SCHEDULED: "bg-blue-100 text-blue-700",
   LIVE: "bg-green-100 text-green-700",
   COMPLETED: "bg-gray-100 text-gray-600",
@@ -16,6 +16,7 @@ const STATUS_COLORS: Record<WebinarDto["status"], string> = {
 };
 
 export default function TrainingAdminDashboard() {
+  const { status } = useSession();
   const [upcoming, setUpcoming] = useState<WebinarDto[]>([]);
   const [past, setPast] = useState<WebinarDto[]>([]);
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
@@ -28,18 +29,23 @@ export default function TrainingAdminDashboard() {
   const [attendeesTitle, setAttendeesTitle] = useState("");
 
   useEffect(() => {
+    if (status !== "authenticated") return;
     void fetchAll();
-  }, []);
+  }, [status]);
 
   const fetchAll = async () => {
     setLoading(true);
     setError("");
+
     try {
-      const [upRes, pastRes] = await Promise.all([webinarApi.getUpcoming(), webinarApi.getPast()]);
+      const [upRes, pastRes] = await Promise.all([
+        webinarApi.getUpcoming(),
+        webinarApi.getPast(),
+      ]);
       setUpcoming(upRes.data);
       setPast(pastRes.data);
-    } catch (error) {
-      setError(getErrorMessage(error) || "Could not load webinars. Please refresh.");
+    } catch {
+      setError("Failed to load webinars. Please refresh.");
     } finally {
       setLoading(false);
     }
@@ -56,14 +62,20 @@ export default function TrainingAdminDashboard() {
     await fetchAll();
   };
 
-  const handleCancel = async (id: number) => {
-    if (!window.confirm("Cancel this webinar?")) return;
+  const handleCancel = async (webinar: WebinarDto) => {
+    if (
+      !window.confirm(
+        `Cancel "${webinar.title}"?\n\nRegistered attendees will be notified.`
+      )
+    ) {
+      return;
+    }
 
     try {
-      await webinarApi.cancel(id);
+      await webinarApi.cancel(webinar.id);
       await fetchAll();
-    } catch (error) {
-      window.alert(getErrorMessage(error));
+    } catch {
+      window.alert("Failed to cancel webinar. Please try again.");
     }
   };
 
@@ -72,7 +84,7 @@ export default function TrainingAdminDashboard() {
     setFormOpen(true);
   };
 
-  const handleOpenForm = () => {
+  const handleOpenCreate = () => {
     setEditData(null);
     setFormOpen(true);
   };
@@ -87,53 +99,105 @@ export default function TrainingAdminDashboard() {
       minute: "2-digit",
     });
 
+  const formatDuration = (mins: number) => {
+    if (!mins) return "-";
+    if (mins < 60) return `${mins} min`;
+    const hours = Math.floor(mins / 60);
+    const remainingMinutes = mins % 60;
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours}h`;
+  };
+
   const displayList = activeTab === "upcoming" ? upcoming : past;
+  const totalRegistered = [...upcoming, ...past].reduce(
+    (sum, webinar) => sum + webinar.registeredCount,
+    0
+  );
 
   return (
-    <div className="mx-auto max-w-6xl p-6">
+    <div className="mx-auto max-w-5xl p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Webinar Management</h1>
           <p className="mt-1 text-sm text-gray-500">Schedule and manage training webinars</p>
         </div>
         <button
-          onClick={handleOpenForm}
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          onClick={handleOpenCreate}
+          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
         >
-          <span className="text-lg leading-none">+</span>
+          <span className="text-lg font-bold leading-none">+</span>
           Schedule New Webinar
         </button>
       </div>
 
-      {error ? <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
-
       <div className="mb-6 grid grid-cols-3 gap-4">
         {[
-          { label: "Upcoming", value: upcoming.length, color: "text-blue-600" },
-          { label: "Past", value: past.length, color: "text-gray-600" },
+          {
+            label: "Upcoming Webinars",
+            value: upcoming.length,
+            icon: "UP",
+            color: "text-blue-600",
+          },
+          {
+            label: "Past Webinars",
+            value: past.length,
+            icon: "PA",
+            color: "text-gray-600",
+          },
           {
             label: "Total Registered",
-            value: [...upcoming, ...past].reduce((sum, webinar) => sum + webinar.registeredCount, 0),
+            value: totalRegistered,
+            icon: "RG",
             color: "text-green-600",
           },
         ].map((stat) => (
-          <div key={stat.label} className="rounded-xl border border-gray-200 bg-white px-5 py-4">
-            <p className="text-sm text-gray-500">{stat.label}</p>
-            <p className={`mt-1 text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+          <div
+            key={stat.label}
+            className="rounded-xl border border-gray-200 bg-white px-5 py-4"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">{stat.label}</p>
+                <p className={`mt-1 text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+              </div>
+              <span className="text-3xl">{stat.icon}</span>
+            </div>
           </div>
         ))}
       </div>
 
+      {error ? (
+        <div className="mb-5 flex items-center justify-between rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+          <button onClick={() => void fetchAll()} className="ml-4 shrink-0 font-medium underline">
+            Retry
+          </button>
+        </div>
+      ) : null}
+
       <div className="mb-4 flex w-fit gap-1 rounded-lg bg-gray-100 p-1">
-        {(["upcoming", "past"] as const).map((tab) => (
+        {[
+          { id: "upcoming" as const, label: "Upcoming", count: upcoming.length },
+          { id: "past" as const, label: "Past", count: past.length },
+        ].map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`rounded-md px-4 py-2 text-sm font-medium capitalize transition-colors ${
-              activeTab === tab ? "bg-white text-gray-900 shadow" : "text-gray-500 hover:text-gray-700"
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+              activeTab === tab.id
+                ? "bg-white text-gray-900 shadow"
+                : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tab} ({tab === "upcoming" ? upcoming.length : past.length})
+            {tab.label}
+            <span
+              className={`ml-1.5 rounded-full px-1.5 py-0.5 text-xs ${
+                activeTab === tab.id
+                  ? "bg-blue-100 text-blue-700"
+                  : "bg-gray-200 text-gray-500"
+              }`}
+            >
+              {tab.count}
+            </span>
           </button>
         ))}
       </div>
@@ -141,14 +205,15 @@ export default function TrainingAdminDashboard() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((index) => (
-            <div key={index} className="h-24 animate-pulse rounded-xl bg-gray-100" />
+            <div key={index} className="h-28 animate-pulse rounded-xl bg-gray-100" />
           ))}
         </div>
       ) : displayList.length === 0 ? (
-        <div className="py-12 text-center text-gray-500">
+        <div className="py-16 text-center text-gray-500">
+          <p className="mb-3 text-4xl">W</p>
           <p className="text-lg font-medium">No {activeTab} webinars</p>
           {activeTab === "upcoming" ? (
-            <p className="mt-1 text-sm">Click &quot;Schedule New Webinar&quot; to create one</p>
+            <p className="mt-1 text-sm">Click "Schedule New Webinar" to create one</p>
           ) : null}
         </div>
       ) : (
@@ -170,16 +235,29 @@ export default function TrainingAdminDashboard() {
                       {webinar.status}
                     </span>
                   </div>
+
                   {webinar.description ? (
                     <p className="mb-2 line-clamp-1 text-sm text-gray-500">{webinar.description}</p>
                   ) : null}
-                  <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <span>📅 {formatDate(webinar.scheduledAt)}</span>
-                    <span>⏱ {webinar.durationMinutes} min</span>
+
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-gray-400">
+                    <span>Date: {formatDate(webinar.scheduledAt)}</span>
+                    <span>Duration: {formatDuration(webinar.durationMinutes)}</span>
                     <span>
-                      👥 {webinar.registeredCount}
+                      Registered: {webinar.registeredCount}
                       {webinar.maxAttendees ? ` / ${webinar.maxAttendees}` : ""} registered
                     </span>
+                    {webinar.meetingLink ? (
+                      <a
+                        href={webinar.meetingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(event) => event.stopPropagation()}
+                        className="text-blue-500 hover:underline"
+                      >
+                        Meeting Link
+                      </a>
+                    ) : null}
                   </div>
                 </div>
 
@@ -192,7 +270,13 @@ export default function TrainingAdminDashboard() {
                     className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs text-blue-600 hover:bg-blue-50"
                   >
                     Attendees
+                    {webinar.registeredCount > 0 ? (
+                      <span className="ml-1 rounded-full bg-blue-100 px-1 text-blue-700">
+                        {webinar.registeredCount}
+                      </span>
+                    ) : null}
                   </button>
+
                   {webinar.status !== "CANCELLED" && webinar.status !== "COMPLETED" ? (
                     <>
                       <button
@@ -202,7 +286,7 @@ export default function TrainingAdminDashboard() {
                         Edit
                       </button>
                       <button
-                        onClick={() => void handleCancel(webinar.id)}
+                        onClick={() => void handleCancel(webinar)}
                         className="rounded-lg border border-red-200 px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
                       >
                         Cancel

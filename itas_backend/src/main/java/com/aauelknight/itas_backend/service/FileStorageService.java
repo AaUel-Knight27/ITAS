@@ -81,6 +81,26 @@ public class FileStorageService {
         }
     }
 
+    public String storeThumbnail(Long courseId, MultipartFile file) {
+        try {
+            String extension = getNormalizedExtension(file.getOriginalFilename());
+            String fileName = UUID.randomUUID() + "." + extension;
+
+            Path dir = uploadRoot.resolve(Paths.get("courses", courseId.toString(), "thumbnail")).normalize();
+            Files.createDirectories(dir);
+
+            Path dest = dir.resolve(fileName);
+            Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
+
+            String relativePath = "uploads/courses/" + courseId + "/thumbnail/" + fileName;
+            log.info("Stored thumbnail: {}", relativePath);
+            return relativePath;
+        } catch (IOException ex) {
+            log.error("Failed to store thumbnail for course {}", courseId, ex);
+            throw new RuntimeException("Failed to store thumbnail: " + ex.getMessage(), ex);
+        }
+    }
+
     public void deleteFile(String filePath) {
         if (filePath == null || filePath.isBlank()) {
             return;

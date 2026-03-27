@@ -252,8 +252,7 @@ public class CourseController {
             throw new IllegalArgumentException("Thumbnail must be under 5MB");
         }
 
-        String filePath = fileStorageService.saveFile(file, "courses/" + id + "/thumbnail");
-        String thumbnailUrl = "http://localhost:8080/uploads/" + filePath;
+        String thumbnailUrl = fileStorageService.storeThumbnail(id, file);
         courseService.updateThumbnail(id, thumbnailUrl);
         return ResponseEntity.ok(Map.of("thumbnailUrl", thumbnailUrl));
     }

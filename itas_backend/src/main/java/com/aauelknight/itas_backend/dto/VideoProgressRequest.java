@@ -20,4 +20,7 @@ public class VideoProgressRequest {
     @NotNull(message = "lastPosition is required")
     @Min(value = 0, message = "lastPosition must be >= 0")
     private Integer lastPosition;
+
+    @Min(value = 0, message = "completionPercentage must be >= 0")
+    private Integer completionPercentage;
 }

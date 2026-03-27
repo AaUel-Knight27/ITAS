@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { BookOpen, Award, TrendingUp, Clock, ArrowRight, Play } from "lucide-react";
 
 import ProgressBar from "@/components/course/ProgressBar";
+import { getCourseLearnHref } from "@/lib/learn";
 import { useCertificateStore, useEnrollmentStore } from "@/lib/store";
 
 type LearnerDashboardProps = {
@@ -225,11 +226,7 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
                     </div>
 
                     <Link
-                      href={
-                        course.lastLectureId
-                          ? `/courses/${course.courseSlug}/learn/${course.lastLectureId}`
-                          : `/courses/${course.courseSlug}`
-                      }
+                      href={getCourseLearnHref(course.courseSlug, course.lastLectureId)}
                       className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       <Play className="h-4 w-4" />
