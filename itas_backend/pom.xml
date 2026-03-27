@@ -135,7 +135,7 @@
                 <configuration>
                     <url>jdbc:postgresql://localhost:5432/portal_db</url>
                     <user>postgres</user>
-                    <password>Kangrro@123</password>
+                    <password>your_password</password>
                     <cleanDisabled>false</cleanDisabled>
                 </configuration>
             </plugin>
