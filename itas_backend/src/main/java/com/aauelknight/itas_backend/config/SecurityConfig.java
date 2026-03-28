@@ -66,6 +66,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.POST, "/lms/video/*/progress"
                         ).hasAnyRole("TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER")
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/lms/video/*/progress",
+                                "/lms/course/*/last-watched"
+                        ).hasAnyRole("TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER")
 
                         .requestMatchers(
                                 HttpMethod.OPTIONS, "/**"

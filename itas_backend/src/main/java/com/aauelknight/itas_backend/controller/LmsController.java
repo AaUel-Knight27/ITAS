@@ -5,16 +5,15 @@ import com.aauelknight.itas_backend.dto.CompletionDto;
 import com.aauelknight.itas_backend.dto.CourseProgressDto;
 import com.aauelknight.itas_backend.dto.EnrollRequest;
 import com.aauelknight.itas_backend.dto.EnrollmentDto;
+import com.aauelknight.itas_backend.dto.VideoProgressDto;
 import com.aauelknight.itas_backend.dto.VideoProgressRequest;
 import com.aauelknight.itas_backend.entity.User;
-import com.aauelknight.itas_backend.entity.VideoProgress;
 import com.aauelknight.itas_backend.service.AssessmentService;
 import com.aauelknight.itas_backend.service.EnrollmentService;
 import com.aauelknight.itas_backend.service.VideoProgressService;
 import jakarta.validation.Valid;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -97,22 +96,28 @@ public class LmsController {
 
     @PostMapping("/video/{id}/progress")
     @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER')")
-    public Map<String, Object> saveVideoProgress(@PathVariable("id") Long lectureId,
-                                                 @Valid @RequestBody VideoProgressRequest request,
-                                                 Authentication authentication) {
-        VideoProgress progress = videoProgressService.save(
-                requireUserId(authentication),
-                lectureId,
-                request.getWatchedSeconds(),
-                request.getLastPosition());
+    public ResponseEntity<VideoProgressDto> saveVideoProgress(@PathVariable("id") Long lectureId,
+                                                              @Valid @RequestBody VideoProgressRequest request,
+                                                              @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(videoProgressService.saveProgress(lectureId, request, userDetails.getUsername()));
+    }
 
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("lectureId", lectureId);
-        response.put("watchedSeconds", progress.getWatchedSeconds());
-        response.put("completionPercentage", progress.getCompletionPercentage());
-        response.put("lastPosition", progress.getLastPosition());
-        response.put("updatedAt", progress.getUpdatedAt());
-        return response;
+    @GetMapping("/video/{lectureId}/progress")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<VideoProgressDto> getProgress(@PathVariable Long lectureId,
+                                                        @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(videoProgressService.getProgress(lectureId, userDetails.getUsername()));
+    }
+
+    @GetMapping("/course/{courseId}/last-watched")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<VideoProgressDto> getLastWatched(@PathVariable Long courseId,
+                                                           @AuthenticationPrincipal UserDetails userDetails) {
+        VideoProgressDto result = videoProgressService.getLastWatched(courseId, userDetails.getUsername());
+        if (result == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(result);
     }
 
     private Long requireUserId(Authentication authentication) {

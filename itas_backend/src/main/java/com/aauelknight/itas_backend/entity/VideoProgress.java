@@ -14,14 +14,12 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Getter;
+import lombok.Data;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 @Entity
 @Table(name = "video_progress")
-@Getter
-@Setter
+@Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
@@ -39,34 +37,41 @@ public class VideoProgress {
     @JoinColumn(name = "lecture_id", nullable = false)
     private Lecture lecture;
 
-    @Column(name = "watched_seconds", nullable = false)
-    private Integer watchedSeconds;
+    @Column(name = "watched_seconds")
+    @Builder.Default
+    private Integer watchedSeconds = 0;
 
-    @Column(name = "completion_percentage", nullable = false)
-    private Double completionPercentage;
+    @Column(name = "completion_percentage")
+    @Builder.Default
+    private Integer completionPercentage = 0;
 
-    @Column(name = "last_position", nullable = false)
-    private Integer lastPosition;
+    @Column(name = "last_position")
+    @Builder.Default
+    private Integer lastPosition = 0;
 
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "last_watched_at_display", length = 10)
+    private String lastWatchedAtDisplay;
+
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    @PreUpdate
     @PrePersist
-    public void onCreate() {
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
         if (watchedSeconds == null) {
             watchedSeconds = 0;
         }
         if (completionPercentage == null) {
-            completionPercentage = 0.0;
+            completionPercentage = 0;
         }
         if (lastPosition == null) {
             lastPosition = 0;
         }
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    public void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        if (lastPosition != null && lastPosition > 0) {
+            int mins = lastPosition / 60;
+            int secs = lastPosition % 60;
+            lastWatchedAtDisplay = String.format("%d:%02d", mins, secs);
+        }
     }
 }

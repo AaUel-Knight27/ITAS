@@ -48,7 +48,7 @@ public class AuthController {
                           JwtUtil jwtUtil,
                           UserRepository userRepository,
                           TokenBlacklistService tokenBlacklistService,
-                          @Value("${jwt.secret}") String secret) {
+                          @Value("${app.jwt.secret}") String secret) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;

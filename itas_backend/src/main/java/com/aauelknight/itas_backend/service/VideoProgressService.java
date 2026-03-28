@@ -1,5 +1,7 @@
 package com.aauelknight.itas_backend.service;
 
+import com.aauelknight.itas_backend.dto.VideoProgressDto;
+import com.aauelknight.itas_backend.dto.VideoProgressRequest;
 import com.aauelknight.itas_backend.entity.Lecture;
 import com.aauelknight.itas_backend.entity.User;
 import com.aauelknight.itas_backend.entity.VideoProgress;
@@ -30,48 +32,66 @@ public class VideoProgressService {
     }
 
     @Transactional
-    public VideoProgress save(Long userId, Long lectureId, Integer watchedSeconds, Integer lastPosition) {
+    public VideoProgressDto saveProgress(Long lectureId, VideoProgressRequest request, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
         Lecture lecture = lectureRepository.findByIdWithSectionAndCourse(lectureId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lecture not found"));
 
         Long courseId = lecture.getSection().getCourse().getId();
-        if (!lecture.isPreview() && !enrollmentService.isEnrolled(userId, courseId)) {
+        if (!lecture.isPreview() && !enrollmentService.isEnrolled(user.getId(), courseId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You are not enrolled in this course");
         }
 
-        VideoProgress progress = videoProgressRepository.findByUserIdAndLectureId(userId, lectureId)
-                .orElseGet(() -> VideoProgress.builder()
-                        .user(getUser(userId))
+        VideoProgress progress = videoProgressRepository.findByUserIdAndLectureId(user.getId(), lectureId)
+                .orElse(VideoProgress.builder()
+                        .user(user)
                         .lecture(lecture)
-                        .watchedSeconds(0)
-                        .lastPosition(0)
-                        .completionPercentage(0.0)
                         .build());
 
-        int normalizedWatched = Math.max(0, watchedSeconds == null ? 0 : watchedSeconds);
-        int normalizedPosition = Math.max(0, lastPosition == null ? 0 : lastPosition);
-        int duration = lecture.getDurationSeconds() == null ? 0 : Math.max(lecture.getDurationSeconds(), 0);
+        int watchedSeconds = Math.max(0, request.getWatchedSeconds() == null ? 0 : request.getWatchedSeconds());
+        int completionPercentage = Math.max(0, Math.min(100,
+                request.getCompletionPercentage() == null ? 0 : request.getCompletionPercentage()));
+        int lastPosition = Math.max(0, request.getLastPosition() == null ? 0 : request.getLastPosition());
 
-        double completion = duration <= 0
-                ? 0.0
-                : Math.min(100.0, (normalizedWatched * 100.0) / duration);
-
-        progress.setWatchedSeconds(Math.max(progress.getWatchedSeconds(), normalizedWatched));
-        progress.setLastPosition(normalizedPosition);
-        progress.setCompletionPercentage(completion);
+        progress.setWatchedSeconds(watchedSeconds);
+        progress.setCompletionPercentage(completionPercentage);
+        progress.setLastPosition(lastPosition);
 
         VideoProgress saved = videoProgressRepository.save(progress);
 
-        if (completion >= 90.0) {
-            enrollmentService.markLectureComplete(userId, lectureId);
+        if (completionPercentage >= 90) {
+            enrollmentService.markLectureComplete(user.getId(), lectureId);
         }
-        return saved;
+
+        return toDto(saved);
     }
 
-    public Integer getLastPosition(Long userId, Long lectureId) {
-        return videoProgressRepository.findByUserIdAndLectureId(userId, lectureId)
-                .map(VideoProgress::getLastPosition)
-                .orElse(0);
+    @Transactional(readOnly = true)
+    public VideoProgressDto getProgress(Long lectureId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        return videoProgressRepository.findByUserIdAndLectureId(user.getId(), lectureId)
+                .map(this::toDto)
+                .orElse(VideoProgressDto.builder()
+                        .lectureId(lectureId)
+                        .watchedSeconds(0)
+                        .completionPercentage(0)
+                        .lastPosition(0)
+                        .lastWatchedAtDisplay(null)
+                        .build());
+    }
+
+    @Transactional(readOnly = true)
+    public VideoProgressDto getLastWatched(Long courseId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        return videoProgressRepository.findLastWatchedInCourse(user.getId(), courseId)
+                .map(this::toDto)
+                .orElse(null);
     }
 
     public String getStreamUrl(Long userId, Long lectureId) {
@@ -93,5 +113,18 @@ public class VideoProgressService {
     private User getUser(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    private VideoProgressDto toDto(VideoProgress vp) {
+        return VideoProgressDto.builder()
+                .id(vp.getId())
+                .lectureId(vp.getLecture().getId())
+                .lectureTitle(vp.getLecture().getTitle())
+                .watchedSeconds(vp.getWatchedSeconds())
+                .completionPercentage(vp.getCompletionPercentage())
+                .lastPosition(vp.getLastPosition())
+                .lastWatchedAtDisplay(vp.getLastWatchedAtDisplay())
+                .updatedAt(vp.getUpdatedAt() != null ? vp.getUpdatedAt().toString() : null)
+                .build();
     }
 }

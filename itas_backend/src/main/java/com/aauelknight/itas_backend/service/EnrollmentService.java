@@ -215,7 +215,7 @@ public class EnrollmentService {
         return lectureCompletionRepository
                 .findTopByUserIdAndLectureSectionCourseIdAndCompletedTrueOrderByCompletedAtDesc(userId, courseId)
                 .map(completion -> completion.getLecture().getId())
-                .or(() -> videoProgressRepository.findTopByUserIdAndLectureSectionCourseIdOrderByUpdatedAtDesc(userId, courseId)
+                .or(() -> videoProgressRepository.findLastWatchedInCourse(userId, courseId)
                         .map(progress -> progress.getLecture().getId()))
                 .or(() -> lectureRepository.findBySectionCourseIdOrderBySectionOrderIndexAscOrderIndexAsc(courseId)
                         .stream()

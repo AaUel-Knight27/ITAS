@@ -17,7 +17,7 @@ public class CorsConfig {
     private String frontendUrl;
 
     @Bean
-    public CorsFilter corsFilter() {
+    public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config =
                 new CorsConfiguration();
 
@@ -45,6 +45,11 @@ public class CorsConfig {
         source.registerCorsConfiguration(
                 "/**", config);
 
-        return new CorsFilter(source);
+        return source;
+    }
+
+    @Bean
+    public CorsFilter corsFilter(CorsConfigurationSource corsConfigurationSource) {
+        return new CorsFilter(corsConfigurationSource);
     }
 }
