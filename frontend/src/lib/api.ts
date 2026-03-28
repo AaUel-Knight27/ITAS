@@ -53,8 +53,6 @@ type AxiosConfigWithSuppressedStatuses = {
   suppressErrorStatuses?: number[];
 };
 
-const API_BASE_URL = API_BASE;
-
 function readAccessTokenFromStorage(): string | undefined {
   if (typeof window === "undefined") {
     return undefined;
@@ -74,7 +72,7 @@ function readAccessTokenFromStorage(): string | undefined {
 }
 
 export const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_BASE,
   headers: {
     "Content-Type": "application/json",
   },
@@ -203,6 +201,21 @@ export const learnerApi = {
     }),
 
   shareCertificate: (id: number) => api.post(`/lms/certificate/${id}/share`),
+};
+
+export const progressApi = {
+  save: (
+    lectureId: number,
+    data: {
+      watchedSeconds: number;
+      completionPercentage: number;
+      lastPosition: number;
+    }
+  ) => api.post(`/lms/video/${lectureId}/progress`, data),
+
+  get: (lectureId: number) => api.get(`/lms/video/${lectureId}/progress`),
+
+  getLastWatched: (courseId: number) => api.get(`/lms/course/${courseId}/last-watched`),
 };
 
 export const analyticsApi = {

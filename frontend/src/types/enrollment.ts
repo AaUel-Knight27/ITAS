@@ -13,9 +13,13 @@ export interface Enrollment {
 }
 
 export interface VideoProgress {
+  id?: number | string;
   lectureId: number | string;
+  lectureTitle?: string;
   watchedSeconds: number;
+  completionPercentage?: number;
   lastPosition: number;
+  lastWatchedAtDisplay?: string | null;
   completed?: boolean;
   updatedAt?: string;
 }

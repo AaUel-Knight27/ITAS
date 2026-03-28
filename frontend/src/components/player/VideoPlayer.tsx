@@ -1,215 +1,378 @@
-"use client";
+'use client'
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
-import videojs from "video.js";
-import type Player from "video.js/dist/types/player";
+import {
+    useEffect,
+    useRef,
+    useState,
+    useCallback,
+    forwardRef,
+    useImperativeHandle,
+} from 'react'
 
-type VideoPlayerProps = {
-  src: string;
-  lectureId: number | string;
-  lectureTitle?: string;
-  onProgress?: (currentTime: number, duration: number) => void;
-  resumeAt?: number;
-};
-
-function getVideoType(url: string): string {
-  const lower = url.toLowerCase();
-  if (lower.includes(".m3u8")) return "application/x-mpegURL";
-  if (lower.includes(".webm")) return "video/webm";
-  return "video/mp4";
+interface Props {
+    src: string
+    lectureId: number
+    resumeAt?: number
+    onProgress?: (
+        currentTime: number,
+        duration: number) => void
+    onEnded?: () => void
+    autoPlay?: boolean
 }
 
-function formatClock(seconds: number) {
-  const safe = Math.max(0, Math.floor(seconds));
-  const minutes = Math.floor(safe / 60);
-  const secs = safe % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+export interface VideoPlayerHandle {
+    getCurrentTime: () => number
+    getDuration: () => number
+    pause: () => void
+    play: () => void
+    seekTo: (time: number) => void
 }
 
-export default function VideoPlayer({
-  src,
-  lectureId,
-  lectureTitle,
-  onProgress,
-  resumeAt = 0,
-}: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const playerRef = useRef<Player | null>(null);
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const resumeActionTakenRef = useRef(false);
+const VideoPlayer = forwardRef<
+    VideoPlayerHandle,
+    Props
+>(function VideoPlayer(
+    {
+        src,
+        lectureId,
+        resumeAt = 0,
+        onProgress,
+        onEnded,
+        autoPlay = false,
+    },
+    ref
+) {
+    const videoRef =
+        useRef<HTMLVideoElement>(null)
+    const playerRef = useRef<any>(null)
+    const intervalRef =
+        useRef<NodeJS.Timeout | undefined>(
+            undefined)
+    const mountedRef = useRef(false)
+    const initializingRef = useRef(false)
+    const [error, setError] = useState(false)
+    const [loading, setLoading] = useState(true)
 
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [showResumeToast, setShowResumeToast] = useState(resumeAt > 10);
+    useImperativeHandle(ref, () => ({
+        getCurrentTime: () =>
+            playerRef.current
+                ?.currentTime() || 0,
+        getDuration: () =>
+            playerRef.current
+                ?.duration() || 0,
+        pause: () =>
+            playerRef.current?.pause(),
+        play: () =>
+            playerRef.current?.play(),
+        seekTo: (time: number) =>
+            playerRef.current?.currentTime(
+                Math.max(0, time)),
+    }))
 
-  const progressPercent = useMemo(() => {
-    if (!duration) return 0;
-    return Math.min(100, (currentTime / duration) * 100);
-  }, [currentTime, duration]);
+    const getVideoType = (url: string) => {
+        const lower = url.toLowerCase()
+        if (lower.includes('.m3u8'))
+            return 'application/x-mpegURL'
+        if (lower.includes('.webm'))
+            return 'video/webm'
+        if (lower.includes('.ogg'))
+            return 'video/ogg'
+        return 'video/mp4'
+    }
 
-  useEffect(() => {
-    setCurrentTime(0);
-    setDuration(0);
-    setShowResumeToast(resumeAt > 10);
-    resumeActionTakenRef.current = false;
-  }, [lectureId, resumeAt]);
-
-  useEffect(() => {
-    if (!src || !videoRef.current) return;
-
-    let player: Player | null = null;
-    let timeUpdateHandler: (() => void) | null = null;
-    let loadedMetadataHandler: (() => void) | null = null;
-
-    const timer = setTimeout(() => {
-      if (!videoRef.current) return;
-
-      const createdPlayer = videojs(videoRef.current, {
-        controls: true,
-        fluid: true,
-        responsive: true,
-        preload: "auto",
-        playbackRates: [0.5, 0.75, 1, 1.25, 1.5, 2],
-        sources: [{ src, type: getVideoType(src) }],
-        controlBar: {
-          volumePanel: { inline: false },
-          fullscreenToggle: true,
-          currentTimeDisplay: true,
-          timeDivider: true,
-          durationDisplay: true,
-          progressControl: true,
-        },
-      });
-
-      player = createdPlayer;
-      playerRef.current = createdPlayer;
-
-      loadedMetadataHandler = () => {
-        if (resumeAt > 0 && !resumeActionTakenRef.current) {
-          createdPlayer.currentTime(resumeAt);
+    const destroyPlayer = useCallback(() => {
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current)
+            intervalRef.current = undefined
         }
-      };
 
-      timeUpdateHandler = () => {
-        setCurrentTime(Number(createdPlayer.currentTime() ?? 0));
-        setDuration(Number(createdPlayer.duration() ?? 0));
-      };
-
-      createdPlayer.on("loadedmetadata", loadedMetadataHandler);
-      createdPlayer.on("timeupdate", timeUpdateHandler);
-
-      heartbeatRef.current = setInterval(() => {
-        if (!onProgress || !playerRef.current) return;
-        const currentPlayer = playerRef.current;
-        if (currentPlayer.paused() || currentPlayer.ended()) return;
-
-        const current = Number(currentPlayer.currentTime() ?? 0);
-        const total = Number(currentPlayer.duration() ?? 0);
-        if (total > 0) {
-          onProgress(current, total);
+        if (playerRef.current) {
+            try {
+                if (!playerRef.current.isDisposed
+                        ?.()) {
+                    playerRef.current.dispose()
+                }
+            } catch {
+                // Ignore disposal errors
+            }
+            playerRef.current = null
         }
-      }, 15000);
-    }, 0);
+    }, [])
 
-    return () => {
-      clearTimeout(timer);
+    const initPlayer = useCallback(
+            async () => {
+        if (initializingRef.current) return
+        if (!videoRef.current) return
+        if (!mountedRef.current) return
 
-      if (heartbeatRef.current) {
-        clearInterval(heartbeatRef.current);
-        heartbeatRef.current = null;
-      }
-
-      if (player) {
-        if (loadedMetadataHandler) {
-          player.off("loadedmetadata", loadedMetadataHandler);
+        if (!document.body.contains(
+                videoRef.current)) {
+            return
         }
-        if (timeUpdateHandler) {
-          player.off("timeupdate", timeUpdateHandler);
+
+        initializingRef.current = true
+        setLoading(true)
+        setError(false)
+
+        destroyPlayer()
+
+        try {
+            const vjsModule = await import(
+                'video.js')
+            const videojs = vjsModule.default
+
+            if (!mountedRef.current) {
+                initializingRef.current = false
+                return
+            }
+            if (!videoRef.current) {
+                initializingRef.current = false
+                return
+            }
+            if (!document.body.contains(
+                    videoRef.current)) {
+                initializingRef.current = false
+                return
+            }
+
+            await new Promise(resolve =>
+                setTimeout(resolve, 50))
+
+            if (!mountedRef.current ||
+                    !videoRef.current ||
+                    !document.body.contains(
+                        videoRef.current)) {
+                initializingRef.current = false
+                return
+            }
+
+            const player = videojs(
+                videoRef.current,
+                {
+                    controls: true,
+                    fluid: true,
+                    preload: 'metadata',
+                    playbackRates: [
+                        0.5, 0.75, 1,
+                        1.25, 1.5, 2
+                    ],
+                    sources: [{
+                        src,
+                        type: getVideoType(src),
+                    }],
+                    html5: {
+                        vhs: {
+                            overrideNative: false,
+                        },
+                    },
+                }
+            )
+
+            playerRef.current = player
+
+            player.on('loadedmetadata', () => {
+                if (!mountedRef.current) return
+                setLoading(false)
+                if (resumeAt > 2) {
+                    player.currentTime(resumeAt)
+                }
+            })
+
+            player.on('loadeddata', () => {
+                if (!mountedRef.current) return
+                setLoading(false)
+                if (autoPlay) {
+                    const playPromise =
+                        player?.play()
+                    if (playPromise) {
+                        void playPromise
+                            .catch(() => {})
+                    }
+                }
+            })
+
+            intervalRef.current = setInterval(
+                () => {
+                if (!mountedRef.current) return
+                if (!playerRef.current) return
+                if (playerRef.current
+                        .isDisposed?.()) return
+
+                try {
+                    const paused =
+                        playerRef.current
+                            .paused()
+                    const ended =
+                        playerRef.current
+                            .ended()
+
+                    if (!paused && !ended) {
+                        const current =
+                            playerRef.current
+                                .currentTime()
+                            || 0
+                        const duration =
+                            playerRef.current
+                                .duration()
+                            || 0
+                        if (duration > 0) {
+                            onProgress?.(
+                                current,
+                                duration)
+                        }
+                    }
+                } catch {
+                    // Ignore disposed player
+                }
+            }, 10000)
+
+            player.on('pause', () => {
+                if (!mountedRef.current) return
+                try {
+                    const current =
+                        player.currentTime() || 0
+                    const duration =
+                        player.duration() || 0
+                    if (duration > 0) {
+                        onProgress?.(
+                            current, duration)
+                    }
+                } catch {
+                    // Ignore pause save errors
+                }
+            })
+
+            player.on('ended', () => {
+                if (!mountedRef.current) return
+                try {
+                    const duration =
+                        player.duration() || 0
+                    onProgress?.(
+                        duration, duration)
+                    onEnded?.()
+                } catch {
+                    // Ignore ended errors
+                }
+            })
+
+            player.on('error', () => {
+                if (!mountedRef.current) return
+                setError(true)
+                setLoading(false)
+            })
+        } catch (err) {
+            console.warn(
+                'VideoPlayer init failed:',
+                err)
+            if (mountedRef.current) {
+                setError(true)
+                setLoading(false)
+            }
+        } finally {
+            initializingRef.current = false
         }
-        player.dispose();
-      }
+    }, [
+        autoPlay,
+        destroyPlayer,
+        onEnded,
+        onProgress,
+        resumeAt,
+        src,
+        lectureId,
+    ])
 
-      playerRef.current = null;
-    };
-  }, [onProgress, resumeAt, src]);
+    useEffect(() => {
+        mountedRef.current = true
 
-  useEffect(() => {
-    if (!showResumeToast || resumeActionTakenRef.current) return;
+        const rafId = requestAnimationFrame(
+            () => {
+            if (mountedRef.current) {
+                void initPlayer()
+            }
+        })
 
-    const timeout = setTimeout(() => {
-      const player = playerRef.current;
-      if (player && resumeAt > 0) {
-        player.currentTime(resumeAt);
-      }
-      resumeActionTakenRef.current = true;
-      setShowResumeToast(false);
-    }, 5000);
+        return () => {
+            mountedRef.current = false
+            cancelAnimationFrame(rafId)
+            destroyPlayer()
+        }
+    }, [initPlayer])
 
-    return () => clearTimeout(timeout);
-  }, [resumeAt, showResumeToast]);
-
-  function handleResume() {
-    const player = playerRef.current;
-    if (!player) return;
-    player.currentTime(resumeAt);
-    resumeActionTakenRef.current = true;
-    setShowResumeToast(false);
-  }
-
-  function handleStartOver() {
-    const player = playerRef.current;
-    if (!player) return;
-    player.currentTime(0);
-    resumeActionTakenRef.current = true;
-    setShowResumeToast(false);
-  }
-
-  function handleSeek(event: ChangeEvent<HTMLInputElement>) {
-    const player = playerRef.current;
-    if (!player || !duration) return;
-    const ratio = Number(event.target.value) / 100;
-    player.currentTime(ratio * duration);
-  }
-
-  if (!src) {
-    return <div className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600">Video source unavailable.</div>;
-  }
-
-  return (
-    <div className="space-y-3">
-      <div className="relative overflow-hidden rounded-xl border border-slate-200 bg-black shadow-sm" data-vjs-player>
-        <video ref={videoRef} className="video-js vjs-big-play-centered" playsInline aria-label={lectureTitle ?? String(lectureId)} />
-
-        {showResumeToast ? (
-          <div className="absolute left-4 top-4 z-20 rounded-lg bg-slate-900/90 px-3 py-2 text-sm text-white">
-            <p>Resume from {formatClock(resumeAt)}?</p>
-            <div className="mt-2 flex gap-2">
-              <button type="button" onClick={handleResume} className="rounded bg-emerald-600 px-2 py-1 text-xs">
-                Resume
-              </button>
-              <button type="button" onClick={handleStartOver} className="rounded bg-slate-200 px-2 py-1 text-xs text-slate-900">
-                Start Over
-              </button>
+    if (error) {
+        return (
+            <div className="flex items-center
+                justify-center w-full
+                aspect-video bg-gray-900">
+                <div className="text-center
+                    text-gray-500 p-6">
+                    <p className="text-4xl mb-3">
+                        Video
+                    </p>
+                    <p className="text-sm
+                        font-medium text-gray-400
+                        mb-2">
+                        Could not load video
+                    </p>
+                    <p className="text-xs
+                        text-gray-600 mb-4">
+                        The video file may be
+                        unavailable or the format
+                        is not supported.
+                    </p>
+                    <a
+                        href={src}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2
+                            bg-blue-600 text-white
+                            rounded-lg text-xs
+                            hover:bg-blue-700">
+                        Try Opening Directly
+                    </a>
+                </div>
             </div>
-          </div>
-        ) : null}
-      </div>
+        )
+    }
 
-      <div className="rounded-lg border border-slate-200 bg-white p-3">
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={progressPercent}
-          onChange={handleSeek}
-          className="w-full accent-blue-600"
-          aria-label="Video progress"
-        />
-        <div className="mt-1 flex items-center justify-between text-xs text-slate-600">
-          <span>{formatClock(currentTime)}</span>
-          <span>{formatClock(duration)}</span>
+    return (
+        <div className="relative w-full
+            bg-black">
+            {loading && (
+                <div className="absolute
+                    inset-0 z-10
+                    flex items-center
+                    justify-center
+                    bg-gray-900">
+                    <div className="flex
+                        flex-col items-center
+                        gap-3">
+                        <div className="w-8 h-8
+                            border-2
+                            border-blue-500
+                            border-t-transparent
+                            rounded-full
+                            animate-spin" />
+                        <p className="text-xs
+                            text-gray-500">
+                            Loading video...
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            <div data-vjs-player>
+                <video
+                    ref={videoRef}
+                    className="video-js
+                        vjs-big-play-centered
+                        vjs-fluid"
+                    playsInline
+                />
+            </div>
         </div>
-      </div>
-    </div>
-  );
-}
+    )
+})
+
+VideoPlayer.displayName = 'VideoPlayer'
+
+export default VideoPlayer

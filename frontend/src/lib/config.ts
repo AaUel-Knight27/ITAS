@@ -1,11 +1,16 @@
-const rawApiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api/v1";
-const rawStorageBase = process.env.NEXT_PUBLIC_STORAGE_URL ?? "http://localhost:8080";
+const rawBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+const rawStorageBase = process.env.NEXT_PUBLIC_STORAGE_URL ?? rawBase;
 
-const normalizedApiBase = rawApiBase.replace(/\/+$/, "");
+// Normalize base URL: no trailing slash
+const normalizedBase = rawBase.replace(/\/+$/, "");
 const normalizedStorageBase = rawStorageBase.replace(/\/+$/, "");
 
-export const API_BASE = normalizedApiBase.endsWith("/api/v1")
-  ? normalizedApiBase
-  : `${normalizedApiBase}/api/v1`;
+// Centralized API Base: ensure /api/v1 prefix
+export const API_BASE = normalizedBase.endsWith("/api/v1") 
+  ? normalizedBase 
+  : `${normalizedBase}/api/v1`;
 
-export const STORAGE_BASE = normalizedStorageBase;
+// Centralized Storage Base: for public assets/uploads (must include context path)
+export const STORAGE_BASE = normalizedStorageBase.endsWith("/api/v1")
+  ? normalizedStorageBase
+  : `${normalizedStorageBase}/api/v1`;

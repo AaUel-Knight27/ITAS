@@ -3,8 +3,8 @@
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 
+import { progressApi } from "@/lib/api";
 import { getCourseBySlug } from "@/lib/api/courses";
-import { getCourseProgress } from "@/lib/api/enrollment";
 import { getCourseLearnHref } from "@/lib/learn";
 import type { CourseSection } from "@/types";
 
@@ -42,9 +42,9 @@ export default function LearnRedirectPage() {
 
         if (course.enrolled) {
           try {
-            const progress = await getCourseProgress(course.id);
+            const progress = await progressApi.getLastWatched(Number(course.id));
             if (!active) return;
-            targetLectureId = progress.lastLectureId ?? null;
+            targetLectureId = progress.data?.lectureId ?? null;
           } catch {
             targetLectureId = null;
           }
