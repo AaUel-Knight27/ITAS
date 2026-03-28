@@ -2,7 +2,7 @@ spring:
   datasource:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/portal_db}
     username: ${DATABASE_USERNAME:postgres}
-    password: ${DATABASE_PASSWORD:Kangrro@123}
+    password: ${DATABASE_PASSWORD:your_password}
     driver-class-name: org.postgresql.Driver
     hikari:
       connection-timeout: 20000
@@ -41,7 +41,7 @@ server:
 app:
   upload-dir: ${UPLOAD_DIR:uploads}
   jwt:
-    secret: ${JWT_SECRET:U3ByaW5nQm9vdDNKYXZhMjVKd3RTZWNyZXRLZXlGb3JQb3J0YWxMbXNfU3VwZXJTZWN1cmVfMjAyNg==}
+    secret: ${JWT_SECRET:your_secret}
     expiration-ms: ${JWT_EXPIRATION:86400000}
   frontend-url: ${FRONTEND_URL:http://localhost:3000}
 
