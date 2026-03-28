@@ -1,72 +1,32 @@
-# Compiled class files and build outputs
-target/
-build/
-!.mvn/wrapper/maven-wrapper.jar
-!.gradle/wrapper/gradle-wrapper.jar
+# ================== Backend (Spring Boot) ==================
+itas_backend/target/
+itas_backend/.mvn/
+itas_backend/mvnw
+itas_backend/mvnw.cmd
+itas_backend/logs/
+itas_backend/*.log
+itas_backend/uploads/
 
-# Maven
-.mvn/
-mvnw
-mvnw.cmd
+# ================== Frontend (Next.js) ==================
+frontend/.next/
+frontend/node_modules/
+frontend/out/
+frontend/.env*.local
+frontend/.env
 
-# Gradle
-.gradle/
-gradlew
-gradlew.bat
-
-# Spring Boot specific
-/logs/
-*.log
-*.log.*
-
-# Temporary files
-*.tmp
-*.swp
-*~
-
-# IDE files
-# IntelliJ IDEA
-.idea/
-*.iml
-*.iws
-*.ipr
-uploads/
-
-# Eclipse / STS
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# NetBeans
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-
-# OS generated files
+# ================== Common ==================
+**/.idea/
+**/.vscode/
+**/*.iml
+**/*.log
 .DS_Store
 Thumbs.db
+nul
+NUL
+*.tmp
 
-# Environment / sensitive files
-.env
-.env.local
-.env.*.local
-application-*.yml
-application-*.properties
-!application.yml
-!application.properties
-
-# Other
-*.jar
-*.war
-*.ear
-*.class
+# Sensitive files
+**/.env
+**/*.env.local
+**/*-local.properties
+**/*-local.yml
