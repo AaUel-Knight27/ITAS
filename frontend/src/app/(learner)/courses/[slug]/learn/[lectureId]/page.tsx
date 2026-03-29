@@ -107,6 +107,7 @@ export default function LearnLecturePage() {
   const [autoPlayLectureId, setAutoPlayLectureId] = useState<string | null>(null);
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lectureSwitchTimeoutRef = useRef<number | null>(null);
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const selectingLectureRef = useRef(false);
@@ -174,14 +175,20 @@ export default function LearnLecturePage() {
       if (activeLecture) {
         persistLocalProgress(String(activeLecture.id), playerRef.current?.getCurrentTime() ?? 0);
       }
+      if (lectureSwitchTimeoutRef.current) {
+        clearTimeout(lectureSwitchTimeoutRef.current);
+        lectureSwitchTimeoutRef.current = null;
+      }
       stopCountdown();
       setAutoPlayLectureId(null);
       selectingLectureRef.current = true;
-      setActiveLecture(lecture);
-      setActiveTab("video");
-      router.push(`/courses/${slug}/learn/${lecture.id}`);
-      window.setTimeout(() => {
+      setActiveLecture(null);
+      lectureSwitchTimeoutRef.current = window.setTimeout(() => {
+        setActiveLecture(lecture);
+        setActiveTab("video");
+        router.push(`/courses/${slug}/learn/${lecture.id}`);
         selectingLectureRef.current = false;
+        lectureSwitchTimeoutRef.current = null;
         document.getElementById(`lecture-${lecture.id}`)?.scrollIntoView({
           behavior: "smooth",
           block: "nearest",
@@ -317,6 +324,14 @@ export default function LearnLecturePage() {
       setActiveLecture(matchedLecture);
     }
   }, [activeLecture, allLectures, lectureIdParam]);
+
+  useEffect(() => {
+    return () => {
+      if (lectureSwitchTimeoutRef.current) {
+        clearTimeout(lectureSwitchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -502,7 +517,7 @@ export default function LearnLecturePage() {
     );
   }
 
-  if (error || !course || !activeLecture) {
+  if (error || !course) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950 p-6">
         <div className="max-w-sm text-center">
@@ -515,6 +530,14 @@ export default function LearnLecturePage() {
             Back to Courses
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (!activeLecture) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-950">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
       </div>
     );
   }
@@ -737,35 +760,39 @@ export default function LearnLecturePage() {
               </div>
             ) : null}
 
-            <div className="flex-1 overflow-y-auto bg-gray-950">
-              {lectureType === "VIDEO" ? (
-                <div>
-                  {activeLecture.videoUrl || activeLecture.contentUrl ? (
-                    <VideoPlayer
-                      key={`video-${activeLecture.id}`}
-                      ref={playerRef}
-                      src={getFileUrl(activeLecture.videoUrl ?? activeLecture.contentUrl) ?? ""}
-                      lectureId={Number(activeLecture.id)}
-                      resumeAt={resumeAt}
-                      autoPlay={autoPlayLectureId === String(activeLecture.id)}
-                      onProgress={(currentTime, duration) => void handleVideoProgress(currentTime, duration)}
-                      onEnded={() => void handleMarkComplete()}
-                    />
-                  ) : (
-                    <div className="flex h-64 items-center justify-center bg-gray-900">
-                      <div className="text-center text-gray-500">
-                        <p className="mb-2 text-4xl">Video</p>
-                        <p className="text-sm">No video uploaded</p>
+              <div className="flex-1 overflow-y-auto bg-gray-950">
+                {lectureType === "VIDEO" ? (
+                  <div>
+                    {!activeLecture ? (
+                      <div className="flex aspect-video w-full items-center justify-center bg-gray-900">
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
                       </div>
-                    </div>
-                  )}
+                    ) : activeLecture.videoUrl || activeLecture.contentUrl ? (
+                      <VideoPlayer
+                        key={`video-${activeLecture.id}`}
+                        ref={playerRef}
+                        src={getFileUrl(activeLecture.videoUrl ?? activeLecture.contentUrl) ?? ""}
+                        lectureId={Number(activeLecture.id)}
+                        resumeAt={resumeAt}
+                        autoPlay={autoPlayLectureId === String(activeLecture.id)}
+                        onProgress={(currentTime, duration) => void handleVideoProgress(currentTime, duration)}
+                        onEnded={() => void handleMarkComplete()}
+                      />
+                    ) : (
+                      <div className="flex h-64 items-center justify-center bg-gray-900">
+                        <div className="text-center text-gray-500">
+                          <p className="mb-2 text-4xl">Video</p>
+                          <p className="text-sm">No video uploaded</p>
+                        </div>
+                      </div>
+                    )}
 
-                  {activeLecture.description ? (
-                    <div className="mx-auto max-w-4xl p-6">
-                      <h3 className="mb-2 text-sm font-semibold text-white">About this lesson</h3>
-                      <p className="text-sm leading-relaxed text-gray-400">{activeLecture.description}</p>
-                    </div>
-                  ) : null}
+                    {activeLecture?.description ? (
+                      <div className="mx-auto max-w-4xl p-6">
+                        <h3 className="mb-2 text-sm font-semibold text-white">About this lesson</h3>
+                        <p className="text-sm leading-relaxed text-gray-400">{activeLecture.description}</p>
+                      </div>
+                    ) : null}
                 </div>
               ) : null}
 

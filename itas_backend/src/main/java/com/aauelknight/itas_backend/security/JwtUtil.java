@@ -2,8 +2,12 @@ package com.aauelknight.itas_backend.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.io.DecodingException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import javax.crypto.SecretKey;
 import lombok.extern.slf4j.Slf4j;
@@ -20,7 +24,7 @@ public class JwtUtil {
 
     public JwtUtil(@Value("${app.jwt.secret}") String secret,
                    @Value("${app.jwt.expiration-ms}") long expirationMs) {
-        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        this.signingKey = Keys.hmacShaKeyFor(resolveSecretBytes(secret));
         this.expirationMs = expirationMs;
     }
 
@@ -65,11 +69,53 @@ public class JwtUtil {
         return expirationMs;
     }
 
+    public SecretKey getSigningKey() {
+        return signingKey;
+    }
+
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(signingKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    private byte[] resolveSecretBytes(String secret) {
+        String value = secret == null ? "" : secret.trim();
+
+        if (value.isEmpty()) {
+            throw new IllegalStateException("app.jwt.secret must not be blank");
+        }
+
+        byte[] decoded = tryDecode(value);
+        if (decoded != null && decoded.length >= 32) {
+            return decoded;
+        }
+
+        byte[] rawBytes = value.getBytes(StandardCharsets.UTF_8);
+        if (rawBytes.length >= 32) {
+            return rawBytes;
+        }
+
+        try {
+            return MessageDigest.getInstance("SHA-256").digest(rawBytes);
+        } catch (NoSuchAlgorithmException ex) {
+            throw new IllegalStateException("SHA-256 is not available", ex);
+        }
+    }
+
+    private byte[] tryDecode(String secret) {
+        try {
+            return Decoders.BASE64.decode(secret);
+        } catch (DecodingException ignored) {
+            // Fall through to URL-safe Base64 or raw text.
+        }
+
+        try {
+            return Decoders.BASE64URL.decode(secret);
+        } catch (DecodingException ignored) {
+            return null;
+        }
     }
 }

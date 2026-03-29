@@ -218,7 +218,7 @@ export default function QuizPlayer({ courseId, lectureId, onComplete }: Props) {
           <div className="flex gap-1">
             {questions.map((entry, index) => (
               <button
-                key={entry.id}
+                key={`dot-${entry.id}-${index}`}
                 type="button"
                 onClick={() => setCurrentQuestion(index)}
                 className={`h-2.5 w-2.5 rounded-full ${
@@ -267,7 +267,11 @@ export default function QuizPlayer({ courseId, lectureId, onComplete }: Props) {
 
                     return (
                       <button
-                        key={`${question.id}-${option}`}
+                        key={
+                          question.questionType === "TRUE_FALSE"
+                            ? `q${question.id}-tf-${index}`
+                            : `q${question.id}-opt-${index}`
+                        }
                         type="button"
                         onClick={() => handleAnswer(question.id, option)}
                         className={`flex w-full items-start gap-3 rounded-xl border p-4 text-left text-sm transition-all ${

@@ -30,3 +30,5 @@ NUL
 **/*.env.local
 **/*-local.properties
 **/*-local.yml
+itas_backend/src/main/resources/application.yml
+itas_backend/pom.xml

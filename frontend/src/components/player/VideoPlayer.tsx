@@ -62,8 +62,13 @@ const VideoPlayer = forwardRef<
                 ?.duration() || 0,
         pause: () =>
             playerRef.current?.pause(),
-        play: () =>
-            playerRef.current?.play(),
+        play: () => {
+            const playPromise =
+                playerRef.current?.play()
+            if (playPromise?.catch) {
+                void playPromise.catch(() => {})
+            }
+        },
         seekTo: (time: number) =>
             playerRef.current?.currentTime(
                 Math.max(0, time)),
@@ -88,14 +93,17 @@ const VideoPlayer = forwardRef<
 
         if (playerRef.current) {
             try {
-                if (!playerRef.current.isDisposed
-                        ?.()) {
-                    playerRef.current.dispose()
+                const player =
+                    playerRef.current
+                playerRef.current = null
+
+                if (!player.isDisposed?.()) {
+                    try { player.pause() } catch {}
+                    try { player.dispose() } catch {}
                 }
             } catch {
                 // Ignore disposal errors
             }
-            playerRef.current = null
         }
     }, [])
 
@@ -138,6 +146,15 @@ const VideoPlayer = forwardRef<
             await new Promise(resolve =>
                 setTimeout(resolve, 50))
 
+            if (!videoRef.current?.isConnected) {
+                initializingRef.current = false
+                return
+            }
+            if (!document.body.contains(
+                    videoRef.current)) {
+                initializingRef.current = false
+                return
+            }
             if (!mountedRef.current ||
                     !videoRef.current ||
                     !document.body.contains(
@@ -171,7 +188,10 @@ const VideoPlayer = forwardRef<
             playerRef.current = player
 
             player.on('loadedmetadata', () => {
-                if (!mountedRef.current) return
+                if (!mountedRef.current ||
+                        !videoRef.current?.isConnected) {
+                    return
+                }
                 setLoading(false)
                 if (resumeAt > 2) {
                     player.currentTime(resumeAt)
@@ -179,12 +199,15 @@ const VideoPlayer = forwardRef<
             })
 
             player.on('loadeddata', () => {
-                if (!mountedRef.current) return
+                if (!mountedRef.current ||
+                        !videoRef.current?.isConnected) {
+                    return
+                }
                 setLoading(false)
                 if (autoPlay) {
                     const playPromise =
                         player?.play()
-                    if (playPromise) {
+                    if (playPromise?.catch) {
                         void playPromise
                             .catch(() => {})
                     }
@@ -193,10 +216,27 @@ const VideoPlayer = forwardRef<
 
             intervalRef.current = setInterval(
                 () => {
-                if (!mountedRef.current) return
+                if (!mountedRef.current) {
+                    clearInterval(intervalRef.current)
+                    intervalRef.current =
+                        undefined
+                    return
+                }
+                if (!videoRef.current
+                        ?.isConnected) {
+                    clearInterval(intervalRef.current)
+                    intervalRef.current =
+                        undefined
+                    return
+                }
                 if (!playerRef.current) return
                 if (playerRef.current
-                        .isDisposed?.()) return
+                        .isDisposed?.()) {
+                    clearInterval(intervalRef.current)
+                    intervalRef.current =
+                        undefined
+                    return
+                }
 
                 try {
                     const paused =
@@ -222,12 +262,17 @@ const VideoPlayer = forwardRef<
                         }
                     }
                 } catch {
-                    // Ignore disposed player
+                    clearInterval(intervalRef.current)
+                    intervalRef.current =
+                        undefined
                 }
             }, 10000)
 
             player.on('pause', () => {
-                if (!mountedRef.current) return
+                if (!mountedRef.current ||
+                        !videoRef.current?.isConnected) {
+                    return
+                }
                 try {
                     const current =
                         player.currentTime() || 0
@@ -243,7 +288,10 @@ const VideoPlayer = forwardRef<
             })
 
             player.on('ended', () => {
-                if (!mountedRef.current) return
+                if (!mountedRef.current ||
+                        !videoRef.current?.isConnected) {
+                    return
+                }
                 try {
                     const duration =
                         player.duration() || 0
@@ -256,7 +304,10 @@ const VideoPlayer = forwardRef<
             })
 
             player.on('error', () => {
-                if (!mountedRef.current) return
+                if (!mountedRef.current ||
+                        !videoRef.current?.isConnected) {
+                    return
+                }
                 setError(true)
                 setLoading(false)
             })
@@ -264,7 +315,8 @@ const VideoPlayer = forwardRef<
             console.warn(
                 'VideoPlayer init failed:',
                 err)
-            if (mountedRef.current) {
+            if (mountedRef.current &&
+                    videoRef.current?.isConnected) {
                 setError(true)
                 setLoading(false)
             }

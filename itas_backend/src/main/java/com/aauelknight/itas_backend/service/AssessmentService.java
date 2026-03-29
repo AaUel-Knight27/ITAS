@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -143,18 +144,30 @@ public class AssessmentService {
 
     @Transactional(readOnly = true)
     public AssessmentDto getByLectureId(Long lectureId) {
-        return assessmentRepository.findByLectureId(lectureId)
-                .map(this::toDto)
+        List<Assessment> assessments = assessmentRepository.findByLectureId(lectureId);
+
+        if (assessments.isEmpty()) {
+            throw new ResourceNotFoundException("No assessment found for lecture: " + lectureId);
+        }
+
+        Assessment assessment = assessments.stream()
+                .max(Comparator.comparing(Assessment::getId))
                 .orElseThrow(() -> new ResourceNotFoundException("No assessment for lecture: " + lectureId));
+
+        return toDto(assessment);
     }
 
     @Transactional(readOnly = true)
     public AssessmentDto getByCourseId(Long courseId) {
-        return assessmentRepository.findByCourseId(courseId)
-                .stream()
-                .findFirst()
-                .map(this::toDto)
-                .orElseThrow(() -> new ResourceNotFoundException("No assessment for course: " + courseId));
+        List<Assessment> assessments = assessmentRepository.findByCourseId(courseId);
+
+        if (assessments.isEmpty()) {
+            throw new ResourceNotFoundException("No assessment found for course: " + courseId);
+        }
+
+        return toDto(assessments.stream()
+                .max(Comparator.comparing(Assessment::getId))
+                .orElseThrow());
     }
 
     @Transactional

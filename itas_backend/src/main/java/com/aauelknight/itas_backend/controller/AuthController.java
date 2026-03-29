@@ -8,8 +8,6 @@ import com.aauelknight.itas_backend.security.JwtUtil;
 import com.aauelknight.itas_backend.security.TokenBlacklistService;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -47,13 +45,12 @@ public class AuthController {
     public AuthController(AuthenticationManager authenticationManager,  
                           JwtUtil jwtUtil,
                           UserRepository userRepository,
-                          TokenBlacklistService tokenBlacklistService,
-                          @Value("${app.jwt.secret}") String secret) {
+                          TokenBlacklistService tokenBlacklistService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.tokenBlacklistService = tokenBlacklistService;
-        this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+        this.signingKey = jwtUtil.getSigningKey();
     }
 
     @PostMapping("/login")
