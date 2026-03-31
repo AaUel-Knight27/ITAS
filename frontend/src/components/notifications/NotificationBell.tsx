@@ -1,55 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
+import { useNotifications } from "@/context/NotificationContext";
 import { notificationApi } from "@/lib/api";
 import type { UserNotificationDto } from "@/lib/types";
 
-export default function NotificationBell() {
-  const { data: session, status } = useSession();
+const NotificationBell = memo(function NotificationBell() {
+  const { unreadCount, refresh } = useNotifications();
+
   const [notifications, setNotifications] = useState<UserNotificationDto[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const fetchUnreadCount = useCallback(async () => {
-    if (status !== "authenticated") return;
-
-    try {
-      const res = await notificationApi.getUnreadCount();
-      setUnreadCount(res.data.count);
-    } catch {
-      // Don't let navbar rendering fail due to notification API errors.
-    }
-  }, [status]);
-
-  const fetchNotifications = useCallback(async () => {
-    if (status !== "authenticated") return;
-
-    setLoading(true);
-    try {
-      const res = await notificationApi.getMyNotifications();
-      setNotifications(res.data);
-    } catch {
-      setNotifications([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [status]);
-
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    if (!session?.user?.accessToken) return;
-
-    void fetchUnreadCount();
-    const interval = setInterval(() => {
-      void fetchUnreadCount();
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount, session?.user?.accessToken, status]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -60,6 +23,18 @@ export default function NotificationBell() {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const fetchNotifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await notificationApi.getMyNotifications();
+      setNotifications(res.data ?? []);
+    } catch {
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const handleOpen = () => {
@@ -78,7 +53,7 @@ export default function NotificationBell() {
           notification.id === id ? { ...notification, readStatus: true } : notification,
         ),
       );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
+      refresh();
     } catch {
       // Keep interaction non-blocking if API request fails.
     }
@@ -88,7 +63,7 @@ export default function NotificationBell() {
     try {
       await notificationApi.markAllAsRead();
       setNotifications((prev) => prev.map((notification) => ({ ...notification, readStatus: true })));
-      setUnreadCount(0);
+      refresh();
     } catch {
       // Keep interaction non-blocking if API request fails.
     }
@@ -197,4 +172,8 @@ export default function NotificationBell() {
       ) : null}
     </div>
   );
-}
+});
+
+NotificationBell.displayName = "NotificationBell";
+
+export default NotificationBell;

@@ -32,7 +32,7 @@ public class VideoProgressService {
     }
 
     @Transactional
-    public VideoProgressDto saveProgress(Long lectureId, VideoProgressRequest request, String username) {
+    public void saveProgress(Long lectureId, VideoProgressRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
@@ -59,13 +59,8 @@ public class VideoProgressService {
         progress.setCompletionPercentage(completionPercentage);
         progress.setLastPosition(lastPosition);
 
-        VideoProgress saved = videoProgressRepository.save(progress);
-
-        if (completionPercentage >= 90) {
-            enrollmentService.markLectureComplete(user.getId(), lectureId);
-        }
-
-        return toDto(saved);
+        // Save progress only; completion is handled by the dedicated lesson completion endpoint.
+        videoProgressRepository.save(progress);
     }
 
     @Transactional(readOnly = true)

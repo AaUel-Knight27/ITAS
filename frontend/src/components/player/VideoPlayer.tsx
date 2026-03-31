@@ -7,6 +7,7 @@ import {
     useCallback,
     forwardRef,
     useImperativeHandle,
+    memo,
 } from 'react'
 
 interface Props {
@@ -50,8 +51,18 @@ const VideoPlayer = forwardRef<
             undefined)
     const mountedRef = useRef(false)
     const initializingRef = useRef(false)
+    const onProgressRef = useRef(onProgress)
+    const onEndedRef = useRef(onEnded)
     const [error, setError] = useState(false)
     const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        onProgressRef.current = onProgress
+    }, [onProgress])
+
+    useEffect(() => {
+        onEndedRef.current = onEnded
+    }, [onEnded])
 
     useImperativeHandle(ref, () => ({
         getCurrentTime: () =>
@@ -256,7 +267,7 @@ const VideoPlayer = forwardRef<
                                 .duration()
                             || 0
                         if (duration > 0) {
-                            onProgress?.(
+                            onProgressRef.current?.(
                                 current,
                                 duration)
                         }
@@ -279,8 +290,8 @@ const VideoPlayer = forwardRef<
                     const duration =
                         player.duration() || 0
                     if (duration > 0) {
-                        onProgress?.(
-                            current, duration)
+                            onProgressRef.current?.(
+                                current, duration)
                     }
                 } catch {
                     // Ignore pause save errors
@@ -295,9 +306,11 @@ const VideoPlayer = forwardRef<
                 try {
                     const duration =
                         player.duration() || 0
-                    onProgress?.(
-                        duration, duration)
-                    onEnded?.()
+                    if (duration > 0) {
+                        onProgressRef.current?.(
+                            duration, duration)
+                    }
+                    onEndedRef.current?.()
                 } catch {
                     // Ignore ended errors
                 }
@@ -326,8 +339,6 @@ const VideoPlayer = forwardRef<
     }, [
         autoPlay,
         destroyPlayer,
-        onEnded,
-        onProgress,
         resumeAt,
         src,
         lectureId,
@@ -427,4 +438,4 @@ const VideoPlayer = forwardRef<
 
 VideoPlayer.displayName = 'VideoPlayer'
 
-export default VideoPlayer
+export default memo(VideoPlayer)

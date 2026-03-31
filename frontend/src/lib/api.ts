@@ -59,13 +59,36 @@ function readAccessTokenFromStorage(): string | undefined {
   }
 
   try {
+    // Try custom storage first.
     const raw = window.localStorage.getItem("itas-auth-storage");
-    if (!raw) {
-      return undefined;
+    if (raw) {
+      const parsed = JSON.parse(raw) as { state?: { accessToken?: string | null } };
+      const token = parsed?.state?.accessToken;
+      if (token) {
+        return token;
+      }
     }
 
-    const parsed = JSON.parse(raw) as { state?: { accessToken?: string | null } };
-    return parsed?.state?.accessToken ?? undefined;
+    // Fallback: try NextAuth-style session keys.
+    const keys = Object.keys(window.localStorage);
+    for (const key of keys) {
+      if (key.startsWith("nextauth.message") || key.includes("session")) {
+        try {
+          const value = JSON.parse(window.localStorage.getItem(key) ?? "{}") as {
+            accessToken?: string;
+            user?: { accessToken?: string };
+          };
+          const token = value?.accessToken ?? value?.user?.accessToken;
+          if (token) {
+            return token;
+          }
+        } catch {
+          // Skip malformed session entries.
+        }
+      }
+    }
+
+    return undefined;
   } catch {
     return undefined;
   }

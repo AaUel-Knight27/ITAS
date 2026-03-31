@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "video.js/dist/video-js.css";
 import "./globals.css";
 
-import Navbar from "@/components/ui/Navbar";
+import RootChrome from "@/components/ui/RootChrome";
 import { ToastNotification } from "@/components/ui/ToastNotification";
 import { Providers } from "./providers";
 
@@ -36,8 +36,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} bg-slate-50 text-slate-900 antialiased`}
       >
         <Providers>
-          <Navbar />
-          <main>{children}</main>
+          <RootChrome>{children}</RootChrome>
           <ToastNotification />
         </Providers>
       </body>

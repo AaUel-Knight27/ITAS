@@ -97,6 +97,7 @@ export default function LearnLecturePage() {
   const [activeLecture, setActiveLecture] = useState<Lecture | null>(null);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
   const [progressMap, setProgressMap] = useState<ProgressMap>({});
+  const [displayProgress, setDisplayProgress] = useState<ProgressMap>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -111,12 +112,19 @@ export default function LearnLecturePage() {
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
   const playerRef = useRef<VideoPlayerHandle | null>(null);
   const selectingLectureRef = useRef(false);
+  const courseRef = useRef<Course | null>(null);
+  const activeLectureRef = useRef<Lecture | null>(null);
+  const completedIdsRef = useRef<Set<string>>(new Set());
+  const getAllLecturesRef = useRef<() => Lecture[]>(() => []);
+  const progressRef = useRef<Record<string, ProgressEntry>>({});
+  const saveInProgressRef = useRef(false);
+  const lastSavedPositionRef = useRef<Record<string, number>>({});
 
   const sections = useMemo(() => byOrder(course?.sections ?? []), [course?.sections]);
   const allLectures = useMemo(() => flattenLectures(sections), [sections]);
 
   const activeLectureKey = String(activeLecture?.id ?? "");
-  const currentProgress = activeLecture ? progressMap[activeLectureKey] : undefined;
+  const currentProgress = activeLecture ? displayProgress[activeLectureKey] ?? progressMap[activeLectureKey] : undefined;
   const resumeAt = currentProgress?.lastPosition ?? 0;
   const isCompleted = activeLecture ? completedIds.has(activeLectureKey) : false;
 
@@ -154,11 +162,11 @@ export default function LearnLecturePage() {
 
   const persistLocalProgress = useCallback(
     (lectureId: string, currentTime: number) => {
-      if (!course || currentTime <= 0) {
+      if (!courseRef.current || currentTime <= 0) {
         return;
       }
 
-      const key = getLocalProgressKey(course.id);
+      const key = getLocalProgressKey(courseRef.current.id);
       const existing = window.localStorage.getItem(key);
       const parsed: LocalProgressMap = existing ? JSON.parse(existing) : {};
       parsed[lectureId] = {
@@ -167,8 +175,26 @@ export default function LearnLecturePage() {
       };
       window.localStorage.setItem(key, JSON.stringify(parsed));
     },
-    [course]
+    []
   );
+
+  useEffect(() => {
+    courseRef.current = course;
+    getAllLecturesRef.current = () => flattenLectures(courseRef.current?.sections ?? []);
+  }, [course]);
+
+  useEffect(() => {
+    activeLectureRef.current = activeLecture;
+  }, [activeLecture]);
+
+  useEffect(() => {
+    completedIdsRef.current = completedIds;
+  }, [completedIds]);
+
+  useEffect(() => {
+    progressRef.current = progressMap;
+    setDisplayProgress(progressMap);
+  }, [progressMap]);
 
   const selectLecture = useCallback(
     (lecture: Lecture) => {
@@ -264,7 +290,9 @@ export default function LearnLecturePage() {
           };
         }
       });
+      progressRef.current = nextProgressMap;
       setProgressMap(nextProgressMap);
+      setDisplayProgress(nextProgressMap);
 
       try {
         const completionResponse = await api.get<Array<{ lectureId: number | string }>>(
@@ -334,6 +362,14 @@ export default function LearnLecturePage() {
   }, []);
 
   useEffect(() => {
+    const displayInterval = window.setInterval(() => {
+      setDisplayProgress({ ...progressRef.current });
+    }, 30000);
+
+    return () => window.clearInterval(displayInterval);
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
@@ -371,7 +407,7 @@ export default function LearnLecturePage() {
       persistLocalProgress(String(activeLecture.id), playerRef.current?.getCurrentTime() ?? 0);
     };
 
-    const intervalId = window.setInterval(saveCurrentPosition, 1000);
+    const intervalId = window.setInterval(saveCurrentPosition, 15000);
     window.addEventListener("beforeunload", saveCurrentPosition);
 
     const handleVisibilityChange = () => {
@@ -391,61 +427,88 @@ export default function LearnLecturePage() {
   }, [activeLecture, course, persistLocalProgress]);
 
   const handleMarkComplete = useCallback(async () => {
-    if (!activeLecture || completing || completedIds.has(String(activeLecture.id))) {
+    const lecture = activeLectureRef.current;
+    if (!lecture || completing || completedIdsRef.current.has(String(lecture.id))) {
       return;
     }
 
     setCompleting(true);
     try {
-      await api.post(`/lms/lesson/${activeLecture.id}/complete`);
+      await api.post(`/lms/lesson/${lecture.id}/complete`);
       setCompletedIds((previous) => {
         const next = new Set(previous);
-        next.add(String(activeLecture.id));
+        next.add(String(lecture.id));
         return next;
       });
-      if (nextLecture) {
-        startCountdown(nextLecture);
+      const lectures = getAllLecturesRef.current();
+      const lectureIndex = lectures.findIndex((item) => String(item.id) === String(lecture.id));
+      const upcomingLecture =
+        lectureIndex >= 0 && lectureIndex < lectures.length - 1 ? lectures[lectureIndex + 1] : null;
+      if (upcomingLecture) {
+        startCountdown(upcomingLecture);
       }
     } catch {
       // Keep the learning flow usable even if completion sync fails.
     } finally {
       setCompleting(false);
     }
-  }, [activeLecture, completedIds, completing, nextLecture, startCountdown]);
+  }, [completing, startCountdown]);
 
   const handleVideoProgress = useCallback(
-    async (currentTime: number, duration: number) => {
-      if (!activeLecture) {
+    (currentTime: number, duration: number) => {
+      const lecture = activeLectureRef.current;
+      if (!lecture || duration <= 0) {
         return;
       }
 
-      const lectureKey = String(activeLecture.id);
+      const lectureKey = String(lecture.id);
       const percentage = duration > 0 ? Math.round((currentTime / duration) * 100) : 0;
-      const roundedTime = Math.round(currentTime);
-
-      updateProgressEntry(lectureKey, {
+      const position = Math.round(currentTime);
+      const nextProgress: ProgressEntry = {
         percentage,
-        lastPosition: roundedTime,
-        lastWatchedAt: roundedTime > 0 ? formatTimestamp(roundedTime) : null,
+        lastPosition: position,
+        lastWatchedAt: position > 0 ? formatTimestamp(position) : null,
         updatedAt: new Date().toISOString(),
-      });
+      };
+      progressRef.current[lectureKey] = nextProgress;
+      persistLocalProgress(lectureKey, position);
 
-      try {
-        await progressApi.save(Number(activeLecture.id), {
-          watchedSeconds: roundedTime,
+      const lastSavedPosition = lastSavedPositionRef.current[lectureKey] ?? 0;
+      if (Math.abs(position - lastSavedPosition) < 5) {
+        return;
+      }
+      if (saveInProgressRef.current) {
+        return;
+      }
+
+      lastSavedPositionRef.current[lectureKey] = position;
+      saveInProgressRef.current = true;
+
+      void progressApi
+        .save(Number(lecture.id), {
+          watchedSeconds: position,
           completionPercentage: percentage,
-          lastPosition: roundedTime,
+          lastPosition: position,
+        })
+        .then(() => {
+          saveInProgressRef.current = false;
+          if (percentage >= 90 && !completedIdsRef.current.has(lectureKey)) {
+            void handleMarkComplete();
+          }
+        })
+        .catch(() => {
+          saveInProgressRef.current = false;
         });
-      } catch {
-        // Silent autosave failure.
-      }
-
-      if (percentage >= 90 && !completedIds.has(lectureKey)) {
-        await handleMarkComplete();
-      }
     },
-    [activeLecture, completedIds, handleMarkComplete, updateProgressEntry]
+    [handleMarkComplete, persistLocalProgress]
   );
+
+  const handleVideoEnded = useCallback(() => {
+    if (!activeLectureRef.current) {
+      return;
+    }
+    void handleMarkComplete();
+  }, [handleMarkComplete]);
 
   const handleNotesChange = useCallback(
     (value: string) => {
@@ -595,7 +658,7 @@ export default function LearnLecturePage() {
                 const lectureKey = String(lecture.id);
                 const isActive = lectureKey === String(activeLecture.id);
                 const isDone = completedIds.has(lectureKey);
-                const progress = progressMap[lectureKey];
+                const progress = displayProgress[lectureKey] ?? progressMap[lectureKey];
 
                 return (
                   <button
@@ -775,8 +838,8 @@ export default function LearnLecturePage() {
                         lectureId={Number(activeLecture.id)}
                         resumeAt={resumeAt}
                         autoPlay={autoPlayLectureId === String(activeLecture.id)}
-                        onProgress={(currentTime, duration) => void handleVideoProgress(currentTime, duration)}
-                        onEnded={() => void handleMarkComplete()}
+                        onProgress={handleVideoProgress}
+                        onEnded={handleVideoEnded}
                       />
                     ) : (
                       <div className="flex h-64 items-center justify-center bg-gray-900">

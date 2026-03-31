@@ -96,10 +96,11 @@ public class LmsController {
 
     @PostMapping("/video/{id}/progress")
     @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER')")
-    public ResponseEntity<VideoProgressDto> saveVideoProgress(@PathVariable("id") Long lectureId,
-                                                              @Valid @RequestBody VideoProgressRequest request,
-                                                              @AuthenticationPrincipal UserDetails userDetails) {
-        return ResponseEntity.ok(videoProgressService.saveProgress(lectureId, request, userDetails.getUsername()));
+    public ResponseEntity<Void> saveVideoProgress(@PathVariable("id") Long lectureId,
+                                                  @Valid @RequestBody VideoProgressRequest request,
+                                                  @AuthenticationPrincipal UserDetails userDetails) {
+        videoProgressService.saveProgress(lectureId, request, userDetails.getUsername());
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/video/{lectureId}/progress")
