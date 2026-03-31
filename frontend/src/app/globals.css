@@ -173,3 +173,41 @@
 .focus-ring {
   @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
 }
+.itas-rich-editor .ProseMirror {
+  min-height: 280px;
+}
+
+.itas-rich-editor .ProseMirror p {
+  margin: 0.5rem 0;
+}
+
+.itas-rich-editor .ProseMirror h2,
+.itas-rich-editor .ProseMirror h3,
+.itas-rich-editor .ProseMirror h4 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  color: rgb(15 23 42);
+}
+
+.itas-rich-editor .ProseMirror h2 {
+  font-size: 1.5rem;
+}
+
+.itas-rich-editor .ProseMirror h3 {
+  font-size: 1.25rem;
+}
+
+.itas-rich-editor .ProseMirror h4 {
+  font-size: 1.125rem;
+}
+
+.itas-rich-editor .ProseMirror ul,
+.itas-rich-editor .ProseMirror ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.itas-rich-editor .ProseMirror:focus {
+  outline: none;
+}

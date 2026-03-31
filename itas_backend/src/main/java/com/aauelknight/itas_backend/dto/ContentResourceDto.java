@@ -1,7 +1,7 @@
 package com.aauelknight.itas_backend.dto;
 
-import com.aauelknight.itas_backend.entity.ContentStatus;
-import com.aauelknight.itas_backend.entity.ContentType;
+import com.aauelknight.itas_backend.modules.courses.ContentStatus;
+import com.aauelknight.itas_backend.modules.courses.ContentType;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

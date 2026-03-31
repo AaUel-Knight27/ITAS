@@ -1,6 +1,6 @@
 package com.aauelknight.itas_backend.dto;
 
-import com.aauelknight.itas_backend.entity.QuestionType;
+import com.aauelknight.itas_backend.modules.learning.QuestionType;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

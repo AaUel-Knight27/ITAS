@@ -1,6 +1,6 @@
 package com.aauelknight.itas_backend.dto;
 
-import com.aauelknight.itas_backend.entity.LectureType;
+import com.aauelknight.itas_backend.modules.courses.LectureType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

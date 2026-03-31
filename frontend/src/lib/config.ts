@@ -10,7 +10,7 @@ export const API_BASE = normalizedBase.endsWith("/api/v1")
   ? normalizedBase 
   : `${normalizedBase}/api/v1`;
 
-// Centralized Storage Base: for public assets/uploads (must include context path)
+// Centralized Storage Base: public assets must include the backend context path
 export const STORAGE_BASE = normalizedStorageBase.endsWith("/api/v1")
   ? normalizedStorageBase
   : `${normalizedStorageBase}/api/v1`;

@@ -1,6 +1,6 @@
 package com.aauelknight.itas_backend.dto;
 
-import com.aauelknight.itas_backend.entity.EnrollmentStatus;
+import com.aauelknight.itas_backend.modules.learning.EnrollmentStatus;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
 import lombok.Builder;

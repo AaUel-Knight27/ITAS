@@ -5,6 +5,8 @@ import { Camera, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { updateCourse, getCourseCategories, uploadCourseThumbnail } from "@/lib/api/admin-courses";
 import { getErrorMessage } from "@/lib/errors";
+import { createSlugCandidate, normalizeSlugInput } from "@/lib/slug";
+import { getFileUrl } from "@/lib/utils";
 import type { Category, Course } from "@/types";
 import { useUIStore } from "@/lib/store";
 
@@ -12,15 +14,6 @@ type CourseSettingsFormProps = {
   course: Course;
   onCourseUpdated: (course: Course) => void;
 };
-
-function toKebabCase(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
 
 export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSettingsFormProps) {
   const { showToast } = useUIStore();
@@ -67,10 +60,7 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
   }, [form.categoryId, showToast]);
 
   function handleRegenerateSlug() {
-    const base = toKebabCase(form.slug || form.title || "");
-    const suffix = String(Date.now()).slice(-4);
-    const nextSlug = base ? `${base}-${suffix}` : suffix;
-    setForm((prev) => ({ ...prev, slug: nextSlug }));
+    setForm((prev) => ({ ...prev, slug: createSlugCandidate(prev.title || prev.slug || "") }));
     setSlugError("");
   }
 
@@ -161,7 +151,7 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
             <input
               value={form.slug}
               onChange={(event) => {
-                setForm((prev) => ({ ...prev, slug: toKebabCase(event.target.value) }));
+                setForm((prev) => ({ ...prev, slug: normalizeSlugInput(event.target.value) }));
                 setSlugError("");
               }}
               className={`w-full rounded-lg border px-3 py-2 text-sm ${
@@ -266,7 +256,11 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
           ) : (
             <div className="relative inline-block">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={thumbnailPreview} alt="Thumbnail preview" className="h-40 w-64 rounded-lg object-cover" />
+              <img
+                src={getFileUrl(thumbnailPreview) ?? ""}
+                alt="Thumbnail preview"
+                className="h-40 w-64 rounded-lg object-cover"
+              />
               <button
                 type="button"
                 onClick={() => {

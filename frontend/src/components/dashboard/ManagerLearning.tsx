@@ -7,6 +7,7 @@ import { BookOpen, Award, ArrowRight, Play } from "lucide-react";
 import ProgressBar from "@/components/course/ProgressBar";
 import { getCourseLearnHref } from "@/lib/learn";
 import { useCertificateStore, useEnrollmentStore } from "@/lib/store";
+import { getFileUrl } from "@/lib/utils";
 
 export default function ManagerLearning() {
   const { enrollments, isLoading: enrollmentsLoading, error: enrollmentsError, fetchMyEnrollments } = useEnrollmentStore();
@@ -117,7 +118,7 @@ export default function ManagerLearning() {
                         {course.courseThumbnailUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={course.courseThumbnailUrl}
+                            src={getFileUrl(course.courseThumbnailUrl) ?? ""}
                             alt={course.courseTitle}
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />

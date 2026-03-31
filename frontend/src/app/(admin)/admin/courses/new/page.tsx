@@ -10,6 +10,7 @@ import CourseBuilder from "@/components/admin/CourseBuilder";
 import HelpButton from "@/components/help/HelpButton";
 import HelpTooltip from "@/components/help/HelpTooltip";
 import { getErrorMessage } from "@/lib/errors";
+import { createSlugCandidate, normalizeSlugInput } from "@/lib/slug";
 import {
   createCourse,
   getCourseCategories,
@@ -22,15 +23,6 @@ import type { Category, Course, Lecture } from "@/types";
 function isAllowedRole(role: string | null | undefined) {
   const normalized = (role ?? "").replace("ROLE_", "").toUpperCase();
   return normalized === "CONTENT_ADMIN" || normalized === "SYSTEM_ADMIN";
-}
-
-function toKebabCase(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
 }
 
 export default function NewCoursePage() {
@@ -97,8 +89,8 @@ export default function NewCoursePage() {
 
   useEffect(() => {
     setForm((prev) => {
-      if (!prev.slug || prev.slug === toKebabCase(prev.title)) {
-        return { ...prev, slug: toKebabCase(prev.title || "") };
+      if (!prev.slug) {
+        return { ...prev, slug: normalizeSlugInput(prev.title || "") };
       }
       return prev;
     });
@@ -111,17 +103,9 @@ export default function NewCoursePage() {
   ] as const;
 
   const slugSuggestion = useMemo(() => {
-    const base = toKebabCase(form.slug || form.title || "");
-    if (!base) return "";
-
-    const match = base.match(/^(.*)-(\d+)$/);
-    if (match) {
-      const prefix = match[1];
-      const next = Number(match[2]) + 1;
-      return `${prefix}-${next}`;
-    }
-
-    return `${base}-2`;
+    const source = form.title || form.slug || "";
+    if (!normalizeSlugInput(source)) return "";
+    return createSlugCandidate(source);
   }, [form.slug, form.title]);
 
   const summary = useMemo(() => {
@@ -255,10 +239,7 @@ export default function NewCoursePage() {
   }
 
   function handleRegenerateSlug() {
-    const base = toKebabCase(form.slug || form.title || "");
-    const suffix = String(Date.now()).slice(-4);
-    const nextSlug = base ? `${base}-${suffix}` : suffix;
-    setForm((prev) => ({ ...prev, slug: nextSlug }));
+    setForm((prev) => ({ ...prev, slug: createSlugCandidate(prev.title || prev.slug || "") }));
     setSlugError("");
   }
 
@@ -323,7 +304,7 @@ export default function NewCoursePage() {
                   <input
                     value={form.slug}
                     onChange={(event) => {
-                      setForm((prev) => ({ ...prev, slug: toKebabCase(event.target.value) }));
+                      setForm((prev) => ({ ...prev, slug: normalizeSlugInput(event.target.value) }));
                       setSlugError("");
                     }}
                     className={`w-full rounded-lg border px-3 py-2 text-sm ${

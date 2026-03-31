@@ -1,0 +1,39 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api/v1
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  upload-dir: uploads
+  jwt:
+    secret: ${JWT_SECRET:U3ByaW5nQm9vdDNKYXZhMjVKd3RTZWNyZXRLZXlGb3JQb3J0YWxMbXNfU3VwZXJTZWN1cmVfMjAyNg==}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portal_db?currentSchema=public}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:Kangrro@123}
+    driver-class-name: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.postgresql.Driver}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        default_schema: public
+    open-in-view: false
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 100MB
+      max-request-size: 100MB
+      file-size-threshold: 2KB
+  web:
+    resources:
+      static-locations: file:uploads/,classpath:/static/
+      add-mappings: true

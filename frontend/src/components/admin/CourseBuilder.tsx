@@ -17,7 +17,9 @@ import {
   type QuizQuestionPayload,
 } from "@/lib/api/admin-courses";
 import { versionApi } from "@/lib/api";
+import RichTextEditor from "@/components/editor/RichTextEditor";
 import { getErrorMessage, getUploadErrorMessage } from "@/lib/errors";
+import { getFileUrl } from "@/lib/utils";
 import VersionHistoryPanel from "@/components/versioning/VersionHistoryPanel";
 import type { Course, CourseSection, Lecture } from "@/types";
 
@@ -856,7 +858,11 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                 ) : null}
                 {activeLecture.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={activeLecture.thumbnailUrl} alt={activeLecture.title} className="mt-2 h-16 w-28 rounded object-cover" />
+                  <img
+                    src={getFileUrl(activeLecture.thumbnailUrl) ?? ""}
+                    alt={activeLecture.title}
+                    className="mt-2 h-16 w-28 rounded object-cover"
+                  />
                 ) : null}
               </div>
             ) : null}
@@ -879,15 +885,14 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
             ) : null}
 
             {(activeLecture.type ?? "VIDEO") === "TEXT" ? (
-              <label className="block">
+              <div className="block">
                 <span className="mb-1 block text-sm font-medium text-slate-700">Enter the Article</span>
-                <textarea
-                  value={activeLecture.contentHtml ?? ""}
-                  onChange={(event) => patchActiveLecture({ contentHtml: event.target.value })}
-                  rows={10}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                <RichTextEditor
+                  value={activeLecture.contentHtml ?? activeLecture.content ?? ""}
+                  placeholder="Write the lesson content here..."
+                  onChange={(value) => patchActiveLecture({ contentHtml: value, content: value })}
                 />
-              </label>
+              </div>
             ) : null}
 
             {(activeLecture.type ?? "VIDEO") === "QUIZ" ? (

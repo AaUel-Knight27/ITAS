@@ -1,10 +1,10 @@
 package com.aauelknight.itas_backend.dto;
 
-import com.aauelknight.itas_backend.entity.CourseDifficulty;
+import com.aauelknight.itas_backend.modules.courses.CourseDifficulty;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
-import com.aauelknight.itas_backend.entity.AudienceType;
+import com.aauelknight.itas_backend.modules.courses.AudienceType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

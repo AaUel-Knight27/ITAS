@@ -7,6 +7,7 @@ import { BookOpen, Award, TrendingUp, Clock, ArrowRight, Play } from "lucide-rea
 import ProgressBar from "@/components/course/ProgressBar";
 import { getCourseLearnHref } from "@/lib/learn";
 import { useCertificateStore, useEnrollmentStore } from "@/lib/store";
+import { getFileUrl } from "@/lib/utils";
 
 type LearnerDashboardProps = {
   showCertificates: boolean;
@@ -207,7 +208,7 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
                         {course.courseThumbnailUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
-                            src={course.courseThumbnailUrl}
+                            src={getFileUrl(course.courseThumbnailUrl) ?? ""}
                             alt={course.courseTitle}
                             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                           />
