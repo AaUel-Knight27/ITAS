@@ -14,7 +14,6 @@ itas_backend/pom.xml
 *.log.*
 *.tmp
 *.swp
-*~
 .idea/
 *.iml
 *.iws
@@ -25,7 +24,7 @@ uploads/
 .env
 .env.local
 .env.*.local
-itas_backend/src/main/resources/application.yml
+itas_backend/src/main/resources/application-dev.yml
 *.jar
 *.war
 *.ear
