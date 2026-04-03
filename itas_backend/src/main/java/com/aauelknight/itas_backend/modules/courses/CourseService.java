@@ -178,8 +178,13 @@ public class CourseService {
     }
 
     public CourseDto getCourseByIdAdmin(Long courseId) {
-        Course course = courseRepository.findByIdWithSectionsAndLecturesAdmin(courseId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+        Course course = getCourseWithContent(courseId);
+        return toCourseDetailDto(course, null);
+    }
+
+    @Transactional(readOnly = true)
+    public CourseDto getCourse(Long courseId) {
+        Course course = getCourseWithContent(courseId);
         return toCourseDetailDto(course, null);
     }
 
@@ -227,16 +232,28 @@ public class CourseService {
 
     @Transactional
     public CourseDto updateCourse(Long courseId, CourseRequest req) {
-        Course course = getCourse(courseId);
+        Course course = getCourseEntity(courseId);
         course.setTitle(req.getTitle());
         course.setSlug(resolveUpdatedSlug(course, req));
         course.setDescription(req.getDescription());
-        course.setDifficulty(req.getDifficulty());
-        course.setDurationMinutes(req.getDurationMinutes());
-        course.setThumbnailUrl(req.getThumbnailUrl());
-        course.setTargetAudience(req.getTargetAudience() == null || req.getTargetAudience().isEmpty()
-                ? Set.of(AudienceType.ALL)
-                : req.getTargetAudience());
+
+        if (req.getDifficulty() != null) {
+            course.setDifficulty(req.getDifficulty());
+        }
+
+        if (req.getDurationMinutes() != null) {
+            course.setDurationMinutes(req.getDurationMinutes());
+        }
+
+        if (req.getThumbnailUrl() != null && !req.getThumbnailUrl().isBlank()) {
+            course.setThumbnailUrl(req.getThumbnailUrl());
+        }
+
+        if (req.getTargetAudience() != null && !req.getTargetAudience().isEmpty()) {
+            course.setTargetAudience(req.getTargetAudience());
+        } else {
+            course.setTargetAudience(Set.of(AudienceType.ALL));
+        }
 
         if (req.getCategoryId() != null) {
             Category category = categoryRepository.findById(req.getCategoryId())
@@ -244,7 +261,10 @@ public class CourseService {
             course.setCategory(category);
         }
 
-        return toCourseDetailDto(courseRepository.save(course), null);
+        courseRepository.save(course);
+
+        Course refreshed = getCourseWithContent(courseId);
+        return toCourseDetailDto(refreshed, null);
     }
 
     private String resolveUpdatedSlug(Course course, CourseRequest request) {
@@ -287,7 +307,7 @@ public class CourseService {
 
     @Transactional
     public CourseDto patchCourse(Long courseId, Map<String, Object> updates) {
-        Course course = getCourse(courseId);
+        Course course = getCourseEntity(courseId);
 
         if (updates.containsKey("title")) {
             course.setTitle((String) updates.get("title"));
@@ -351,7 +371,7 @@ public class CourseService {
 
     @Transactional
     public CourseSectionDto addSection(Long courseId, CourseSectionRequest request) {
-        Course course = getCourse(courseId);
+        Course course = getCourseEntity(courseId);
         CourseSection section = CourseSection.builder()
                 .course(course)
                 .title(request.getTitle())
@@ -462,7 +482,7 @@ public class CourseService {
 
     @Transactional
     public CourseDto setPublished(Long courseId, boolean published) {
-        Course course = getCourse(courseId);
+        Course course = getCourseEntity(courseId);
         course.setPublished(published);
         course.setStatus(published ? "PUBLISHED" : "DRAFT");
         if (!published) {
@@ -474,7 +494,7 @@ public class CourseService {
 
     @Transactional
     public void updateThumbnail(Long courseId, String url) {
-        Course course = getCourse(courseId);
+        Course course = getCourseEntity(courseId);
         course.setThumbnailUrl(url);
         courseRepository.save(course);
     }
@@ -482,7 +502,8 @@ public class CourseService {
     @Transactional
     public CourseDto publishCourse(Long courseId) {
         try {
-            Course course = getCourse(courseId);
+            Course course = getCourseEntity(courseId);
+
             if ("ARCHIVED".equals(course.getStatus())) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Cannot publish an archived course. Restore it first.");
@@ -503,7 +524,7 @@ public class CourseService {
     @Transactional
     public CourseDto unpublishCourse(Long courseId) {
         try {
-            Course course = getCourse(courseId);
+            Course course = getCourseEntity(courseId);
             course.setStatus("DRAFT");
             course.setPublished(false);
             Course saved = courseRepository.save(course);
@@ -515,9 +536,14 @@ public class CourseService {
         }
     }
 
-    private Course getCourse(Long courseId) {
+    private Course getCourseEntity(Long courseId) {
         return courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+    }
+
+    private Course getCourseWithContent(Long id) {
+        return courseRepository.findByIdWithSectionsAndLectures(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found: " + id));
     }
 
     private CourseSection getSection(Long courseId, Long sectionId) {

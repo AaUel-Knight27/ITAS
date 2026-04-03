@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import "video.js/dist/video-js.css";
 import "./globals.css";
 
 import RootChrome from "@/components/ui/RootChrome";

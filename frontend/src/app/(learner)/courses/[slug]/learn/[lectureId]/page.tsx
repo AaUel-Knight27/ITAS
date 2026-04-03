@@ -90,8 +90,6 @@ export default function LearnLecturePage() {
 
   const slug = params?.slug ?? "";
   const lectureIdParam = params?.lectureId ?? "";
-  const role = session?.user?.role ?? "";
-  const canLearn = canAccessCourses(role);
 
   const [course, setCourse] = useState<Course | null>(null);
   const [activeLecture, setActiveLecture] = useState<Lecture | null>(null);
@@ -119,6 +117,8 @@ export default function LearnLecturePage() {
   const progressRef = useRef<Record<string, ProgressEntry>>({});
   const saveInProgressRef = useRef(false);
   const lastSavedPositionRef = useRef<Record<string, number>>({});
+  const roleCheckedRef = useRef(false);
+  const [accessDenied, setAccessDenied] = useState(false);
 
   const sections = useMemo(() => byOrder(course?.sections ?? []), [course?.sections]);
   const allLectures = useMemo(() => flattenLectures(sections), [sections]);
@@ -331,17 +331,32 @@ export default function LearnLecturePage() {
   }, [lectureIdParam, slug]);
 
   useEffect(() => {
-    if (status === "authenticated" && !canLearn) {
-      router.replace("/dashboard");
+    if (status !== "authenticated") {
+      roleCheckedRef.current = false;
+      setAccessDenied(false);
       return;
     }
 
-    if (status !== "authenticated") {
+    if (roleCheckedRef.current) {
+      return;
+    }
+
+    roleCheckedRef.current = true;
+    const role = session?.user?.role ?? "";
+
+    if (!canAccessCourses(role)) {
+      setAccessDenied(true);
+      router.replace("/dashboard");
+    }
+  }, [router, session, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || accessDenied) {
       return;
     }
 
     void fetchCourse();
-  }, [canLearn, fetchCourse, router, status]);
+  }, [accessDenied, fetchCourse, status]);
 
   useEffect(() => {
     if (!activeLecture || selectingLectureRef.current) {
@@ -565,7 +580,7 @@ export default function LearnLecturePage() {
     [completedIds]
   );
 
-  if (status === "authenticated" && !canLearn) {
+  if (status === "authenticated" && accessDenied) {
     return null;
   }
 

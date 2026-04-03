@@ -8,6 +8,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useSession } from "next-auth/react";
+import { getRoleHomePath } from "@/lib/roles";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required."),
@@ -36,7 +37,11 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (status === "authenticated" && session?.user) {
-      router.replace("/dashboard");
+      router.replace(
+        getRoleHomePath(
+          session.user.role ?? "",
+        ),
+      );
     }
   }, [status, session, router]);
 

@@ -19,7 +19,7 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
   const { showToast } = useUIStore();
   const [isSaving, setIsSaving] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  
+
   const [form, setForm] = useState({
     title: course.title,
     slug: course.slug,
@@ -37,18 +37,23 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(course.thumbnailUrl ?? "");
   const [thumbnailError, setThumbnailError] = useState("");
+  const courseIdRef = useRef(course.id);
 
   useEffect(() => {
     let active = true;
     async function loadCategories() {
       try {
         const data = await getCourseCategories();
-        if (active) {
-          setCategories(data);
-          if (!form.categoryId && data.length > 0) {
-            setForm((prev) => ({ ...prev, categoryId: String(data[0].id) }));
-          }
-        }
+        if (!active) return;
+        setCategories(data);
+        setForm((prev) => {
+          if (prev.categoryId) return prev;
+          if (data.length === 0) return prev;
+          return {
+            ...prev,
+            categoryId: String(data[0].id),
+          };
+        });
       } catch (error) {
         if (active) showToast(getErrorMessage(error), "error");
       }
@@ -57,7 +62,25 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
     return () => {
       active = false;
     };
-  }, [form.categoryId, showToast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (course.id === courseIdRef.current) {
+      return;
+    }
+    courseIdRef.current = course.id;
+    setForm({
+      title: course.title,
+      slug: course.slug,
+      description: course.description ?? "",
+      categoryId: course.category?.id ?? course.categoryId ?? "",
+      difficulty: course.difficulty,
+    });
+    setTargetAudience(course.targetAudience ?? ["TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER"]);
+    setThumbnailPreview(course.thumbnailUrl ?? "");
+    setThumbnailFile(null);
+  }, [course.id]);
 
   function handleRegenerateSlug() {
     setForm((prev) => ({ ...prev, slug: createSlugCandidate(prev.title || prev.slug || "") }));
@@ -103,9 +126,19 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
         categoryId: form.categoryId,
         difficulty: form.difficulty,
         targetAudience,
+        thumbnailUrl: course.thumbnailUrl || undefined,
       });
 
-      let nextCourse = { ...updatedCourse, sections: course.sections ?? [] };
+      let nextCourse: Course = {
+        ...course,
+        ...updatedCourse,
+        sections: course.sections ?? [],
+        thumbnailUrl: thumbnailFile
+          ? updatedCourse.thumbnailUrl ?? course.thumbnailUrl
+          : thumbnailPreview
+            ? course.thumbnailUrl
+            : updatedCourse.thumbnailUrl ?? course.thumbnailUrl,
+      };
 
       if (thumbnailFile) {
         const uploaded = await uploadCourseThumbnail(course.id, thumbnailFile);

@@ -7,6 +7,7 @@ import {
   TAXPAYER,
   TRAINING_ADMIN,
   WEB_ADMIN,
+  getRoleHomePath,
   normalizeRole,
 } from "@/lib/roles";
 
@@ -48,22 +49,22 @@ export const NAV_LINKS: Record<string, NavLink[]> = {
   ],
 
   [CONTENT_ADMIN]: [
-    { label: "Dashboard", href: "/dashboard" },
+    { label: "Dashboard", href: getRoleHomePath(CONTENT_ADMIN) },
     { label: "Courses", href: "/admin/courses" },
   ],
 
   [TRAINING_ADMIN]: [
-    { label: "Dashboard", href: "/dashboard" },
+    { label: "Dashboard", href: getRoleHomePath(TRAINING_ADMIN) },
     { label: "Webinars", href: "/webinars" },
   ],
 
   [COMMUNICATION]: [
-    { label: "Dashboard", href: "/dashboard" },
+    { label: "Dashboard", href: getRoleHomePath(COMMUNICATION) },
     { label: "Notifications", href: "/notifications" },
   ],
 
   [WEB_ADMIN]: [
-    { label: "Dashboard", href: "/dashboard" },
+    { label: "Dashboard", href: getRoleHomePath(WEB_ADMIN) },
     { label: "Users", href: "/admin/users" },
     { label: "Courses", href: "/admin/courses" },
     { label: "Webinars", href: "/admin/webinars" },

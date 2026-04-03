@@ -40,6 +40,14 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     @Query("SELECT DISTINCT c FROM Course c " +
             "LEFT JOIN FETCH c.category " +
             "LEFT JOIN FETCH c.sections s " +
+            "LEFT JOIN FETCH s.lectures l " +
+            "WHERE c.id = :id " +
+            "ORDER BY s.orderIndex, l.orderIndex")
+    Optional<Course> findByIdWithSectionsAndLectures(@Param("id") Long id);
+
+    @Query("SELECT DISTINCT c FROM Course c " +
+            "LEFT JOIN FETCH c.category " +
+            "LEFT JOIN FETCH c.sections s " +
             "ORDER BY c.createdAt DESC")
     List<Course> findAllWithSections();
 

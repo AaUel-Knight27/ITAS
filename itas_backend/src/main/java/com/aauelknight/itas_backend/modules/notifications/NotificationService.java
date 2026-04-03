@@ -4,29 +4,26 @@ import com.aauelknight.itas_backend.dto.notification.AnnouncementDto;
 import com.aauelknight.itas_backend.dto.notification.AnnouncementRequest;
 import com.aauelknight.itas_backend.dto.notification.CampaignDto;
 import com.aauelknight.itas_backend.dto.notification.NotificationRequest;
-import com.aauelknight.itas_backend.dto.notification.UserNotificationDto;
-import com.aauelknight.itas_backend.modules.notifications.Announcement;
-import com.aauelknight.itas_backend.modules.notifications.NotificationCampaign;
 import com.aauelknight.itas_backend.modules.auth.User;
-import com.aauelknight.itas_backend.modules.notifications.AnnouncementRepository;
-import com.aauelknight.itas_backend.modules.notifications.NotificationCampaignRepository;
 import com.aauelknight.itas_backend.modules.auth.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.aauelknight.itas_backend.modules.notifications.UserNotification;
-import com.aauelknight.itas_backend.modules.notifications.UserNotificationRepository;
 @Service
 @RequiredArgsConstructor
 public class NotificationService {
 
+    private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
+
     private final NotificationCampaignRepository campaignRepository;
-    private final UserNotificationRepository userNotificationRepository;
     private final AnnouncementRepository announcementRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Transactional
     public CampaignDto sendNotification(NotificationRequest req, String username) {
@@ -47,7 +44,7 @@ public class NotificationService {
         campaign = campaignRepository.save(campaign);
 
         if (Boolean.TRUE.equals(req.getSendNow())) {
-            deliverToAudience(campaign, req.getAudienceType());
+            sendCampaignEmail(campaign);
         }
 
         return toCampaignDto(campaign);
@@ -60,60 +57,6 @@ public class NotificationService {
                 .stream()
                 .map(this::toCampaignDto)
                 .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<UserNotificationDto> getMyNotifications(String username) {
-        User user = userRepository
-                .findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
-
-        return userNotificationRepository
-                .findByUserId(user.getId())
-                .stream()
-                .map(n -> UserNotificationDto.builder()
-                        .id(n.getId())
-                        .title(n.getCampaign().getTitle())
-                        .message(n.getCampaign().getMessage())
-                        .readStatus(n.getReadStatus())
-                        .deliveredAt(n.getDeliveredAt())
-                        .build())
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public long getUnreadCount(String username) {
-        User user = userRepository
-                .findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
-
-        return userNotificationRepository.countByUserIdAndReadStatusFalse(user.getId());
-    }
-
-    @Transactional
-    public void markAsRead(Long notificationId, String username) {
-        User user = userRepository
-                .findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
-
-        userNotificationRepository.findById(notificationId).ifPresent(n -> {
-            if (n.getUser().getId().equals(user.getId())) {
-                n.setReadStatus(true);
-                userNotificationRepository.save(n);
-            }
-        });
-    }
-
-    @Transactional
-    public void markAllAsRead(String username) {
-        User user = userRepository
-                .findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
-
-        userNotificationRepository.findUnreadByUserId(user.getId()).forEach(n -> {
-            n.setReadStatus(true);
-            userNotificationRepository.save(n);
-        });
     }
 
     @Transactional
@@ -167,42 +110,54 @@ public class NotificationService {
         announcementRepository.deleteById(id);
     }
 
-    private void deliverToAudience(NotificationCampaign campaign, String audienceType) {
-        List<User> targetUsers;
+    private void sendCampaignEmail(NotificationCampaign campaign) {
+        List<String> emails = getRecipients(campaign.getAudienceType()).stream()
+                .map(User::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .distinct()
+                .toList();
+
+        if (emails.isEmpty()) {
+            log.warn("No email recipients found for campaign: {}", campaign.getTitle());
+            return;
+        }
+
+        String htmlBody = emailService.buildNotificationEmail(
+                "Portal User",
+                campaign.getTitle(),
+                campaign.getMessage());
+
+        emailService.sendBulkEmail(emails, "[ITAS Portal] " + campaign.getTitle(), htmlBody);
+        log.info("Campaign '{}' dispatched to {} recipients via email", campaign.getTitle(), emails.size());
+    }
+
+    private List<User> getRecipients(String audienceType) {
+        if (audienceType == null || audienceType.isBlank()) {
+            return userRepository.findAll();
+        }
 
         switch (audienceType.toUpperCase()) {
             case "TAXPAYER":
-                targetUsers = userRepository.findByRoleName("TAXPAYER");
-                break;
+                return userRepository.findByRoleName("TAXPAYER");
             case "TAX_AGENT":
-                targetUsers = userRepository.findByRoleName("TAX_AGENT");
-                break;
+                return userRepository.findByRoleName("TAX_AGENT");
             case "MOR_STAFF":
-                targetUsers = userRepository.findByRoleName("MOR_STAFF");
-                break;
+                return userRepository.findByRoleName("MOR_STAFF");
             case "ALL_LEARNERS":
-                targetUsers = userRepository.findByRoleNameIn(
+                return userRepository.findByRoleNameIn(
                         List.of("TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER"));
-                break;
             case "ALL":
             default:
-                targetUsers = userRepository.findAll();
-                break;
+                return userRepository.findAll();
         }
-
-        List<UserNotification> notifications = targetUsers.stream()
-                .map(user -> UserNotification.builder()
-                        .user(user)
-                        .campaign(campaign)
-                        .readStatus(false)
-                        .build())
-                .collect(Collectors.toList());
-
-        userNotificationRepository.saveAll(notifications);
     }
 
     private CampaignDto toCampaignDto(NotificationCampaign c) {
-        long deliveryCount = userNotificationRepository.countByUserIdAndReadStatusFalse(c.getId());
+        long deliveryCount = getRecipients(c.getAudienceType()).stream()
+                .map(User::getEmail)
+                .filter(email -> email != null && !email.isBlank())
+                .distinct()
+                .count();
 
         return CampaignDto.builder()
                 .id(c.getId())

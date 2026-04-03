@@ -1,11 +1,67 @@
-import type { ReactNode } from "react";
+'use client'
 
-import AppShell from "@/components/ui/AppShell";
+import type { ReactNode } from 'react'
+import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
+import { useEffect } from 'react'
+import AppShell from '@/components/ui/AppShell'
+import { canAccessCourses,
+    isManagerRole } from '@/lib/roles'
 
-type LearnerLayoutProps = {
-  children: ReactNode;
-};
+export default function LearnerLayout({
+    children,
+}: {
+    children: ReactNode
+}) {
+    const { data: session, status } =
+        useSession()
+    const router = useRouter()
 
-export default function LearnerLayout({ children }: LearnerLayoutProps) {
-  return <AppShell>{children}</AppShell>;
+    useEffect(() => {
+        if (status === 'loading') return
+
+        if (status === 'unauthenticated') {
+            router.replace('/login')
+            return
+        }
+
+        const role =
+            session?.user?.role ?? ''
+
+        const allowed =
+            canAccessCourses(role) ||
+            isManagerRole(role)
+
+        if (!allowed) {
+            router.replace('/dashboard')
+        }
+    }, [status, session, router])
+
+    if (status === 'loading') {
+        return (
+            <div className="flex min-h-screen
+                items-center justify-center
+                bg-gray-50">
+                <div className="h-8 w-8
+                    animate-spin rounded-full
+                    border-2 border-blue-500
+                    border-t-transparent" />
+            </div>
+        )
+    }
+
+    if (status === 'unauthenticated') {
+        return null
+    }
+
+    const role = session?.user?.role ?? ''
+    const allowed =
+        canAccessCourses(role) ||
+        isManagerRole(role)
+
+    if (!allowed) {
+        return null
+    }
+
+    return <AppShell>{children}</AppShell>
 }

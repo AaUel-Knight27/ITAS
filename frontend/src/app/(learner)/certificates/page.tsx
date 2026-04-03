@@ -73,7 +73,7 @@ export default function CertificatesPage() {
         </div>
       ) : certificates.length === 0 ? (
         <div className="py-16 text-center text-gray-500">
-          <p className="mb-4 text-4xl">🏆</p>
+          <p className="mb-4 text-4xl">Trophy</p>
           <p className="text-lg font-medium">No certificates yet</p>
           <p className="mt-1 text-sm">Complete a course and pass the quiz to earn your certificate</p>
         </div>
@@ -86,7 +86,7 @@ export default function CertificatesPage() {
             >
               <div>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="text-2xl">🏆</span>
+                  <span className="text-2xl">Award</span>
                   <h3 className="line-clamp-2 text-sm font-semibold text-gray-900">{cert.courseTitle}</h3>
                 </div>
                 <p className="w-fit rounded bg-gray-50 px-2 py-1 font-mono text-xs text-gray-500">
@@ -103,20 +103,33 @@ export default function CertificatesPage() {
               </div>
 
               <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
-                <button
-                  type="button"
-                  onClick={() => handleShare(cert)}
-                  className="flex items-center gap-1.5 rounded-lg border border-blue-200 px-4 py-2 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
-                >
-                  🔗 Link
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleShare(cert)}
+                    className="flex items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
+                  >
+                    Link
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const uuid = cert.verificationUuid || cert.certificateCode;
+                      window.open(`/verify/${uuid}`, "_blank");
+                    }}
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                  >
+                    Verify
+                  </button>
+                </div>
 
                 <button
                   type="button"
                   onClick={() => handleDownload(cert)}
                   className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                 >
-                  ⬇ Download
+                  Download
                 </button>
               </div>
             </div>

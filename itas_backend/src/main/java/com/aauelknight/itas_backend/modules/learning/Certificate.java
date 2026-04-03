@@ -43,6 +43,9 @@ public class Certificate {
     @Column(name = "certificate_code", nullable = false, unique = true, length = 30)
     private String certificateCode;
 
+    @Column(name = "verification_uuid", nullable = false, unique = true, length = 36)
+    private String verificationUuid;
+
     @Column(name = "qr_code", nullable = false, columnDefinition = "TEXT")
     private String qrCode;
 
@@ -56,6 +59,9 @@ public class Certificate {
     public void onCreate() {
         if (issuedAt == null) {
             issuedAt = LocalDateTime.now();
+        }
+        if (verificationUuid == null || verificationUuid.isBlank()) {
+            verificationUuid = java.util.UUID.randomUUID().toString();
         }
     }
 }

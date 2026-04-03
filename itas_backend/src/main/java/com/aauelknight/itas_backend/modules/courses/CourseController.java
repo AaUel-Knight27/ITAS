@@ -97,7 +97,7 @@ public class CourseController {
     @GetMapping("/id/{id}")
     @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
     public CourseDto getCourseById(@PathVariable Long id) {
-        return courseService.getCourseByIdAdmin(id);
+        return courseService.getCourse(id);
     }
 
     @GetMapping("/archived")

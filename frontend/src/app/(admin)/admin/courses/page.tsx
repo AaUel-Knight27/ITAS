@@ -8,14 +8,15 @@ import { useSession } from "next-auth/react";
 import { Plus, Upload, Edit, Eye, EyeOff, Trash2, BookOpen, Search, CheckCircle } from "lucide-react";
 
 import CourseThumbnail from "@/components/course/CourseThumbnail";
-import { useAuthStore, useUIStore } from "@/lib/store";
+import { useUIStore } from "@/lib/store";
 import { uploadContent } from "@/lib/api/content";
 import { deleteCourse, getAdminCourses, publishCourse, unpublishCourse } from "@/lib/api/admin-courses";
 import { getErrorMessage } from "@/lib/errors";
+import { normalizeRole } from "@/lib/roles";
 import type { Course } from "@/types";
 
 function isAllowedRole(role: string | null | undefined) {
-  const normalized = (role ?? "").replace("ROLE_", "").toUpperCase();
+  const normalized = normalizeRole(role ?? "");
   return ["CONTENT_ADMIN", "SYSTEM_ADMIN"].includes(normalized);
 }
 
@@ -23,37 +24,24 @@ function AdminCoursesPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const { role, isAuthenticated } = useAuthStore();
-  const normalizedRole = (role ?? "").replace("ROLE_", "").toUpperCase();
+  const { data: session, status: sessionStatus } = useSession();
+  const role = session?.user?.role;
+  const normalizedRole = normalizeRole(role ?? "");
   const canEditContent = ["CONTENT_ADMIN", "SYSTEM_ADMIN"].includes(normalizedRole);
-  const { status: sessionStatus } = useSession();
   const { showToast } = useUIStore();
 
   const [uploadingFile, setUploadingFile] = useState<File | null>(null);
   const [uploadPercent, setUploadPercent] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [hasHydrated, setHasHydrated] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
   const [localCourses, setLocalCourses] = useState<Course[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    if (useAuthStore.persist.hasHydrated()) {
-      setHasHydrated(true);
-    } else {
-      const unsub = useAuthStore.persist.onFinishHydration(() => {
-        setHasHydrated(true);
-      });
-      return unsub;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!hasHydrated) return;
     if (sessionStatus === "loading") return;
 
-    if (!isAuthenticated && sessionStatus === "unauthenticated") {
+    if (sessionStatus === "unauthenticated") {
       router.replace("/login");
       return;
     }
@@ -86,7 +74,7 @@ function AdminCoursesPageContent() {
     return () => {
       active = false;
     };
-  }, [router, role, isAuthenticated, showToast, sessionStatus, hasHydrated]);
+  }, [router, role, showToast, sessionStatus]);
 
   function handleChooseFile() {
     fileInputRef.current?.click();
@@ -158,7 +146,7 @@ function AdminCoursesPageContent() {
     course.category?.name?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (!hasHydrated || localLoading) {
+  if (sessionStatus === "loading" || localLoading) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="flex flex-col items-center gap-3">

@@ -1,25 +1,13 @@
 'use client'
 
 import {
+    memo,
     useEffect,
     useRef,
-    useState,
     useCallback,
     forwardRef,
     useImperativeHandle,
-    memo,
 } from 'react'
-
-interface Props {
-    src: string
-    lectureId: number
-    resumeAt?: number
-    onProgress?: (
-        currentTime: number,
-        duration: number) => void
-    onEnded?: () => void
-    autoPlay?: boolean
-}
 
 export interface VideoPlayerHandle {
     getCurrentTime: () => number
@@ -29,13 +17,25 @@ export interface VideoPlayerHandle {
     seekTo: (time: number) => void
 }
 
+interface VideoPlayerProps {
+    src: string
+    lectureId: number
+    resumeAt?: number
+    onProgress?: (
+        currentTime: number,
+        duration: number
+    ) => void
+    onEnded?: () => void
+    autoPlay?: boolean
+}
+
 const VideoPlayer = forwardRef<
     VideoPlayerHandle,
-    Props
+    VideoPlayerProps
 >(function VideoPlayer(
     {
         src,
-        lectureId,
+        lectureId: _lectureId,
         resumeAt = 0,
         onProgress,
         onEnded,
@@ -45,16 +45,15 @@ const VideoPlayer = forwardRef<
 ) {
     const videoRef =
         useRef<HTMLVideoElement>(null)
-    const playerRef = useRef<any>(null)
-    const intervalRef =
-        useRef<NodeJS.Timeout | undefined>(
-            undefined)
-    const mountedRef = useRef(false)
-    const initializingRef = useRef(false)
     const onProgressRef = useRef(onProgress)
     const onEndedRef = useRef(onEnded)
-    const [error, setError] = useState(false)
-    const [loading, setLoading] = useState(true)
+    const resumeAtRef = useRef(resumeAt)
+    const intervalRef =
+        useRef<ReturnType<
+            typeof setInterval
+        > | null>(null)
+    const hasResumedRef = useRef(false)
+    const srcRef = useRef(src)
 
     useEffect(() => {
         onProgressRef.current = onProgress
@@ -64,374 +63,193 @@ const VideoPlayer = forwardRef<
         onEndedRef.current = onEnded
     }, [onEnded])
 
+    useEffect(() => {
+        resumeAtRef.current = resumeAt
+    }, [resumeAt])
+
     useImperativeHandle(ref, () => ({
         getCurrentTime: () =>
-            playerRef.current
-                ?.currentTime() || 0,
+            videoRef.current?.currentTime
+                ?? 0,
         getDuration: () =>
-            playerRef.current
-                ?.duration() || 0,
+            videoRef.current?.duration
+                ?? 0,
         pause: () =>
-            playerRef.current?.pause(),
+            videoRef.current?.pause(),
         play: () => {
-            const playPromise =
-                playerRef.current?.play()
-            if (playPromise?.catch) {
-                void playPromise.catch(() => {})
+            videoRef.current
+                ?.play()
+                .catch(() => {})
+        },
+        seekTo: (time: number) => {
+            if (videoRef.current) {
+                videoRef.current.currentTime =
+                    Math.max(0, time)
             }
         },
-        seekTo: (time: number) =>
-            playerRef.current?.currentTime(
-                Math.max(0, time)),
-    }))
+    }), [])
 
-    const getVideoType = (url: string) => {
-        const lower = url.toLowerCase()
-        if (lower.includes('.m3u8'))
-            return 'application/x-mpegURL'
-        if (lower.includes('.webm'))
-            return 'video/webm'
-        if (lower.includes('.ogg'))
-            return 'video/ogg'
-        return 'video/mp4'
-    }
-
-    const destroyPlayer = useCallback(() => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current)
-            intervalRef.current = undefined
-        }
-
-        if (playerRef.current) {
-            try {
-                const player =
-                    playerRef.current
-                playerRef.current = null
-
-                if (!player.isDisposed?.()) {
-                    try { player.pause() } catch {}
-                    try { player.dispose() } catch {}
-                }
-            } catch {
-                // Ignore disposal errors
+    const startInterval =
+        useCallback(() => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
             }
-        }
-    }, [])
-
-    const initPlayer = useCallback(
-            async () => {
-        if (initializingRef.current) return
-        if (!videoRef.current) return
-        if (!mountedRef.current) return
-
-        if (!document.body.contains(
-                videoRef.current)) {
-            return
-        }
-
-        initializingRef.current = true
-        setLoading(true)
-        setError(false)
-
-        destroyPlayer()
-
-        try {
-            const vjsModule = await import(
-                'video.js')
-            const videojs = vjsModule.default
-
-            if (!mountedRef.current) {
-                initializingRef.current = false
-                return
-            }
-            if (!videoRef.current) {
-                initializingRef.current = false
-                return
-            }
-            if (!document.body.contains(
-                    videoRef.current)) {
-                initializingRef.current = false
-                return
-            }
-
-            await new Promise(resolve =>
-                setTimeout(resolve, 50))
-
-            if (!videoRef.current?.isConnected) {
-                initializingRef.current = false
-                return
-            }
-            if (!document.body.contains(
-                    videoRef.current)) {
-                initializingRef.current = false
-                return
-            }
-            if (!mountedRef.current ||
-                    !videoRef.current ||
-                    !document.body.contains(
-                        videoRef.current)) {
-                initializingRef.current = false
-                return
-            }
-
-            const player = videojs(
-                videoRef.current,
-                {
-                    controls: true,
-                    fluid: true,
-                    preload: 'metadata',
-                    playbackRates: [
-                        0.5, 0.75, 1,
-                        1.25, 1.5, 2
-                    ],
-                    sources: [{
-                        src,
-                        type: getVideoType(src),
-                    }],
-                    html5: {
-                        vhs: {
-                            overrideNative: false,
-                        },
-                    },
-                }
-            )
-
-            playerRef.current = player
-
-            player.on('loadedmetadata', () => {
-                if (!mountedRef.current ||
-                        !videoRef.current?.isConnected) {
-                    return
-                }
-                setLoading(false)
-                if (resumeAt > 2) {
-                    player.currentTime(resumeAt)
-                }
-            })
-
-            player.on('loadeddata', () => {
-                if (!mountedRef.current ||
-                        !videoRef.current?.isConnected) {
-                    return
-                }
-                setLoading(false)
-                if (autoPlay) {
-                    const playPromise =
-                        player?.play()
-                    if (playPromise?.catch) {
-                        void playPromise
-                            .catch(() => {})
-                    }
-                }
-            })
 
             intervalRef.current = setInterval(
                 () => {
-                if (!mountedRef.current) {
-                    clearInterval(intervalRef.current)
-                    intervalRef.current =
-                        undefined
-                    return
-                }
-                if (!videoRef.current
-                        ?.isConnected) {
-                    clearInterval(intervalRef.current)
-                    intervalRef.current =
-                        undefined
-                    return
-                }
-                if (!playerRef.current) return
-                if (playerRef.current
-                        .isDisposed?.()) {
-                    clearInterval(intervalRef.current)
-                    intervalRef.current =
-                        undefined
-                    return
-                }
+                    const video = videoRef.current
+                    if (!video) return
+                    if (video.paused) return
+                    if (video.ended) return
 
-                try {
-                    const paused =
-                        playerRef.current
-                            .paused()
-                    const ended =
-                        playerRef.current
-                            .ended()
-
-                    if (!paused && !ended) {
-                        const current =
-                            playerRef.current
-                                .currentTime()
-                            || 0
-                        const duration =
-                            playerRef.current
-                                .duration()
-                            || 0
-                        if (duration > 0) {
-                            onProgressRef.current?.(
-                                current,
-                                duration)
-                        }
-                    }
-                } catch {
-                    clearInterval(intervalRef.current)
-                    intervalRef.current =
-                        undefined
-                }
-            }, 10000)
-
-            player.on('pause', () => {
-                if (!mountedRef.current ||
-                        !videoRef.current?.isConnected) {
-                    return
-                }
-                try {
                     const current =
-                        player.currentTime() || 0
+                        video.currentTime
                     const duration =
-                        player.duration() || 0
-                    if (duration > 0) {
-                            onProgressRef.current?.(
-                                current, duration)
-                    }
-                } catch {
-                    // Ignore pause save errors
-                }
-            })
+                        video.duration
 
-            player.on('ended', () => {
-                if (!mountedRef.current ||
-                        !videoRef.current?.isConnected) {
-                    return
-                }
-                try {
-                    const duration =
-                        player.duration() || 0
-                    if (duration > 0) {
+                    if (duration > 0 &&
+                            current > 0) {
                         onProgressRef.current?.(
-                            duration, duration)
+                            current, duration)
                     }
-                    onEndedRef.current?.()
-                } catch {
-                    // Ignore ended errors
-                }
-            })
+                }, 10000)
+        }, [])
 
-            player.on('error', () => {
-                if (!mountedRef.current ||
-                        !videoRef.current?.isConnected) {
-                    return
-                }
-                setError(true)
-                setLoading(false)
-            })
-        } catch (err) {
-            console.warn(
-                'VideoPlayer init failed:',
-                err)
-            if (mountedRef.current &&
-                    videoRef.current?.isConnected) {
-                setError(true)
-                setLoading(false)
+    const stopInterval =
+        useCallback(() => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current)
+                intervalRef.current = null
             }
-        } finally {
-            initializingRef.current = false
-        }
-    }, [
-        autoPlay,
-        destroyPlayer,
-        resumeAt,
-        src,
-        lectureId,
-    ])
+        }, [])
 
     useEffect(() => {
-        mountedRef.current = true
+        const video = videoRef.current
+        if (!video) return
+        if (!src) return
 
-        const rafId = requestAnimationFrame(
-            () => {
-            if (mountedRef.current) {
-                void initPlayer()
+        if (src !== srcRef.current) {
+            hasResumedRef.current = false
+            srcRef.current = src
+        }
+
+        video.src = src
+        video.load()
+
+        const handleLoadedMetadata = () => {
+            const resume =
+                resumeAtRef.current
+            if (resume > 2 &&
+                    !hasResumedRef.current) {
+                video.currentTime = resume
+                hasResumedRef.current = true
             }
-        })
+        }
+
+        const handleLoadedData = () => {
+            if (autoPlay) {
+                video.play().catch(() => {})
+            }
+        }
+
+        const handlePlay = () => {
+            startInterval()
+        }
+
+        const handlePause = () => {
+            stopInterval()
+            const current =
+                video.currentTime
+            const duration =
+                video.duration
+            if (duration > 0 &&
+                    current > 0) {
+                onProgressRef.current?.(
+                    current, duration)
+            }
+        }
+
+        const handleEnded = () => {
+            stopInterval()
+            const duration =
+                video.duration
+            if (duration > 0) {
+                onProgressRef.current?.(
+                    duration, duration)
+            }
+            onEndedRef.current?.()
+        }
+
+        const handleError = () => {
+            stopInterval()
+            console.warn(
+                'Video load error for src:',
+                src)
+        }
+
+        video.addEventListener(
+            'loadedmetadata',
+            handleLoadedMetadata)
+        video.addEventListener(
+            'loadeddata',
+            handleLoadedData)
+        video.addEventListener(
+            'play',
+            handlePlay)
+        video.addEventListener(
+            'pause',
+            handlePause)
+        video.addEventListener(
+            'ended',
+            handleEnded)
+        video.addEventListener(
+            'error',
+            handleError)
 
         return () => {
-            mountedRef.current = false
-            cancelAnimationFrame(rafId)
-            destroyPlayer()
-        }
-    }, [initPlayer])
+            stopInterval()
 
-    if (error) {
-        return (
-            <div className="flex items-center
-                justify-center w-full
-                aspect-video bg-gray-900">
-                <div className="text-center
-                    text-gray-500 p-6">
-                    <p className="text-4xl mb-3">
-                        Video
-                    </p>
-                    <p className="text-sm
-                        font-medium text-gray-400
-                        mb-2">
-                        Could not load video
-                    </p>
-                    <p className="text-xs
-                        text-gray-600 mb-4">
-                        The video file may be
-                        unavailable or the format
-                        is not supported.
-                    </p>
-                    <a
-                        href={src}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2
-                            bg-blue-600 text-white
-                            rounded-lg text-xs
-                            hover:bg-blue-700">
-                        Try Opening Directly
-                    </a>
-                </div>
-            </div>
-        )
-    }
+            video.removeEventListener(
+                'loadedmetadata',
+                handleLoadedMetadata)
+            video.removeEventListener(
+                'loadeddata',
+                handleLoadedData)
+            video.removeEventListener(
+                'play',
+                handlePlay)
+            video.removeEventListener(
+                'pause',
+                handlePause)
+            video.removeEventListener(
+                'ended',
+                handleEnded)
+            video.removeEventListener(
+                'error',
+                handleError)
+
+            video.pause()
+            video.src = ''
+            video.load()
+        }
+    }, [src, autoPlay, startInterval,
+        stopInterval])
 
     return (
         <div className="relative w-full
             bg-black">
-            {loading && (
-                <div className="absolute
-                    inset-0 z-10
-                    flex items-center
-                    justify-center
-                    bg-gray-900">
-                    <div className="flex
-                        flex-col items-center
-                        gap-3">
-                        <div className="w-8 h-8
-                            border-2
-                            border-blue-500
-                            border-t-transparent
-                            rounded-full
-                            animate-spin" />
-                        <p className="text-xs
-                            text-gray-500">
-                            Loading video...
-                        </p>
-                    </div>
-                </div>
-            )}
-
-            <div data-vjs-player>
-                <video
-                    ref={videoRef}
-                    className="video-js
-                        vjs-big-play-centered
-                        vjs-fluid"
-                    playsInline
-                />
-            </div>
+            <video
+                ref={videoRef}
+                className="aspect-video w-full"
+                controls
+                playsInline
+                preload="metadata"
+                style={{
+                    display: 'block',
+                    width: '100%',
+                    backgroundColor: '#000',
+                }}
+            />
         </div>
     )
 })

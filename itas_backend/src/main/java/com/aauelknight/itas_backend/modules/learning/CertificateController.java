@@ -82,6 +82,34 @@ public class CertificateController {
         return certificateService.verifyByCode(code);
     }
 
+    @GetMapping("/verify/{uuid}")
+    public ResponseEntity<Map<String, Object>> verifyByUuid(@PathVariable String uuid) {
+        try {
+            CertificateDto cert = certificateService.verifyByUuid(uuid);
+
+            return ResponseEntity.ok(Map.of(
+                    "status", "VALID",
+                    "valid", true,
+                    "recipientName", cert.getUserFullName(),
+                    "courseName", cert.getCourseTitle(),
+                    "issueDate", cert.getIssuedAt() != null
+                            ? cert.getIssuedAt().toLocalDate().toString()
+                            : "",
+                    "certificateCode", cert.getCertificateCode(),
+                    "verificationUuid", uuid
+            ));
+        } catch (ResponseStatusException e) {
+            if (e.getStatusCode().value() == 404) {
+                return ResponseEntity.status(404).body(Map.of(
+                        "status", "INVALID",
+                        "valid", false,
+                        "message", "Certificate not found"
+                ));
+            }
+            throw e;
+        }
+    }
+
     @PostMapping("/certificate/{id}/share")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> shareCertificate(
@@ -99,7 +127,7 @@ public class CertificateController {
                 ? System.getenv("FRONTEND_URL")
                 : "http://localhost:3000";
 
-        String verifyUrl = frontendUrl + "/verify/" + cert.getCertificateCode();
+        String verifyUrl = frontendUrl + "/verify/" + cert.getVerificationUuid();
 
         System.out.println(
                 "CERTIFICATE SHARE REQUEST:" +

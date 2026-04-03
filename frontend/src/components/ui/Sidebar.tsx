@@ -26,6 +26,7 @@ import { signOut } from "next-auth/react";
 
 import {
   canAccessCourses,
+  getRoleHomePath,
   canGetCertificate,
   isAdminRole,
   isCommunicationRole,
@@ -56,7 +57,7 @@ function getNavSections(role: string): NavSection[] {
   const mainItems: NavItem[] = [
     {
       label: "Dashboard",
-      href: "/dashboard",
+      href: getRoleHomePath(normalizedRole),
       icon: <LayoutDashboard className="h-5 w-5" />,
     },
   ];

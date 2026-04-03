@@ -5,15 +5,19 @@ import com.aauelknight.itas_backend.dto.webinar.WebinarDto;
 import com.aauelknight.itas_backend.dto.webinar.WebinarRequest;
 import com.aauelknight.itas_backend.shared.exception.ResourceNotFoundException;
 import com.aauelknight.itas_backend.modules.auth.User;
+import com.aauelknight.itas_backend.modules.notifications.EmailService;
 import com.aauelknight.itas_backend.modules.webinars.Webinar;
 import com.aauelknight.itas_backend.modules.webinars.WebinarRegistration;
 import com.aauelknight.itas_backend.modules.auth.UserRepository;
 import com.aauelknight.itas_backend.modules.webinars.WebinarRegistrationRepository;
 import com.aauelknight.itas_backend.modules.webinars.WebinarRepository;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,9 +27,14 @@ import org.springframework.web.server.ResponseStatusException;
 @RequiredArgsConstructor
 public class WebinarService {
 
+    private static final Logger log = LoggerFactory.getLogger(WebinarService.class);
+    private static final DateTimeFormatter WEBINAR_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("EEEE, MMMM d yyyy 'at' h:mm a");
+
     private final WebinarRepository webinarRepository;
     private final WebinarRegistrationRepository registrationRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
     @Transactional(readOnly = true)
     public List<WebinarDto> getAllWebinars() {
@@ -140,6 +149,27 @@ public class WebinarService {
                 .attended(false)
                 .build();
         registrationRepository.save(registration);
+
+        if (user.getEmail() != null && !user.getEmail().isBlank()) {
+            try {
+                String scheduledStr = webinar.getScheduledAt() != null
+                        ? webinar.getScheduledAt().format(WEBINAR_DATE_FORMAT)
+                        : "TBD";
+
+                String emailBody = emailService.buildWebinarEmail(
+                        user.getFirstName() + " " + user.getLastName(),
+                        webinar.getTitle(),
+                        scheduledStr,
+                        webinar.getMeetingLink());
+
+                emailService.sendEmail(
+                        user.getEmail(),
+                        "[ITAS Portal] Webinar Registration: " + webinar.getTitle(),
+                        emailBody);
+            } catch (Exception ex) {
+                log.warn("Webinar email failed: {}", ex.getMessage());
+            }
+        }
     }
 
     private WebinarDto toDto(Webinar webinar) {

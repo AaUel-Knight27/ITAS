@@ -5,7 +5,6 @@ import { signOut, useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import NotificationBell from "@/components/notifications/NotificationBell";
 import SearchBar from "@/components/search/SearchBar";
 import { getNavLinks } from "@/lib/navLinks";
 import { canAccessCourses, normalizeRole } from "@/lib/roles";
@@ -94,7 +93,7 @@ export default function Navbar() {
             <div className="hidden items-center gap-1 md:flex">
               {navLinks.map((link) => (
                 <Link
-                  key={link.href}
+                  key={`${link.label}-${link.href}`}
                   href={link.href}
                   className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
                     isActive(link.href)
@@ -112,8 +111,6 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-2">
-              <NotificationBell />
-
               <div className="relative">
                 <button
                   type="button"
@@ -210,7 +207,7 @@ export default function Navbar() {
           <div className="space-y-1 border-t border-gray-200 bg-white px-4 py-3 md:hidden">
             {navLinks.map((link) => (
               <Link
-                key={link.href}
+                key={`${link.label}-${link.href}`}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
                 className={`flex items-center rounded-lg px-3 py-2.5 text-sm font-medium ${

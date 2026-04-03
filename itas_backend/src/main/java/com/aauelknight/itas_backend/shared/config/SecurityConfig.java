@@ -1,6 +1,7 @@
 package com.aauelknight.itas_backend.shared.config;
 
 import com.aauelknight.itas_backend.shared.security.JwtAuthFilter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,7 +17,9 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
 
@@ -43,6 +46,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint())
+                        .accessDeniedHandler(accessDeniedHandler()))
                 .authorizeHttpRequests(auth -> auth
 
                         .requestMatchers(
@@ -55,6 +61,12 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/verify/**",
                                 "/uploads/**"
+                        ).permitAll()
+
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/lms/certificate/verify/*",
+                                "/lms/verify/*"
                         ).permitAll()
 
                         .requestMatchers(
@@ -233,18 +245,6 @@ public class SecurityConfig {
                         ).hasAnyRole("MANAGER", "WEB_ADMIN")
 
                         .requestMatchers(
-                                HttpMethod.GET,
-                                "/notifications/my",
-                                "/notifications/unread-count"
-                        ).authenticated()
-
-                        .requestMatchers(
-                                HttpMethod.PUT,
-                                "/notifications/*/read",
-                                "/notifications/read-all"
-                        ).authenticated()
-
-                        .requestMatchers(
                                 HttpMethod.POST,
                                 "/notifications/send"
                         ).hasAnyRole("COMMUNICATION", "WEB_ADMIN")
@@ -296,8 +296,28 @@ public class SecurityConfig {
     }
 
     @Bean
+    public AuthenticationEntryPoint authenticationEntryPoint() {
+        return (request, response, ex) -> {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write(
+                    "{\"status\":401,\"error\":\"Unauthorized\",\"message\":\"Authentication required. Please log in.\"}");
+        };
+    }
+
+    @Bean
+    public AccessDeniedHandler accessDeniedHandler() {
+        return (request, response, ex) -> {
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json");
+            response.getWriter().write(
+                    "{\"status\":403,\"error\":\"Forbidden\",\"message\":\"You do not have permission to access this resource.\"}");
+        };
+    }
+
+    @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return web -> web.ignoring().requestMatchers("/uploads/**");
+        return web -> web.ignoring().requestMatchers("/uploads/**", "/verify/**");
     }
 
     @Bean

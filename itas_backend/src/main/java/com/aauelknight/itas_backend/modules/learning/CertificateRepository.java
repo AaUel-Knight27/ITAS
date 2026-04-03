@@ -12,6 +12,8 @@ public interface CertificateRepository extends JpaRepository<Certificate, Long> 
 
     List<Certificate> findByUserIdOrderByIssuedAtDesc(Long userId);
 
+    Optional<Certificate> findByVerificationUuid(String verificationUuid);
+
     Optional<Certificate> findByCertificateCode(String certificateCode);
 
     @Query(value = "select nextval('certificate_code_seq')", nativeQuery = true)

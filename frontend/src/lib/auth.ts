@@ -66,24 +66,22 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.accessToken = (user as any).accessToken ?? (user as any).token;
+        token.accessToken = (user as any).token;
         token.role = (user as any).role;
         token.id = user.id;
         token.name = user.name;
-        token.email = user.email;
+        token.email = user.email ?? "";
       }
       return token;
     },
 
     async session({ session, token }) {
-      // Map JWT token fields onto session.user
-      // We have to cast since our standard NextAuth types won't include all
       if (session?.user) {
         (session.user as any).accessToken = token.accessToken as string;
         (session.user as any).role = token.role as string;
         (session.user as any).id = token.id as string;
-        (session.user as any).name = token.name as string;
-        (session.user as any).email = token.email as string;
+        session.user.name = token.name as string;
+        session.user.email = (token.email as string) ?? "";
       }
       return session;
     },

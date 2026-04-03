@@ -31,9 +31,7 @@ import type {
   SyncLogDto,
   SyncRequestDto,
   SyncStatsDto,
-  UnreadCountDto,
   UserDto,
-  UserNotificationDto,
   WebinarDto,
   WebinarRequest,
 } from "./types";
@@ -155,16 +153,6 @@ export const authApi = {
         },
       }
     ),
-};
-
-export const notificationApi = {
-  getMyNotifications: () => api.get<UserNotificationDto[]>("/notifications/my"),
-
-  getUnreadCount: () => api.get<UnreadCountDto>("/notifications/unread-count"),
-
-  markAsRead: (id: number) => api.put(`/notifications/${id}/read`),
-
-  markAllAsRead: () => api.put("/notifications/read-all"),
 };
 
 export const webinarApi = {

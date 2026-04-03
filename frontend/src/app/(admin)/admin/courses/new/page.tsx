@@ -224,6 +224,7 @@ export default function NewCoursePage() {
       setIsSavingDraft(true);
       await updateCourse(course.id, {
         title: course.title,
+        slug: course.slug,
         description: course.description ?? "",
         difficulty: course.difficulty,
         categoryId: course.categoryId ?? course.category?.id,

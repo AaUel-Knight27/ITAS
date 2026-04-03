@@ -1,15 +1,3 @@
-export interface UserNotificationDto {
-  id: number;
-  title: string;
-  message: string;
-  readStatus: boolean;
-  deliveredAt: string;
-}
-
-export interface UnreadCountDto {
-  count: number;
-}
-
 export interface WebinarDto {
   id: number;
   title: string;
@@ -116,8 +104,11 @@ export interface CertificateDto {
   id: number;
   courseTitle: string;
   certificateCode: string;
+  verificationUuid?: string;
+  verifyUrl?: string;
   issuedAt: string;
   filePath: string | null;
+  status?: string;
 }
 
 export interface CourseProgressDto {

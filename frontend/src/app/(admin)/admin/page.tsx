@@ -2,8 +2,8 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/lib/store";
 import { useSession } from "next-auth/react";
+import { normalizeRole } from "@/lib/roles";
 
 /**
  * Admin Dashboard Page
@@ -14,31 +14,53 @@ import { useSession } from "next-auth/react";
  */
 export default function AdminPage() {
   const router = useRouter();
-  const { role, isAuthenticated } = useAuthStore();
-  const { status: sessionStatus } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
 
   function isAllowedRole(role: string | null | undefined) {
-    const normalized = (role ?? "").replace("ROLE_", "").toUpperCase();
-    return ["CONTENT_ADMIN", "SYSTEM_ADMIN"].includes(normalized);
+    const normalized = normalizeRole(role ?? "");
+    return [
+      "CONTENT_ADMIN",
+      "TRAINING_ADMIN",
+      "COMMUNICATION",
+      "WEB_ADMIN",
+      "SYSTEM_ADMIN",
+    ].includes(normalized);
+  }
+
+  function getAdminLandingPage(role: string | null | undefined) {
+    const normalized = normalizeRole(role ?? "");
+
+    switch (normalized) {
+      case "CONTENT_ADMIN":
+        return "/admin/courses";
+      case "TRAINING_ADMIN":
+        return "/admin/webinars";
+      case "COMMUNICATION":
+        return "/admin/communications";
+      case "WEB_ADMIN":
+      case "SYSTEM_ADMIN":
+        return "/admin/users";
+      default:
+        return "/dashboard";
+    }
   }
 
   useEffect(() => {
-    // Wait for session and store to be ready
     if (sessionStatus === "loading") return;
 
-    if (!isAuthenticated && sessionStatus === "unauthenticated") {
+    if (sessionStatus === "unauthenticated") {
       router.replace("/login");
       return;
     }
 
+    const role = session?.user?.role;
     if (!isAllowedRole(role)) {
       router.replace("/dashboard");
       return;
     }
 
-    // Default admin behavior: go to course management
-    router.replace("/admin/courses");
-  }, [router, role, isAuthenticated, sessionStatus]);
+    router.replace(getAdminLandingPage(role));
+  }, [router, session?.user?.role, sessionStatus]);
 
   return (
     <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">

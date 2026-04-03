@@ -96,18 +96,43 @@ export async function getCourseById(id: number | string): Promise<Course> {
 }
 
 export async function updateCourse(
-  id: number | string,
-  payload: Partial<{
+  courseId: number | string,
+  data: {
     title: string;
     slug: string;
-    description: string;
-    categoryId: number | string;
-    difficulty: string;
-    thumbnailUrl?: string;
+    description?: string;
+    categoryId?: number | string;
+    difficulty?: string;
     targetAudience?: string[];
-  }>
+    thumbnailUrl?: string;
+    durationMinutes?: number;
+  }
 ): Promise<Course> {
-  const response = await api.put<Course | ApiResponse<Course>>(`${COURSES_BASE}/${id}`, payload);
+  const payload: Record<string, unknown> = {
+    title: data.title,
+    slug: data.slug,
+  };
+
+  if (data.description !== undefined) {
+    payload.description = data.description;
+  }
+  if (data.categoryId !== undefined && data.categoryId !== "") {
+    payload.categoryId = Number(data.categoryId);
+  }
+  if (data.difficulty !== undefined) {
+    payload.difficulty = data.difficulty;
+  }
+  if (data.targetAudience !== undefined) {
+    payload.targetAudience = data.targetAudience;
+  }
+  if (data.thumbnailUrl) {
+    payload.thumbnailUrl = data.thumbnailUrl;
+  }
+  if (data.durationMinutes !== undefined) {
+    payload.durationMinutes = data.durationMinutes;
+  }
+
+  const response = await api.put<Course | ApiResponse<Course>>(`${COURSES_BASE}/${courseId}`, payload);
   return normalizeCourse(unwrap(response.data));
 }
 

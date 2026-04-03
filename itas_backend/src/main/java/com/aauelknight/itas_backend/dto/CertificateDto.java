@@ -20,7 +20,10 @@ public class CertificateDto {
     private Long courseId;
     private String courseTitle;
     private String certificateCode;
+    private String verificationUuid;
+    private String verifyUrl;
     private String qrCode;
     private String filePath;
     private LocalDateTime issuedAt;
+    private String status;
 }
