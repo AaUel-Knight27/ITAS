@@ -8,9 +8,10 @@ import {
   User,
   XCircle,
 } from 'lucide-react'
+import { API_BASE } from '@/lib/config'
 
 type Props = {
-  params: { code: string }
+  params: Promise<{ code: string }>
 }
 
 type VerifyResult = {
@@ -25,38 +26,64 @@ type VerifyResult = {
 }
 
 async function fetchVerification(uuid: string): Promise<VerifyResult> {
-  const apiBase =
-    process.env.NEXT_PUBLIC_API_URL ||
-    'http://localhost:8080/api/v1'
-
   try {
-    const res = await fetch(
-      `${apiBase}/verify/${uuid}`,
-      {
+    const endpoints = [
+      `${API_BASE}/verify/${uuid}`,
+      `${API_BASE}/lms/certificate/verify/${uuid}`,
+    ]
+
+    for (const endpoint of endpoints) {
+      const res = await fetch(endpoint, {
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
         },
-      }
-    )
+      })
 
-    if (res.status === 404) {
+      if (res.status === 404) {
+        continue
+      }
+
+      if (!res.ok) {
+        return {
+          status: 'INVALID',
+          valid: false,
+          message: 'Verification failed',
+        }
+      }
+
+      const data = await res.json()
+
       return {
-        status: 'INVALID',
-        valid: false,
-        message: 'Certificate not found',
+        status: data.status ?? 'VALID',
+        valid:
+          data.valid ??
+          Boolean(
+            data.certificateCode ||
+            data.verificationUuid,
+          ),
+        recipientName:
+          data.recipientName ??
+          data.userFullName,
+        courseName:
+          data.courseName ??
+          data.courseTitle,
+        issueDate:
+          data.issueDate ??
+          data.issuedAt,
+        certificateCode:
+          data.certificateCode,
+        verificationUuid:
+          data.verificationUuid,
+        message: data.message,
       }
     }
 
-    if (!res.ok) {
-      return {
-        status: 'INVALID',
-        valid: false,
-        message: 'Verification failed',
-      }
+    return {
+      status: 'INVALID',
+      valid: false,
+      message: 'Certificate not found',
     }
-
-    return await res.json()
   } catch {
     return {
       status: 'INVALID',
@@ -80,7 +107,8 @@ function formatDate(value?: string) {
 }
 
 export default async function VerifyPage({ params }: Props) {
-  const uuid = params.code
+  const { code } = await params
+  const uuid = code
   const result = await fetchVerification(uuid)
 
   return (

@@ -155,7 +155,7 @@ public class CertificateService {
     @Transactional(readOnly = true)
     public CertificateDto verifyByCode(String code) {
         Certificate cert = certificateRepository.findByCertificateCode(code)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Certificate not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Certificate not test"));
         return toDto(cert);
     }
 

@@ -82,6 +82,8 @@ public class CertificateController {
         return certificateService.verifyByCode(code);
     }
 
+
+
     @GetMapping("/verify/{uuid}")
     public ResponseEntity<Map<String, Object>> verifyByUuid(@PathVariable String uuid) {
         try {

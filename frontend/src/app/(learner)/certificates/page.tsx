@@ -115,8 +115,16 @@ export default function CertificatesPage() {
                   <button
                     type="button"
                     onClick={() => {
-                      const uuid = cert.verificationUuid || cert.certificateCode;
-                      window.open(`/verify/${uuid}`, "_blank");
+                      const verifyPath = cert.verifyUrl
+                        ? new URL(
+                            cert.verifyUrl,
+                            window.location.origin,
+                          ).pathname
+                        : `/verify/${
+                            cert.verificationUuid ||
+                            cert.certificateCode
+                          }`;
+                      window.open(verifyPath, "_blank");
                     }}
                     className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
                   >

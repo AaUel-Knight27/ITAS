@@ -37,3 +37,4 @@ out/
 *.env.local
 *.env
 .DS_Store
+itas_backend/qodana.yaml
