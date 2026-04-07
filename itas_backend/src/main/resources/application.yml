@@ -7,9 +7,9 @@ spring:
   config:
     import: optional:file:.env[.properties]
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portal_db?currentSchema=public}
-    username: ${SPRING_DATASOURCE_USERNAME:postgres}
-    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+    url: ${SPRING_DATASOURCE_URL:}  
+    username: ${SPRING_DATASOURCE_USERNAME:}
+    password: ${SPRING_DATASOURCE_PASSWORD:}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -57,7 +57,7 @@ app:
 
   email:
     enabled: ${APP_EMAIL_ENABLED:true}
-    from: ${APP_EMAIL_FROM:${SPRING_MAIL_USERNAME:noreply@example.com}}
+    from: ${APP_EMAIL_FROM:${SPRING_MAIL_USERNAME:portal@itas.com}}
     from-name: ${APP_EMAIL_FROM_NAME:ITAS Portal}
 
   jwt:
