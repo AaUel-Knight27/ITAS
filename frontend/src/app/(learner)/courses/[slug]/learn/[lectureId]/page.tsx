@@ -878,6 +878,7 @@ export default function LearnLecturePage() {
                 <PdfViewer
                   url={getFileUrl(activeLecture.pdfUrl ?? activeLecture.contentUrl) ?? ""}
                   title={activeLecture.title}
+                  lectureId={Number(activeLecture.id)}
                   onComplete={() => void handleMarkComplete()}
                 />
               ) : null}
