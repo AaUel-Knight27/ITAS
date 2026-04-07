@@ -19,5 +19,7 @@ public class AssessmentQuestionDto {
     private String questionText;
     private QuestionType questionType;
     private List<String> options;
+    private String correctAnswer;
+    private String explanation;
     private Integer points;
 }

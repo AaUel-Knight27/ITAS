@@ -24,6 +24,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -99,6 +100,7 @@ public class AssessmentService {
                 .questionType(request.getQuestionType())
                 .optionsJson(request.getOptionsJson())
                 .correctAnswer(request.getCorrectAnswer())
+                .explanation(request.getExplanation())
                 .points(request.getPoints())
                 .build();
         return toQuestionAdminDto(assessmentQuestionRepository.save(question));
@@ -113,6 +115,7 @@ public class AssessmentService {
                 .questionType(request.getQuestionType())
                 .optionsJson(request.getOptionsJson())
                 .correctAnswer(request.getCorrectAnswer())
+                .explanation(request.getExplanation())
                 .points(request.getPoints() == null ? 1 : request.getPoints())
                 .build();
         return toQuestionDto(assessmentQuestionRepository.save(question));
@@ -191,21 +194,34 @@ public class AssessmentService {
 
         int totalPoints = 0;
         int earnedPoints = 0;
-        Map<Long, String> correctAnswers = new LinkedHashMap<>();
+        int correctCount = 0;
+        List<AssessmentResultDto.QuestionResult> questionResults = new ArrayList<>();
 
         for (AssessmentQuestion question : questions) {
             int points = question.getPoints() == null ? 1 : Math.max(question.getPoints(), 1);
             totalPoints += points;
-            correctAnswers.put(question.getId(), question.getCorrectAnswer());
 
-            String selected = answersMap.get(question.getId());
-            if (selected != null && normalize(selected).equals(normalize(question.getCorrectAnswer()))) {
+            String selected = answersMap.getOrDefault(question.getId(), "");
+            boolean isCorrect = normalize(selected).equals(normalize(question.getCorrectAnswer()));
+            if (isCorrect) {
                 earnedPoints += points;
+                correctCount++;
             }
+
+            questionResults.add(AssessmentResultDto.QuestionResult.builder()
+                    .questionId(question.getId())
+                    .questionText(question.getQuestionText())
+                    .selectedAnswer(selected)
+                    .correctAnswer(question.getCorrectAnswer())
+                    .explanation(question.getExplanation())
+                    .correct(isCorrect)
+                    .points(points)
+                    .build());
         }
 
         double score = totalPoints == 0 ? 0.0 : (earnedPoints * 100.0) / totalPoints;
         boolean passed = score >= assessment.getPassingScore();
+        int attemptsRemaining = Math.max(0, assessment.getMaxAttempts() - ((int) attempts + 1));
 
         AssessmentAttempt attempt = AssessmentAttempt.builder()
                 .assessment(assessment)
@@ -226,21 +242,44 @@ public class AssessmentService {
                 certificate = certificateService.generate(userId, courseId);
             }
         }
-        return toResultDto(saved, correctAnswers, certificate);
+        return toResultDto(saved, assessment, questionResults, correctCount, attemptsRemaining, certificate);
     }
 
     @Transactional(readOnly = true)
     public AssessmentResultDto getAttemptResult(Long attemptId) {
         AssessmentAttempt attempt = assessmentAttemptRepository.findById(attemptId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Attempt not found"));
-        Map<Long, String> correctAnswers = assessmentQuestionRepository
-                .findByAssessmentIdOrderByIdAsc(attempt.getAssessment().getId())
-                .stream()
-                .collect(LinkedHashMap::new, (map, q) -> map.put(q.getId(), q.getCorrectAnswer()), Map::putAll);
+        Assessment assessment = attempt.getAssessment();
+        List<AssessmentQuestion> questions = assessmentQuestionRepository.findByAssessmentIdOrderByIdAsc(assessment.getId());
+        Map<Long, String> answersMap = parseAnswers(attempt.getAnswersJson());
+        List<AssessmentResultDto.QuestionResult> questionResults = new ArrayList<>();
+        int correctCount = 0;
+
+        for (AssessmentQuestion question : questions) {
+            int points = question.getPoints() == null ? 1 : Math.max(question.getPoints(), 1);
+            String selected = answersMap.getOrDefault(question.getId(), "");
+            boolean isCorrect = normalize(selected).equals(normalize(question.getCorrectAnswer()));
+            if (isCorrect) {
+                correctCount++;
+            }
+
+            questionResults.add(AssessmentResultDto.QuestionResult.builder()
+                    .questionId(question.getId())
+                    .questionText(question.getQuestionText())
+                    .selectedAnswer(selected)
+                    .correctAnswer(question.getCorrectAnswer())
+                    .explanation(question.getExplanation())
+                    .correct(isCorrect)
+                    .points(points)
+                    .build());
+        }
+
+        long attemptsUsed = assessmentAttemptRepository.countByUserIdAndAssessmentId(attempt.getUser().getId(), assessment.getId());
+        int attemptsRemaining = Math.max(0, assessment.getMaxAttempts() - (int) attemptsUsed);
         CertificateDto certificate = attempt.isPassed()
-                ? certificateService.getByUserAndCourse(attempt.getUser().getId(), attempt.getAssessment().getCourse().getId())
+                ? certificateService.getByUserAndCourse(attempt.getUser().getId(), assessment.getCourse().getId())
                 : null;
-        return toResultDto(attempt, correctAnswers, certificate);
+        return toResultDto(attempt, assessment, questionResults, correctCount, attemptsRemaining, certificate);
     }
 
     @Transactional(readOnly = true)
@@ -277,6 +316,8 @@ public class AssessmentService {
                 .questionText(question.getQuestionText())
                 .questionType(question.getQuestionType())
                 .options(parseOptions(question.getOptionsJson()))
+                .correctAnswer(question.getCorrectAnswer())
+                .explanation(question.getExplanation())
                 .points(question.getPoints())
                 .build();
     }
@@ -299,22 +340,33 @@ public class AssessmentService {
                 .questionType(question.getQuestionType())
                 .optionsJson(question.getOptionsJson())
                 .correctAnswer(question.getCorrectAnswer())
+                .explanation(question.getExplanation())
                 .points(question.getPoints())
                 .build();
     }
 
     private AssessmentResultDto toResultDto(AssessmentAttempt attempt,
-                                            Map<Long, String> correctAnswers,
+                                            Assessment assessment,
+                                            List<AssessmentResultDto.QuestionResult> questionResults,
+                                            int correctCount,
+                                            int attemptsRemaining,
                                             CertificateDto certificate) {
+        int totalQuestions = questionResults.size();
         return AssessmentResultDto.builder()
                 .attemptId(attempt.getId())
-                .assessmentId(attempt.getAssessment().getId())
-                .attemptNumber(attempt.getAttemptNumber())
+                .assessmentId(assessment.getId())
                 .score(attempt.getScore())
                 .passed(attempt.isPassed())
+                .correctAnswers(correctCount)
+                .incorrectAnswers(totalQuestions - correctCount)
+                .totalQuestions(totalQuestions)
+                .passingScore(assessment.getPassingScore())
+                .attemptNumber(attempt.getAttemptNumber())
+                .attemptsRemaining(attemptsRemaining)
                 .submittedAt(attempt.getSubmittedAt())
-                .correctAnswers(correctAnswers)
-                .certificate(certificate)
+                .certificateId(certificate != null ? certificate.getId() : null)
+                .certificateCode(certificate != null ? certificate.getCertificateCode() : null)
+                .questionResults(questionResults)
                 .build();
     }
 
@@ -335,6 +387,18 @@ public class AssessmentService {
             return objectMapper.writeValueAsString(answersMap);
         } catch (JsonProcessingException ex) {
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to serialize answers");
+        }
+    }
+
+    private Map<Long, String> parseAnswers(String answersJson) {
+        if (answersJson == null || answersJson.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(answersJson, new TypeReference<Map<Long, String>>() {
+            });
+        } catch (JsonProcessingException ex) {
+            return Map.of();
         }
     }
 

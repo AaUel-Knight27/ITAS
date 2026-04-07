@@ -19,5 +19,6 @@ public class AssessmentQuestionAdminDto {
     private QuestionType questionType;
     private String optionsJson;
     private String correctAnswer;
+    private String explanation;
     private Integer points;
 }

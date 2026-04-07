@@ -47,6 +47,9 @@ public class AssessmentQuestion {
     @Column(name = "correct_answer", nullable = false, columnDefinition = "TEXT")
     private String correctAnswer;
 
+    @Column(name = "explanation", columnDefinition = "TEXT")
+    private String explanation;
+
     @Column(nullable = false)
     private Integer points;
 }

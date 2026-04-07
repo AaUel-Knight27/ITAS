@@ -45,6 +45,7 @@ type QuizQuestion = {
   options: string[];
   correctAnswer: string;
   points: number;
+  explanation?: string;
 };
 
 const DEFAULT_QUESTION = {
@@ -53,6 +54,7 @@ const DEFAULT_QUESTION = {
   options: ["", "", "", ""],
   correctAnswer: "",
   points: 1,
+  explanation: "",
 };
 
 function byOrder<T extends { orderIndex: number }>(items: T[]) {
@@ -493,6 +495,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
       ),
       correctAnswer: newQuestion.correctAnswer,
       points: Number(newQuestion.points) || 1,
+      explanation: newQuestion.explanation?.trim() || undefined,
     };
 
     try {
@@ -505,6 +508,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
         options: JSON.parse(payload.optionsJson) as string[],
         correctAnswer: payload.correctAnswer,
         points: payload.points,
+        explanation: payload.explanation,
       };
       setQuestions((prev) => [...prev, nextQuestion]);
       patchActiveLecture({ quizQuestionCount: (activeLecture?.quizQuestionCount ?? 0) + 1 });
@@ -1081,6 +1085,22 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                         />
                       </label>
 
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-medium text-slate-600">Explanation (optional)</span>
+                        <textarea
+                          rows={2}
+                          placeholder="Explain why this is the correct answer..."
+                          value={newQuestion.explanation ?? ""}
+                          onChange={(event) =>
+                            setNewQuestion((prev) => ({
+                              ...prev,
+                              explanation: event.target.value,
+                            }))
+                          }
+                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                        />
+                      </label>
+
                       <button
                         type="button"
                         onClick={() => void handleAddQuestion()}
@@ -1114,6 +1134,9 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                                 }).join(" | ")}
                               </p>
                               <p className="text-xs text-slate-600">Correct: {question.correctAnswer} ✅</p>
+                              {question.explanation ? (
+                                <p className="text-xs text-slate-600">Explanation: {question.explanation}</p>
+                              ) : null}
                               <button
                                 type="button"
                                 onClick={() => void handleDeleteQuestion(question.id)}

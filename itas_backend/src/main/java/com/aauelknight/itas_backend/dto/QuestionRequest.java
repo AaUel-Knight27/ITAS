@@ -25,5 +25,7 @@ public class QuestionRequest {
     @NotBlank
     private String correctAnswer;
 
+    private String explanation;
+
     private Integer points = 1;
 }

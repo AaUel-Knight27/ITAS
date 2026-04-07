@@ -1,7 +1,7 @@
 package com.aauelknight.itas_backend.dto;
 
 import java.time.LocalDateTime;
-import java.util.Map;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,10 +17,31 @@ public class AssessmentResultDto {
 
     private Long attemptId;
     private Long assessmentId;
-    private Integer attemptNumber;
     private Double score;
-    private boolean passed;
+    private Boolean passed;
+    private Integer correctAnswers;
+    private Integer incorrectAnswers;
+    private Integer totalQuestions;
+    private Double passingScore;
+    private Integer attemptNumber;
+    private Integer attemptsRemaining;
     private LocalDateTime submittedAt;
-    private Map<Long, String> correctAnswers;
-    private CertificateDto certificate;
+    private Long certificateId;
+    private String certificateCode;
+    private List<QuestionResult> questionResults;
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class QuestionResult {
+        private Long questionId;
+        private String questionText;
+        private String selectedAnswer;
+        private String correctAnswer;
+        private String explanation;
+        private Boolean correct;
+        private Integer points;
+    }
 }

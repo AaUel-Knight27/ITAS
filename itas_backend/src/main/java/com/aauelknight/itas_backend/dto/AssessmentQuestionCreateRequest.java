@@ -25,6 +25,8 @@ public class AssessmentQuestionCreateRequest {
     @NotBlank(message = "correctAnswer is required")
     private String correctAnswer;
 
+    private String explanation;
+
     @NotNull(message = "points is required")
     private Integer points;
 }

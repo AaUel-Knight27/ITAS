@@ -18,6 +18,7 @@ export type QuizQuestionPayload = {
   optionsJson: string;
   correctAnswer: string;
   points: number;
+  explanation?: string;
 };
 
 function unwrap<T>(payload: T | ApiResponse<T>): T {
