@@ -1,7 +1,13 @@
 "use client";
 
-import WebAdminDashboard from "@/components/dashboard/WebAdminDashboard";
+import AdminRoleGate from "@/components/admin/AdminRoleGate";
+import TrainingAdminDashboard from "@/components/dashboard/TrainingAdminDashboard";
+import { TRAINING_ADMIN_ROUTE_ROLES } from "@/lib/roles";
 
 export default function AdminWebinarsPage() {
-  return <WebAdminDashboard initialSection="webinars" />;
+  return (
+    <AdminRoleGate allowedRoles={TRAINING_ADMIN_ROUTE_ROLES}>
+      <TrainingAdminDashboard />
+    </AdminRoleGate>
+  );
 }

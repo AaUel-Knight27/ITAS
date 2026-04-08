@@ -17,7 +17,7 @@ import type { Course } from "@/types";
 
 function isAllowedRole(role: string | null | undefined) {
   const normalized = normalizeRole(role ?? "");
-  return ["CONTENT_ADMIN", "SYSTEM_ADMIN"].includes(normalized);
+  return ["CONTENT_ADMIN"].includes(normalized);
 }
 
 function AdminCoursesPageContent() {
@@ -27,7 +27,7 @@ function AdminCoursesPageContent() {
   const { data: session, status: sessionStatus } = useSession();
   const role = session?.user?.role;
   const normalizedRole = normalizeRole(role ?? "");
-  const canEditContent = ["CONTENT_ADMIN", "SYSTEM_ADMIN"].includes(normalizedRole);
+  const canEditContent = ["CONTENT_ADMIN"].includes(normalizedRole);
   const { showToast } = useUIStore();
 
   const [uploadingFile, setUploadingFile] = useState<File | null>(null);

@@ -126,6 +126,13 @@ export default function CourseDetailPage() {
     }
   }
 
+  function handleStartHover() {
+    if (!course || !continueLecture) {
+      return;
+    }
+    router.prefetch(getCourseLearnHref(course.slug, continueLecture));
+  }
+
   if (status === "authenticated" && !canLearn) {
     return null;
   }
@@ -176,6 +183,7 @@ export default function CourseDetailPage() {
                 continueLecture ? (
                   <Link
                     href={getCourseLearnHref(course.slug, continueLecture)}
+                    onMouseEnter={handleStartHover}
                     className="inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
                   >
                     Continue Learning
@@ -185,6 +193,7 @@ export default function CourseDetailPage() {
                 <button
                   type="button"
                   disabled={isEnrolling}
+                  onMouseEnter={handleStartHover}
                   onClick={handleEnroll}
                   className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                 >

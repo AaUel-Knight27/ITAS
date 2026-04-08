@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -128,7 +129,14 @@ public class CertificateService {
                 .issuedAt(LocalDateTime.now())
                 .build();
 
-        Certificate saved = certificateRepository.save(cert);
+        Certificate saved;
+        try {
+            saved = certificateRepository.save(cert);
+        } catch (DataIntegrityViolationException ex) {
+            log.info("Certificate already exists for userId={} and courseId={}, returning existing record", userId, courseId);
+            saved = certificateRepository.findByUserIdAndCourseId(userId, courseId)
+                    .orElseThrow(() -> ex);
+        }
 
         try {
             String name = (user.getFirstName() + " " + user.getLastName()).trim();

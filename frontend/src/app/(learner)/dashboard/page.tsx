@@ -1,17 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 
-import CommunicationDashboard from "@/components/dashboard/CommunicationDashboard";
-import ContentAdminDashboard from "@/components/dashboard/ContentAdminDashboard";
-import ManagerDashboard from "@/components/dashboard/ManagerDashboard";
-import MorStaffDashboard from "@/components/dashboard/MorStaffDashboard";
-import TaxAgentDashboard from "@/components/dashboard/TaxAgentDashboard";
-import TaxpayerDashboard from "@/components/dashboard/TaxpayerDashboard";
-import TrainingAdminDashboard from "@/components/dashboard/TrainingAdminDashboard";
-import WebAdminDashboard from "@/components/dashboard/WebAdminDashboard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import {
   isCommunicationRole,
@@ -21,6 +14,49 @@ import {
   isWebAdminRole,
   normalizeRole,
 } from "@/lib/roles";
+
+function DashboardSkeleton() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 p-6 animate-pulse">
+      <div className="h-8 w-64 rounded bg-gray-200" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {[1, 2, 3].map((item) => (
+          <div key={item} className="h-28 rounded-xl bg-gray-200" />
+        ))}
+      </div>
+      <div className="space-y-3">
+        {[1, 2, 3].map((item) => (
+          <div key={item} className="h-20 rounded-xl bg-gray-100" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const TaxpayerDashboard = dynamic(() => import("@/components/dashboard/TaxpayerDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
+const TaxAgentDashboard = dynamic(() => import("@/components/dashboard/TaxAgentDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
+const MorStaffDashboard = dynamic(() => import("@/components/dashboard/MorStaffDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
+const ManagerDashboard = dynamic(() => import("@/components/dashboard/ManagerDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
+const ContentAdminDashboard = dynamic(() => import("@/components/dashboard/ContentAdminDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
+const TrainingAdminDashboard = dynamic(() => import("@/components/dashboard/TrainingAdminDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
+const CommunicationDashboard = dynamic(() => import("@/components/dashboard/CommunicationDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
+const WebAdminDashboard = dynamic(() => import("@/components/dashboard/WebAdminDashboard"), {
+  loading: () => <DashboardSkeleton />,
+});
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -35,11 +71,7 @@ export default function DashboardPage() {
   }, [router, sessionStatus]);
 
   if (sessionStatus === "loading") {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (!session?.user) {

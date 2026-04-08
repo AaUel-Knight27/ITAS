@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import CourseBuilder from "@/components/admin/CourseBuilder";
 import HelpButton from "@/components/help/HelpButton";
 import HelpTooltip from "@/components/help/HelpTooltip";
+import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import { createSlugCandidate, normalizeSlugInput } from "@/lib/slug";
 import {
@@ -22,7 +23,7 @@ import type { Category, Course, Lecture } from "@/types";
 
 function isAllowedRole(role: string | null | undefined) {
   const normalized = (role ?? "").replace("ROLE_", "").toUpperCase();
-  return normalized === "CONTENT_ADMIN" || normalized === "SYSTEM_ADMIN";
+  return normalized === "CONTENT_ADMIN";
 }
 
 export default function NewCoursePage() {
@@ -187,6 +188,7 @@ export default function NewCoursePage() {
         }
       }
 
+      courseCache.invalidate(CACHE_KEYS.courses());
       setCourse(nextCourse);
       setStep(2);
     } catch (error) {
@@ -208,6 +210,8 @@ export default function NewCoursePage() {
       setIsPublishing(true);
       setPublishError(null);
       await publishCourse(course.id);
+      courseCache.invalidate(CACHE_KEYS.courses());
+      courseCache.invalidate(CACHE_KEYS.course(course.slug));
       router.push("/admin/courses");
     } catch (error) {
       const message = getErrorMessage(error) || "Could not publish course. Please try again.";
@@ -231,6 +235,8 @@ export default function NewCoursePage() {
         thumbnailUrl: course.thumbnailUrl,
         targetAudience: course.targetAudience,
       });
+      courseCache.invalidate(CACHE_KEYS.courses());
+      courseCache.invalidate(CACHE_KEYS.course(course.slug));
       router.push("/admin/courses?status=draft");
     } catch (error) {
       setGeneralError(getErrorMessage(error));

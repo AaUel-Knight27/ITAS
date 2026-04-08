@@ -21,6 +21,23 @@ export type QuizQuestionPayload = {
   explanation?: string;
 };
 
+type AssessmentQuestionResponse = {
+  id: number | string;
+  questionText: string;
+  questionType: "MCQ" | "TRUE_FALSE";
+  options: string[];
+  correctAnswer: string;
+  points: number;
+  explanation?: string;
+};
+
+type AssessmentResponse = {
+  id: number | string;
+  passingScore?: number;
+  maxAttempts?: number;
+  questions?: AssessmentQuestionResponse[];
+};
+
 function unwrap<T>(payload: T | ApiResponse<T>): T {
   if (payload == null) return payload as T;
   const obj = payload as Record<string, unknown>;
@@ -281,6 +298,13 @@ export async function createAssessment(payload: {
   const response = await api.post<{ id: number | string } | ApiResponse<{ id: number | string }>>(
     "/lms/assessment/create",
     payload
+  );
+  return unwrap(response.data);
+}
+
+export async function getAssessment(assessmentId: number | string): Promise<AssessmentResponse> {
+  const response = await api.get<AssessmentResponse | ApiResponse<AssessmentResponse>>(
+    `/lms/assessment/${assessmentId}`
   );
   return unwrap(response.data);
 }

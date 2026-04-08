@@ -61,6 +61,11 @@ public class SecurityConfig {
                                 "/verify/**",
                                 "/uploads/**"
                         ).permitAll()
+                        .requestMatchers(
+                                HttpMethod.HEAD,
+                                "/verify/**",
+                                "/uploads/**"
+                        ).permitAll()
 
                         .requestMatchers(
                                 HttpMethod.GET,
@@ -318,7 +323,7 @@ public class SecurityConfig {
 
     @Bean
     public WebSecurityCustomizer webSecurityCustomizer() {
-        return web -> web.ignoring().requestMatchers("/uploads/**", "/verify/**");
+        return web -> web.ignoring().requestMatchers("/verify/**");
     }
 
     @Bean

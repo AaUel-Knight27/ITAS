@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import CourseCard from "@/components/course/CourseCard";
 import api, { searchApi } from "@/lib/api";
 import { getCategories } from "@/lib/api/courses";
+import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { canAccessCourses } from "@/lib/roles";
@@ -97,7 +98,12 @@ export default function CoursesPage() {
 
     async function loadCategories() {
       try {
-        const data = await getCategories();
+        const cacheKey = CACHE_KEYS.categories();
+        let data = courseCache.get<Category[]>(cacheKey);
+        if (!data) {
+          data = await getCategories();
+          courseCache.set(cacheKey, data, 10 * 60 * 1000);
+        }
         if (!active) return;
         setCategories(data);
       } catch {
@@ -134,10 +140,17 @@ export default function CoursesPage() {
           setCourses(list);
         } else {
           setIsLoading(true);
-          const response = await api.get<Course[] | ApiResponse<Course[]>>("/courses");
+          const cacheKey = CACHE_KEYS.courses();
+          let data = courseCache.get<Course[]>(cacheKey);
+
+          if (!data) {
+            const response = await api.get<Course[] | ApiResponse<Course[]>>("/courses");
+            data = unwrap(response.data).map(normalizeCourse).filter(isPublished);
+            courseCache.set(cacheKey, data, 3 * 60 * 1000);
+          }
+
           if (!active) return;
-          const list = unwrap(response.data).map(normalizeCourse).filter(isPublished);
-          setCourses(list);
+          setCourses(data);
         }
       } catch (err) {
         if (!active) return;
@@ -181,10 +194,25 @@ export default function CoursesPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-          <p className="text-sm text-muted-foreground">Loading courses...</p>
+      <div className="mx-auto max-w-6xl px-4 py-8">
+        <div className="mb-6 h-10 max-w-md animate-pulse rounded-xl bg-gray-200" />
+        <div className="mb-6 flex gap-2">
+          {[1, 2, 3, 4].map((item) => (
+            <div key={item} className="h-8 w-20 animate-pulse rounded-full bg-gray-200" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
+            <div key={item} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+              <div className="h-40 animate-pulse bg-gray-200" />
+              <div className="space-y-2 p-4">
+                <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
+                <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-gray-100" />
+                <div className="mt-3 h-8 animate-pulse rounded-lg bg-gray-200" />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );

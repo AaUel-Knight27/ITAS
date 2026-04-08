@@ -8,12 +8,13 @@ import { useSession } from "next-auth/react";
 import CourseBuilder from "@/components/admin/CourseBuilder";
 import CourseSettingsForm from "@/components/admin/CourseSettingsForm";
 import { getCourseById, publishCourse, unpublishCourse } from "@/lib/api/admin-courses";
+import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import type { Course } from "@/types";
 
 function isAllowedRole(role: string | null | undefined) {
   const normalized = (role ?? "").replace("ROLE_", "").toUpperCase();
-  return normalized === "CONTENT_ADMIN" || normalized === "SYSTEM_ADMIN";
+  return normalized === "CONTENT_ADMIN";
 }
 
 export default function EditCoursePage() {
@@ -68,6 +69,8 @@ export default function EditCoursePage() {
       } else {
         await publishCourse(course.id);
       }
+      courseCache.invalidate(CACHE_KEYS.courses());
+      courseCache.invalidate(CACHE_KEYS.course(course.slug));
       setCourse((prev) => (prev ? { ...prev, published: !prev.published } : prev));
     } catch (error) {
       setError(getErrorMessage(error));

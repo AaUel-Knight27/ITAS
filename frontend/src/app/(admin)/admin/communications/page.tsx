@@ -1,7 +1,13 @@
 "use client";
 
-import WebAdminDashboard from "@/components/dashboard/WebAdminDashboard";
+import AdminRoleGate from "@/components/admin/AdminRoleGate";
+import CommunicationDashboard from "@/components/dashboard/CommunicationDashboard";
+import { COMMUNICATION_ROUTE_ROLES } from "@/lib/roles";
 
 export default function AdminCommunicationsPage() {
-  return <WebAdminDashboard initialSection="communications" />;
+  return (
+    <AdminRoleGate allowedRoles={COMMUNICATION_ROUTE_ROLES}>
+      <CommunicationDashboard />
+    </AdminRoleGate>
+  );
 }

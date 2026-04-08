@@ -9,25 +9,74 @@ import CompletionCheck from "@/components/ui/CompletionCheck";
 import type { VideoPlayerHandle } from "@/components/player/VideoPlayer";
 import api, { progressApi } from "@/lib/api";
 import { getCourseBySlug } from "@/lib/api/courses";
+import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { canAccessCourses } from "@/lib/roles";
 import { getFileUrl } from "@/lib/utils";
 import type { Course, CourseSection, Lecture, VideoProgress } from "@/types";
 
-const VideoPlayer = dynamic(() => import("@/components/player/VideoPlayer"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex aspect-video w-full items-center justify-center bg-gray-900">
+function VideoSkeleton() {
+  return (
+    <div className="flex aspect-video w-full items-center justify-center bg-gray-800 animate-pulse">
       <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-        <p className="text-xs text-gray-500">Loading player...</p>
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-700">
+          <div className="ml-1 h-0 w-0 border-b-8 border-l-[12px] border-b-transparent border-l-gray-500 border-t-8 border-t-transparent" />
+        </div>
+        <div className="h-2 w-32 rounded bg-gray-700" />
       </div>
     </div>
-  ),
+  );
+}
+
+function ContentSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl animate-pulse space-y-4 p-8">
+      <div className="h-6 w-3/4 rounded bg-gray-800" />
+      <div className="h-4 w-full rounded bg-gray-800" />
+      <div className="h-4 w-5/6 rounded bg-gray-800" />
+      <div className="h-4 w-4/6 rounded bg-gray-800" />
+      <div className="mt-6 h-4 w-full rounded bg-gray-800" />
+      <div className="h-4 w-3/4 rounded bg-gray-800" />
+    </div>
+  );
+}
+
+function SidebarSkeleton() {
+  return (
+    <div className="flex w-72 flex-col space-y-3 border-r border-gray-800 bg-gray-900 p-4">
+      <div className="h-4 w-3/4 animate-pulse rounded bg-gray-800" />
+      <div className="h-2 animate-pulse rounded bg-gray-800" />
+      <div className="mt-4 space-y-2">
+        {[1, 2, 3, 4, 5, 6].map((item) => (
+          <div key={item} className="flex items-center gap-3">
+            <div className="h-6 w-6 shrink-0 animate-pulse rounded-full bg-gray-800" />
+            <div
+              className="h-3 flex-1 animate-pulse rounded bg-gray-800"
+              style={{ width: `${60 + (item % 3) * 15}%` }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const VideoPlayer = dynamic(() => import("@/components/player/VideoPlayer"), {
+  ssr: false,
+  loading: () => <VideoSkeleton />,
 });
 
-const PdfViewer = dynamic(() => import("@/components/player/PdfViewer"), { ssr: false });
-const ArticleReader = dynamic(() => import("@/components/player/ArticleReader"), { ssr: false });
-const QuizPlayer = dynamic(() => import("@/components/player/QuizPlayer"), { ssr: false });
+const PdfViewer = dynamic(() => import("@/components/player/PdfViewer"), {
+  ssr: false,
+  loading: () => <ContentSkeleton />,
+});
+const ArticleReader = dynamic(() => import("@/components/player/ArticleReader"), {
+  ssr: false,
+  loading: () => <ContentSkeleton />,
+});
+const QuizPlayer = dynamic(() => import("@/components/player/QuizPlayer"), {
+  ssr: false,
+  loading: () => <ContentSkeleton />,
+});
 
 type ProgressEntry = {
   percentage: number;
@@ -291,7 +340,12 @@ export default function LearnLecturePage() {
     setError("");
 
     try {
-      const courseData = await getCourseBySlug(slug);
+      const courseCacheKey = CACHE_KEYS.course(slug);
+      let courseData = courseCache.get<Course>(courseCacheKey);
+      if (!courseData) {
+        courseData = await getCourseBySlug(slug);
+        courseCache.set(courseCacheKey, courseData);
+      }
       setCourse(courseData);
 
       const lectures = flattenLectures(courseData.sections ?? []);
@@ -335,17 +389,28 @@ export default function LearnLecturePage() {
       setDisplayProgress(nextProgressMap);
 
       try {
-        const completionResponse = await api.get<Array<{ lectureId: number | string }>>(
-          `/lms/my-completions/${courseData.id}`
-        );
-        setCompletedIds(new Set((completionResponse.data ?? []).map((item) => String(item.lectureId))));
+        const completionsCacheKey = CACHE_KEYS.completions(Number(courseData.id));
+        let completionData = courseCache.get<Array<{ lectureId: number | string }>>(completionsCacheKey);
+        if (!completionData) {
+          const completionResponse = await api.get<Array<{ lectureId: number | string }>>(
+            `/lms/my-completions/${courseData.id}`
+          );
+          completionData = completionResponse.data ?? [];
+          courseCache.set(completionsCacheKey, completionData, 60 * 1000);
+        }
+        setCompletedIds(new Set(completionData.map((item) => String(item.lectureId))));
       } catch {
         setCompletedIds(new Set());
       }
 
       try {
-        const progressResponse = await progressApi.getCourseProgress(Number(courseData.id));
-        const progressData = progressResponse.data as CourseProgressState;
+        const progressCacheKey = CACHE_KEYS.courseProgress(Number(courseData.id));
+        let progressData = courseCache.get<CourseProgressState>(progressCacheKey);
+        if (!progressData) {
+          const progressResponse = await progressApi.getCourseProgress(Number(courseData.id));
+          progressData = progressResponse.data as CourseProgressState;
+          courseCache.set(progressCacheKey, progressData, 60 * 1000);
+        }
         setCourseProgress(progressData);
 
         const unlockMap: Record<number, boolean> = {};
@@ -496,21 +561,58 @@ export default function LearnLecturePage() {
     };
   }, [activeLecture, course, persistLocalProgress]);
 
+  useEffect(() => {
+    if (!nextLecture) {
+      return;
+    }
+    if (normalizeLectureType(nextLecture.type) !== "VIDEO") {
+      return;
+    }
+    if (!nextLecture.videoUrl && !nextLecture.contentUrl) {
+      return;
+    }
+
+    const nextSrc = getFileUrl(nextLecture.videoUrl ?? nextLecture.contentUrl);
+    if (!nextSrc) {
+      return;
+    }
+
+    const link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "video";
+    link.href = nextSrc;
+    document.head.appendChild(link);
+
+    return () => {
+      try {
+        document.head.removeChild(link);
+      } catch {
+        // The preload hint may already be removed.
+      }
+    };
+  }, [nextLecture]);
+
   const handleMarkComplete = useCallback(async () => {
     const lecture = activeLectureRef.current;
-    if (!lecture || completing || completedIdsRef.current.has(String(lecture.id))) {
+    if (!lecture || completing) {
+      return;
+    }
+
+    const lectureKey = String(lecture.id);
+    if (completedIdsRef.current.has(lectureKey)) {
       return;
     }
 
     setCompleting(true);
+    setCompletedIds((previous) => {
+      const next = new Set(previous);
+      next.add(lectureKey);
+      return next;
+    });
+    setShowCompletion(true);
+
     try {
       await api.post(`/lms/lesson/${lecture.id}/complete`);
-      setCompletedIds((previous) => {
-        const next = new Set(previous);
-        next.add(String(lecture.id));
-        return next;
-      });
-      setShowCompletion(true);
 
       let unlockMapForNext = sectionUnlockMap;
       if (courseRef.current) {
@@ -518,6 +620,7 @@ export default function LearnLecturePage() {
           const progressResponse = await progressApi.getCourseProgress(Number(courseRef.current.id));
           const progressData = progressResponse.data as CourseProgressState;
           setCourseProgress(progressData);
+          courseCache.set(CACHE_KEYS.courseProgress(Number(courseRef.current.id)), progressData, 60 * 1000);
 
           const unlockMap: Record<number, boolean> = {};
           progressData.sectionProgresses?.forEach((sectionProgress) => {
@@ -527,6 +630,19 @@ export default function LearnLecturePage() {
           unlockMapForNext = unlockMap;
         } catch {
           // Keep the learning flow usable even if progress refresh fails.
+        }
+
+        const completionCacheKey = CACHE_KEYS.completions(Number(courseRef.current.id));
+        const existingCompletions = courseCache.get<Array<{ lectureId: number | string }>>(completionCacheKey);
+        if (existingCompletions) {
+          const alreadyExists = existingCompletions.some((item) => String(item.lectureId) === lectureKey);
+          if (!alreadyExists) {
+            courseCache.set(
+              completionCacheKey,
+              [...existingCompletions, { lectureId: lecture.id }],
+              60 * 1000
+            );
+          }
         }
       }
 
@@ -544,7 +660,12 @@ export default function LearnLecturePage() {
         }
       }
     } catch {
-      // Keep the learning flow usable even if completion sync fails.
+      setCompletedIds((previous) => {
+        const next = new Set(previous);
+        next.delete(lectureKey);
+        return next;
+      });
+      setShowCompletion(false);
     } finally {
       setCompleting(false);
     }
@@ -655,11 +776,17 @@ export default function LearnLecturePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          <p className="text-sm text-gray-500">Loading course...</p>
-        </div>
+      <div className="flex h-screen overflow-hidden bg-gray-950">
+        <SidebarSkeleton />
+        <main className="flex flex-1 flex-col overflow-hidden">
+          <div className="border-b border-gray-800 bg-gray-900 px-4 py-3">
+            <div className="h-5 w-48 animate-pulse rounded bg-gray-800" />
+          </div>
+          <div className="flex-1 overflow-hidden bg-gray-950">
+            <VideoSkeleton />
+            <ContentSkeleton />
+          </div>
+        </main>
       </div>
     );
   }
@@ -1040,6 +1167,16 @@ export default function LearnLecturePage() {
               ) : null}
             </div>
           </div>
+
+          {nextLecture && normalizeLectureType(nextLecture.type) === "VIDEO" && (nextLecture.videoUrl || nextLecture.contentUrl) ? (
+            <video
+              key={`preload-${nextLecture.id}`}
+              src={getFileUrl(nextLecture.videoUrl ?? nextLecture.contentUrl) ?? ""}
+              preload="metadata"
+              style={{ display: "none" }}
+              aria-hidden="true"
+            />
+          ) : null}
 
           {lectureType === "VIDEO" && activeTab === "notes" ? (
             <div className="flex w-1/2 flex-col border-l border-gray-800 bg-gray-900">

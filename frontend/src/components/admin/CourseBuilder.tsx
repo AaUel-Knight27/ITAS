@@ -7,6 +7,7 @@ import {
   addLecture,
   addSection,
   createAssessment,
+  getAssessment,
   createAssessmentQuestion,
   deleteAssessmentQuestion,
   deleteLecture,
@@ -39,6 +40,16 @@ const DEFAULT_QUIZ = {
 };
 
 type QuizQuestion = {
+  id: number | string;
+  questionText: string;
+  questionType: "MCQ" | "TRUE_FALSE";
+  options: string[];
+  correctAnswer: string;
+  points: number;
+  explanation?: string;
+};
+
+type AssessmentQuestionResponse = {
   id: number | string;
   questionText: string;
   questionType: "MCQ" | "TRUE_FALSE";
@@ -139,6 +150,57 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     setQuestions([]);
     setNewQuestion(DEFAULT_QUESTION);
   }, [activeLecture?.id, activeLecture?.assessmentId]);
+
+  useEffect(() => {
+    if (!activeLecture || activeLecture.type !== "QUIZ" || !activeLecture.assessmentId) {
+      return;
+    }
+
+    const currentAssessmentId = activeLecture.assessmentId;
+    let cancelled = false;
+
+    async function loadAssessment() {
+      try {
+        setBuilderError(null);
+        const assessment = await getAssessment(currentAssessmentId as number | string);
+        if (cancelled) {
+          return;
+        }
+
+        setAssessmentId(assessment.id);
+        setQuizConfig({
+          passingScore: Number(assessment.passingScore ?? DEFAULT_QUIZ.passingScore),
+          maxAttempts: Number(assessment.maxAttempts ?? DEFAULT_QUIZ.maxAttempts),
+        });
+        setQuestions(
+          (assessment.questions ?? []).map((question: AssessmentQuestionResponse) => ({
+            id: question.id,
+            questionText: question.questionText,
+            questionType: question.questionType,
+            options: question.questionType === "TRUE_FALSE"
+              ? ["True", "False"]
+              : Array.isArray(question.options)
+                ? question.options
+                : ["", "", "", ""],
+            correctAnswer: question.correctAnswer,
+            points: Number(question.points ?? 1),
+            explanation: question.explanation ?? "",
+          }))
+        );
+      } catch (error: any) {
+        if (cancelled) {
+          return;
+        }
+        setBuilderError(getErrorMessage(error) || "Failed to load quiz questions.");
+      }
+    }
+
+    void loadAssessment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeLecture]);
 
   function updateCourse(mutator: (next: Course) => void) {
     const next = cloneCourse(course);

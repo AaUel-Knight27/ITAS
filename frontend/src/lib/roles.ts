@@ -131,16 +131,13 @@ export function canAccessAdminSection(
             return [WEB_ADMIN, SYSTEM_ADMIN]
                 .includes(r)
         case 'courses':
-            return [CONTENT_ADMIN,
-                TRAINING_ADMIN, WEB_ADMIN,
-                SYSTEM_ADMIN].includes(r)
+            return [CONTENT_ADMIN]
+                .includes(r)
         case 'webinars':
-            return [TRAINING_ADMIN,
-                WEB_ADMIN, SYSTEM_ADMIN]
+            return [TRAINING_ADMIN]
                 .includes(r)
         case 'communications':
-            return [COMMUNICATION,
-                WEB_ADMIN, SYSTEM_ADMIN]
+            return [COMMUNICATION]
                 .includes(r)
         default:
             return false
@@ -157,15 +154,12 @@ export function getAdminPrefixRoles(): readonly string[] {
 
 export const WEB_ADMIN_ONLY_ROLES = [WEB_ADMIN, SYSTEM_ADMIN] as const
 
-export const TRAINING_ADMIN_ROUTE_ROLES = [TRAINING_ADMIN, WEB_ADMIN, SYSTEM_ADMIN] as const
+export const TRAINING_ADMIN_ROUTE_ROLES = [TRAINING_ADMIN] as const
 
-export const COMMUNICATION_ROUTE_ROLES = [COMMUNICATION, WEB_ADMIN, SYSTEM_ADMIN] as const
+export const COMMUNICATION_ROUTE_ROLES = [COMMUNICATION] as const
 
 export const CONTENT_ADMIN_ROUTE_ROLES = [
     CONTENT_ADMIN,
-    TRAINING_ADMIN,
-    WEB_ADMIN,
-    SYSTEM_ADMIN,
 ] as const
 
 export function hasAnyRole(
@@ -219,7 +213,7 @@ export function resolveMiddlewareRouting(
 
     const deny: MiddlewareRoutingResult = {
         action: 'redirect',
-        path: '/dashboard',
+        path: homePath,
     }
 
     if (pathname === '/admin' ||

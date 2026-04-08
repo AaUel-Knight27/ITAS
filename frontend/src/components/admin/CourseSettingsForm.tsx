@@ -4,6 +4,7 @@ import axios from "axios";
 import { Camera, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { updateCourse, getCourseCategories, uploadCourseThumbnail } from "@/lib/api/admin-courses";
+import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import { createSlugCandidate, normalizeSlugInput } from "@/lib/slug";
 import { getFileUrl } from "@/lib/utils";
@@ -150,6 +151,11 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
         nextCourse.thumbnailUrl = "";
       }
 
+      courseCache.invalidate(CACHE_KEYS.courses());
+      courseCache.invalidate(CACHE_KEYS.course(course.slug));
+      if (nextCourse.slug && nextCourse.slug !== course.slug) {
+        courseCache.invalidate(CACHE_KEYS.course(nextCourse.slug));
+      }
       onCourseUpdated(nextCourse);
       showToast("Course settings updated successfully.", "success");
     } catch (error) {

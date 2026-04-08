@@ -2,6 +2,7 @@
 
 import { Clock, Users } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import CourseThumbnail from "@/components/course/CourseThumbnail";
 import type { Course } from "@/types";
@@ -46,9 +47,12 @@ function getDifficultyColor(difficulty: string) {
 }
 
 export default function CourseCard({ course, highlightTerm }: CourseCardProps) {
+  const router = useRouter();
+
   return (
     <Link
       href={`/courses/${course.slug}`}
+      onMouseEnter={() => router.prefetch(`/courses/${course.slug}`)}
       className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:shadow-soft-lg"
     >
       {/* Thumbnail */}

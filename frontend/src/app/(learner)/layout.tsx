@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import AppShell from '@/components/ui/AppShell'
 import { canAccessCourses,
+    getRoleHomePath,
     isManagerRole } from '@/lib/roles'
 
 export default function LearnerLayout({
@@ -33,7 +34,7 @@ export default function LearnerLayout({
             isManagerRole(role)
 
         if (!allowed) {
-            router.replace('/dashboard')
+            router.replace(getRoleHomePath(role))
         }
     }, [status, session, router])
 

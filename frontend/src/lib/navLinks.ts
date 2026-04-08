@@ -56,7 +56,7 @@ export const NAV_LINKS: Record<string, NavLink[]> = {
 
   [TRAINING_ADMIN]: [
     { label: "Dashboard", href: getRoleHomePath(TRAINING_ADMIN) },
-    { label: "Webinars", href: "/webinars" },
+    { label: "Webinars", href: "/admin/webinars" },
   ],
 
   [COMMUNICATION]: [

@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 
 import AttendeesModal from "@/components/webinars/AttendeesModal";
 import WebinarFormModal from "@/components/webinars/WebinarFormModal";
 import { webinarApi } from "@/lib/api";
+import { getErrorMessage } from "@/lib/errors";
+import { normalizeRole } from "@/lib/roles";
 import type { WebinarDto, WebinarRequest } from "@/lib/types";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -16,7 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function TrainingAdminDashboard() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const [upcoming, setUpcoming] = useState<WebinarDto[]>([]);
   const [past, setPast] = useState<WebinarDto[]>([]);
   const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
@@ -27,13 +29,12 @@ export default function TrainingAdminDashboard() {
   const [editData, setEditData] = useState<WebinarDto | null>(null);
   const [attendeesWebinarId, setAttendeesWebinarId] = useState<number | null>(null);
   const [attendeesTitle, setAttendeesTitle] = useState("");
+  const normalizedRole = useMemo(
+    () => normalizeRole(session?.user?.role ?? ""),
+    [session?.user?.role]
+  );
 
-  useEffect(() => {
-    if (status !== "authenticated") return;
-    void fetchAll();
-  }, [status]);
-
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -42,14 +43,28 @@ export default function TrainingAdminDashboard() {
         webinarApi.getUpcoming(),
         webinarApi.getPast(),
       ]);
-      setUpcoming(upRes.data);
-      setPast(pastRes.data);
-    } catch {
-      setError("Failed to load webinars. Please refresh.");
+      setUpcoming(Array.isArray(upRes.data) ? upRes.data : []);
+      setPast(Array.isArray(pastRes.data) ? pastRes.data : []);
+    } catch (requestError) {
+      setUpcoming([]);
+      setPast([]);
+      setError(getErrorMessage(requestError) || "Failed to load webinars. Please refresh.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (status !== "authenticated") {
+      return;
+    }
+    if (normalizedRole !== "TRAINING_ADMIN") {
+      setLoading(false);
+      setError("This dashboard is available only to Training Admin users.");
+      return;
+    }
+    void fetchAll();
+  }, [fetchAll, normalizedRole, status]);
 
   const handleCreate = async (data: WebinarRequest) => {
     await webinarApi.create(data);
@@ -112,6 +127,17 @@ export default function TrainingAdminDashboard() {
     (sum, webinar) => sum + webinar.registeredCount,
     0
   );
+
+  if (status === "loading") {
+    return (
+      <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl p-6">
