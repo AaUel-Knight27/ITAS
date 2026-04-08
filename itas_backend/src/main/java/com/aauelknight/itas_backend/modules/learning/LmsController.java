@@ -13,6 +13,7 @@ import com.aauelknight.itas_backend.modules.learning.EnrollmentService;
 import com.aauelknight.itas_backend.modules.learning.VideoProgressService;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -61,6 +62,15 @@ public class LmsController {
     @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER','CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN','SYSTEM_ADMIN')")
     public CourseProgressDto courseProgress(@PathVariable Long courseId, Authentication authentication) {
         return enrollmentService.calculateProgress(requireUserId(authentication), courseId);
+    }
+
+    @GetMapping("/course/{courseId}/section/{sectionId}/unlocked")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Boolean>> isSectionUnlocked(@PathVariable Long courseId,
+                                                                  @PathVariable Long sectionId,
+                                                                  Authentication authentication) {
+        boolean unlocked = enrollmentService.isSectionUnlocked(requireUserId(authentication), courseId, sectionId);
+        return ResponseEntity.ok(Map.of("unlocked", unlocked));
     }
 
     @GetMapping("/my-completions/{courseId}")

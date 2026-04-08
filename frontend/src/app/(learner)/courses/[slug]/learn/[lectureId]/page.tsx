@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import CompletionCheck from "@/components/ui/CompletionCheck";
 import type { VideoPlayerHandle } from "@/components/player/VideoPlayer";
 import api, { progressApi } from "@/lib/api";
 import { getCourseBySlug } from "@/lib/api/courses";
@@ -44,6 +45,23 @@ type LocalProgressMap = Record<
     lastWatchedAt: string | null;
   }
 >;
+
+type SectionProgressEntry = {
+  sectionId: number;
+  sectionTitle: string;
+  totalLectures: number;
+  completedLectures: number;
+  progressPercent: number;
+  unlocked: boolean;
+};
+
+type CourseProgressState = {
+  totalLectures: number;
+  completedLectures: number;
+  progressPercent: number;
+  nextRecommendedLectureId: number | null;
+  sectionProgresses: SectionProgressEntry[];
+};
 
 function byOrder<T extends { orderIndex: number }>(items: T[]) {
   return [...items].sort((a, b) => a.orderIndex - b.orderIndex);
@@ -104,6 +122,10 @@ export default function LearnLecturePage() {
   const [completing, setCompleting] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [autoPlayLectureId, setAutoPlayLectureId] = useState<string | null>(null);
+  const [sectionUnlockMap, setSectionUnlockMap] = useState<Record<number, boolean>>({});
+  const [courseProgress, setCourseProgress] = useState<CourseProgressState | null>(null);
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [toast, setToast] = useState("");
 
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lectureSwitchTimeoutRef = useRef<number | null>(null);
@@ -136,8 +158,9 @@ export default function LearnLecturePage() {
     activeLectureIndex >= 0 && activeLectureIndex < allLectures.length - 1 ? allLectures[activeLectureIndex + 1] : null;
 
   const totalLectures = allLectures.length;
-  const completedCount = completedIds.size;
-  const courseProgressPct = totalLectures > 0 ? Math.round((completedCount / totalLectures) * 100) : 0;
+  const completedCount = courseProgress?.completedLectures ?? completedIds.size;
+  const totalLessonsCount = courseProgress?.totalLectures ?? totalLectures;
+  const courseProgressPct = Math.round(courseProgress?.progressPercent ?? (totalLectures > 0 ? (completedIds.size * 100) / totalLectures : 0));
 
   const stopCountdown = useCallback(() => {
     if (countdownRef.current) {
@@ -196,8 +219,25 @@ export default function LearnLecturePage() {
     setDisplayProgress(progressMap);
   }, [progressMap]);
 
+  useEffect(() => {
+    if (!toast) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => setToast(""), 3000);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
   const selectLecture = useCallback(
     (lecture: Lecture) => {
+      const section = course?.sections?.find((entry) =>
+        entry.lectures?.some((item) => String(item.id) === String(lecture.id))
+      );
+      if (section && sectionUnlockMap[Number(section.id)] === false) {
+        setToast("Complete the previous section to unlock this one");
+        return;
+      }
+
       if (activeLecture) {
         persistLocalProgress(String(activeLecture.id), playerRef.current?.getCurrentTime() ?? 0);
       }
@@ -221,7 +261,7 @@ export default function LearnLecturePage() {
         });
       }, 100);
     },
-    [activeLecture, persistLocalProgress, router, slug, stopCountdown]
+    [activeLecture, course?.sections, persistLocalProgress, router, sectionUnlockMap, slug, stopCountdown]
   );
 
   const startCountdown = useCallback(
@@ -301,6 +341,21 @@ export default function LearnLecturePage() {
         setCompletedIds(new Set((completionResponse.data ?? []).map((item) => String(item.lectureId))));
       } catch {
         setCompletedIds(new Set());
+      }
+
+      try {
+        const progressResponse = await progressApi.getCourseProgress(Number(courseData.id));
+        const progressData = progressResponse.data as CourseProgressState;
+        setCourseProgress(progressData);
+
+        const unlockMap: Record<number, boolean> = {};
+        progressData.sectionProgresses?.forEach((sectionProgress) => {
+          unlockMap[sectionProgress.sectionId] = sectionProgress.unlocked;
+        });
+        setSectionUnlockMap(unlockMap);
+      } catch {
+        setCourseProgress(null);
+        setSectionUnlockMap({});
       }
 
       const savedNotes = window.localStorage.getItem(`course_notes_${courseData.id}`);
@@ -455,19 +510,45 @@ export default function LearnLecturePage() {
         next.add(String(lecture.id));
         return next;
       });
+      setShowCompletion(true);
+
+      let unlockMapForNext = sectionUnlockMap;
+      if (courseRef.current) {
+        try {
+          const progressResponse = await progressApi.getCourseProgress(Number(courseRef.current.id));
+          const progressData = progressResponse.data as CourseProgressState;
+          setCourseProgress(progressData);
+
+          const unlockMap: Record<number, boolean> = {};
+          progressData.sectionProgresses?.forEach((sectionProgress) => {
+            unlockMap[sectionProgress.sectionId] = sectionProgress.unlocked;
+          });
+          setSectionUnlockMap(unlockMap);
+          unlockMapForNext = unlockMap;
+        } catch {
+          // Keep the learning flow usable even if progress refresh fails.
+        }
+      }
+
       const lectures = getAllLecturesRef.current();
       const lectureIndex = lectures.findIndex((item) => String(item.id) === String(lecture.id));
       const upcomingLecture =
         lectureIndex >= 0 && lectureIndex < lectures.length - 1 ? lectures[lectureIndex + 1] : null;
       if (upcomingLecture) {
-        startCountdown(upcomingLecture);
+        const upcomingSection = courseRef.current?.sections?.find((entry) =>
+          entry.lectures?.some((item) => String(item.id) === String(upcomingLecture.id))
+        );
+        const isUnlocked = upcomingSection ? unlockMapForNext[Number(upcomingSection.id)] ?? true : true;
+        if (isUnlocked) {
+          startCountdown(upcomingLecture);
+        }
       }
     } catch {
       // Keep the learning flow usable even if completion sync fails.
     } finally {
       setCompleting(false);
     }
-  }, [completing, startCountdown]);
+  }, [completing, sectionUnlockMap, startCountdown]);
 
   const handleVideoProgress = useCallback(
     (currentTime: number, duration: number) => {
@@ -568,18 +649,6 @@ export default function LearnLecturePage() {
     playerRef.current?.play();
   }, [resumeAt]);
 
-  const getSectionProgress = useCallback(
-    (section: CourseSection) => {
-      const lectures = section.lectures ?? [];
-      if (lectures.length === 0) {
-        return 0;
-      }
-      const done = lectures.filter((lecture) => completedIds.has(String(lecture.id))).length;
-      return Math.round((done / lectures.length) * 100);
-    },
-    [completedIds]
-  );
-
   if (status === "authenticated" && accessDenied) {
     return null;
   }
@@ -642,85 +711,124 @@ export default function LearnLecturePage() {
           <div className="mt-3">
             <div className="mb-1 flex justify-between text-xs">
               <span className="text-gray-400">
-                {completedCount}/{totalLectures} lessons
+                {completedCount}/{totalLessonsCount} lessons
               </span>
               <span className="font-medium text-blue-400">{courseProgressPct}%</span>
             </div>
             <div className="h-1.5 w-full rounded-full bg-gray-700">
-              <div className="h-1.5 rounded-full bg-blue-500 transition-all" style={{ width: `${courseProgressPct}%` }} />
+              <div className="h-1.5 rounded-full bg-blue-500 transition-all duration-500" style={{ width: `${courseProgressPct}%` }} />
             </div>
+            <p className="mt-1 text-xs text-gray-500">
+              {courseProgressPct === 0
+                ? "Let's get started! 🚀"
+                : courseProgressPct < 25
+                  ? `You're ${courseProgressPct}% done - keep going! 💪`
+                  : courseProgressPct < 50
+                    ? `You're ${courseProgressPct}% done - great start! ⭐`
+                    : courseProgressPct < 75
+                      ? `You're ${courseProgressPct}% done - halfway there! 🔥`
+                      : courseProgressPct < 100
+                        ? `You're ${courseProgressPct}% done - almost there! 🎯`
+                        : "Course complete! 🎉"}
+            </p>
             <p className="mt-1 text-xs text-gray-500">You're {courseProgressPct}% done 🎯</p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto py-2">
-          {sections.map((section) => (
-            <div key={section.id}>
-              <div className="sticky top-0 z-10 bg-gray-800/90 px-4 py-2 backdrop-blur-sm">
-                <div className="flex items-center justify-between">
-                  <p className="truncate text-xs font-semibold uppercase tracking-wider text-gray-400">{section.title}</p>
-                  <span className="ml-2 text-xs text-gray-500">{getSectionProgress(section)}%</span>
-                </div>
-                <div className="mt-1 h-0.5 w-full rounded-full bg-gray-700">
-                  <div
-                    className="h-0.5 rounded-full bg-green-500 transition-all"
-                    style={{ width: `${getSectionProgress(section)}%` }}
-                  />
-                </div>
-              </div>
+          {sections.map((section) => {
+            const sectionProgress = courseProgress?.sectionProgresses?.find(
+              (entry) => entry.sectionId === Number(section.id)
+            );
+            const isUnlocked = sectionUnlockMap[Number(section.id)] ?? true;
 
-              {byOrder(section.lectures ?? []).map((lecture) => {
-                const lectureKey = String(lecture.id);
-                const isActive = lectureKey === String(activeLecture.id);
-                const isDone = completedIds.has(lectureKey);
-                const progress = displayProgress[lectureKey] ?? progressMap[lectureKey];
-
-                return (
-                  <button
-                    key={lecture.id}
-                    id={`lecture-${lecture.id}`}
-                    type="button"
-                    onClick={() => selectLecture(lecture)}
-                    className={`group flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left transition-all ${
-                      isActive ? "border-l-blue-500 bg-blue-900/30" : "border-l-transparent hover:bg-gray-800/50"
-                    }`}
-                  >
+            return (
+              <div key={section.id}>
+                <div className="sticky top-0 z-10 bg-gray-800/90 px-4 py-2.5 backdrop-blur-sm">
+                  <div className="flex items-center justify-between">
+                    <p className="flex-1 truncate text-xs font-semibold uppercase tracking-wider text-gray-400">
+                      {section.title}
+                    </p>
+                    <div className="ml-2 flex shrink-0 items-center gap-1.5">
+                      {!isUnlocked ? <span className="text-xs text-yellow-500">LOCK</span> : null}
+                      <span className="text-xs text-gray-500">{sectionProgress?.progressPercent ?? 0}%</span>
+                    </div>
+                  </div>
+                  <div className="mt-1 h-0.5 w-full rounded-full bg-gray-700">
                     <div
-                      className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
-                        isDone
-                          ? "bg-green-500 text-white"
-                          : isActive
-                            ? "bg-blue-500 text-white"
-                            : "bg-gray-700 text-gray-300 group-hover:bg-gray-600"
+                      className={`h-0.5 rounded-full transition-all duration-500 ${isUnlocked ? "bg-green-500" : "bg-gray-600"}`}
+                      style={{ width: `${sectionProgress?.progressPercent ?? 0}%` }}
+                    />
+                  </div>
+                </div>
+
+                {byOrder(section.lectures ?? []).map((lecture) => {
+                  const lectureKey = String(lecture.id);
+                  const isActive = lectureKey === String(activeLecture.id);
+                  const isDone = completedIds.has(lectureKey);
+                  const progress = displayProgress[lectureKey] ?? progressMap[lectureKey];
+                  const isLocked = !isUnlocked;
+
+                  return (
+                    <button
+                      key={lecture.id}
+                      id={`lecture-${lecture.id}`}
+                      type="button"
+                      onClick={() => selectLecture(lecture)}
+                      disabled={isLocked}
+                      className={`group flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left transition-all ${
+                        isActive
+                          ? "border-l-blue-500 bg-blue-900/30"
+                          : isLocked
+                            ? "cursor-not-allowed border-l-transparent opacity-50"
+                            : "border-l-transparent hover:bg-gray-800/50"
                       }`}
                     >
-                      {isDone ? "OK" : getLectureIcon(lecture.type)}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p
-                        className={`line-clamp-2 text-sm ${
-                          isActive ? "font-medium text-white" : isDone ? "text-gray-400" : "text-gray-300 group-hover:text-white"
+                      <div
+                        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold transition-all duration-500 ${
+                          isDone
+                            ? "scale-110 bg-green-500 text-white"
+                            : isActive
+                              ? "bg-blue-500 text-white"
+                              : isLocked
+                                ? "bg-gray-700 text-gray-500"
+                                : "bg-gray-700 text-gray-300 group-hover:bg-gray-600"
                         }`}
                       >
-                        {lecture.title}
-                      </p>
+                        {isDone ? "OK" : isLocked ? "L" : getLectureIcon(lecture.type)}
+                      </div>
 
-                      {progress?.lastWatchedAt && !isDone ? (
-                        <p className="mt-0.5 text-xs text-blue-400">Last watched at {progress.lastWatchedAt}</p>
-                      ) : null}
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className={`line-clamp-2 text-sm ${
+                            isActive
+                              ? "font-medium text-white"
+                              : isDone
+                                ? "text-gray-400"
+                                : isLocked
+                                  ? "text-gray-600"
+                                  : "text-gray-300 group-hover:text-white"
+                          }`}
+                        >
+                          {lecture.title}
+                        </p>
 
-                      {progress && progress.percentage > 0 && !isDone ? (
-                        <div className="mt-1.5 h-0.5 w-full rounded-full bg-gray-700">
-                          <div className="h-0.5 rounded-full bg-blue-400" style={{ width: `${progress.percentage}%` }} />
-                        </div>
-                      ) : null}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          ))}
+                        {progress?.lastWatchedAt && !isDone ? (
+                          <p className="mt-0.5 text-xs text-blue-400">Last watched at {progress.lastWatchedAt}</p>
+                        ) : null}
+
+                        {progress && progress.percentage > 0 && !isDone ? (
+                          <div className="mt-1.5 h-0.5 w-full rounded-full bg-gray-700">
+                            <div className="h-0.5 rounded-full bg-blue-400" style={{ width: `${progress.percentage}%` }} />
+                          </div>
+                        ) : null}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       </aside>
 
@@ -801,6 +909,38 @@ export default function LearnLecturePage() {
             </button>
           </div>
         </div>
+
+        {courseProgress?.nextRecommendedLectureId &&
+        courseProgress.nextRecommendedLectureId !== Number(activeLecture?.id) &&
+        (() => {
+          const recommendedLecture = allLectures.find(
+            (lecture) => String(lecture.id) === String(courseProgress.nextRecommendedLectureId)
+          );
+          if (!recommendedLecture) {
+            return null;
+          }
+
+          return (
+            <div className="mx-4 mb-1 mt-3">
+              <div className="flex items-center justify-between rounded-xl border border-blue-800 bg-blue-900/20 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="shrink-0 text-blue-400">Next</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-blue-400">Recommended next</p>
+                    <p className="truncate text-sm text-white">{recommendedLecture.title}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => selectLecture(recommendedLecture)}
+                  className="ml-3 shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  Go {"->"}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
 
         <div className="flex flex-1 overflow-hidden">
           <div
@@ -963,6 +1103,12 @@ export default function LearnLecturePage() {
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 select-none text-xs text-gray-700">
           ← → navigate lessons · B toggle sidebar
         </div>
+        <CompletionCheck show={showCompletion} onDone={() => setShowCompletion(false)} />
+        {toast ? (
+          <div className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl border border-gray-700 bg-gray-800 px-5 py-3 text-sm text-white shadow-xl transition-opacity">
+            {toast}
+          </div>
+        ) : null}
       </main>
     </div>
   );

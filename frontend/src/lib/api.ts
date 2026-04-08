@@ -227,6 +227,11 @@ export const progressApi = {
   get: (lectureId: number) => api.get(`/lms/video/${lectureId}/progress`),
 
   getLastWatched: (courseId: number) => api.get(`/lms/course/${courseId}/last-watched`),
+
+  getCourseProgress: (courseId: number) => api.get(`/lms/course/${courseId}/progress`),
+
+  isSectionUnlocked: (courseId: number, sectionId: number) =>
+    api.get(`/lms/course/${courseId}/section/${sectionId}/unlocked`),
 };
 
 export const analyticsApi = {

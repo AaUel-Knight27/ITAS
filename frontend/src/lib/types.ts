@@ -113,11 +113,18 @@ export interface CertificateDto {
 
 export interface CourseProgressDto {
   courseId: number;
+  totalLectures?: number;
+  completedLectures?: number;
   progressPercent: number;
-  completedLectureIds?: number[];
-  lastLectureId: number | null;
-  lastLectureTitle: string | null;
-  courseSlug: string | null;
+  nextRecommendedLectureId?: number | null;
+  sectionProgresses?: Array<{
+    sectionId: number;
+    sectionTitle: string;
+    totalLectures: number;
+    completedLectures: number;
+    progressPercent: number;
+    unlocked: boolean;
+  }>;
 }
 
 export interface AnalyticsDashboardDto {

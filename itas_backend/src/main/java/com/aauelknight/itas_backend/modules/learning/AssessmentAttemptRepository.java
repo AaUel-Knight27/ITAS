@@ -9,6 +9,8 @@ public interface AssessmentAttemptRepository extends JpaRepository<AssessmentAtt
 
     long countByUserIdAndAssessmentId(Long userId, Long assessmentId);
 
+    boolean existsByAssessmentIdAndUserIdAndPassedTrue(Long assessmentId, Long userId);
+
     List<AssessmentAttempt> findByUserIdAndAssessmentIdOrderByAttemptNumberDesc(Long userId, Long assessmentId);
 
     @Query("SELECT AVG(a.score) "

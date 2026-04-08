@@ -80,7 +80,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.GET,
                                 "/lms/video/*/progress",
-                                "/lms/course/*/last-watched"
+                                "/lms/course/*/last-watched",
+                                "/lms/course/*/progress",
+                                "/lms/course/*/section/*/unlocked"
                         ).hasAnyRole("TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER")
 
                         .requestMatchers(

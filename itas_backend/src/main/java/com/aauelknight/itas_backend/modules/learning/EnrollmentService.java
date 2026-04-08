@@ -4,9 +4,11 @@ import com.aauelknight.itas_backend.dto.CompletionDto;
 import com.aauelknight.itas_backend.dto.CourseProgressDto;
 import com.aauelknight.itas_backend.dto.EnrollmentDto;
 import com.aauelknight.itas_backend.modules.courses.Course;
+import com.aauelknight.itas_backend.modules.courses.CourseSection;
 import com.aauelknight.itas_backend.modules.learning.CourseEnrollment;
 import com.aauelknight.itas_backend.modules.learning.EnrollmentStatus;
 import com.aauelknight.itas_backend.modules.courses.Lecture;
+import com.aauelknight.itas_backend.modules.courses.LectureType;
 import com.aauelknight.itas_backend.modules.auth.User;
 import com.aauelknight.itas_backend.modules.courses.CourseRepository;
 import com.aauelknight.itas_backend.modules.learning.EnrollmentRepository;
@@ -14,8 +16,12 @@ import com.aauelknight.itas_backend.modules.learning.LectureCompletionRepository
 import com.aauelknight.itas_backend.modules.courses.LectureRepository;
 import com.aauelknight.itas_backend.modules.auth.UserRepository;
 import com.aauelknight.itas_backend.modules.learning.VideoProgressRepository;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,19 +37,25 @@ public class EnrollmentService {
     private final LectureRepository lectureRepository;
     private final LectureCompletionRepository lectureCompletionRepository;
     private final VideoProgressRepository videoProgressRepository;
+    private final AssessmentRepository assessmentRepository;
+    private final AssessmentAttemptRepository attemptRepository;
 
     public EnrollmentService(EnrollmentRepository enrollmentRepository,
                              UserRepository userRepository,
                              CourseRepository courseRepository,
                              LectureRepository lectureRepository,
                              LectureCompletionRepository lectureCompletionRepository,
-                             VideoProgressRepository videoProgressRepository) {
+                             VideoProgressRepository videoProgressRepository,
+                             AssessmentRepository assessmentRepository,
+                             AssessmentAttemptRepository attemptRepository) {
         this.enrollmentRepository = enrollmentRepository;
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.lectureRepository = lectureRepository;
         this.lectureCompletionRepository = lectureCompletionRepository;
         this.videoProgressRepository = videoProgressRepository;
+        this.assessmentRepository = assessmentRepository;
+        this.attemptRepository = attemptRepository;
     }
 
     @Transactional
@@ -96,22 +108,131 @@ public class EnrollmentService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public boolean isSectionUnlocked(Long userId, Long courseId, Long sectionId) {
+        Course course = courseRepository.findByIdWithSectionsAndLectures(courseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+
+        List<CourseSection> sections = course.getSections()
+                .stream()
+                .sorted(Comparator.comparing(CourseSection::getOrderIndex))
+                .collect(Collectors.toList());
+
+        if (sections.isEmpty()) {
+            return true;
+        }
+        if (sections.get(0).getId().equals(sectionId)) {
+            return true;
+        }
+
+        CourseSection targetSection = null;
+        CourseSection previousSection = null;
+        for (int index = 0; index < sections.size(); index++) {
+            CourseSection section = sections.get(index);
+            if (!section.getId().equals(sectionId)) {
+                continue;
+            }
+            targetSection = section;
+            if (index > 0) {
+                previousSection = sections.get(index - 1);
+            }
+            break;
+        }
+
+        if (targetSection == null) {
+            return false;
+        }
+        if (previousSection == null) {
+            return true;
+        }
+
+        List<Lecture> previousLectures = previousSection.getLectures()
+                .stream()
+                .filter(lecture -> lecture.getType() != LectureType.QUIZ)
+                .collect(Collectors.toList());
+
+        for (Lecture lecture : previousLectures) {
+            boolean completed = lectureCompletionRepository.existsByUserIdAndLectureId(userId, lecture.getId());
+            if (!completed) {
+                return false;
+            }
+        }
+
+        List<Lecture> quizLectures = previousSection.getLectures()
+                .stream()
+                .filter(lecture -> lecture.getType() == LectureType.QUIZ)
+                .collect(Collectors.toList());
+
+        for (Lecture quizLecture : quizLectures) {
+            Optional<Assessment> assessment = assessmentRepository.findByLectureId(quizLecture.getId()).stream().findFirst();
+            if (assessment.isPresent()) {
+                boolean passed = attemptRepository.existsByAssessmentIdAndUserIdAndPassedTrue(
+                        assessment.get().getId(),
+                        userId
+                );
+                if (!passed) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     @Transactional
     public CourseProgressDto calculateProgress(Long userId, Long courseId) {
         CourseEnrollment enrollment = enrollmentRepository.findByUserIdAndCourseId(userId, courseId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Enrollment not found"));
+        Course course = courseRepository.findByIdWithSectionsAndLectures(courseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
 
-        long totalLectures = lectureRepository.countBySectionCourseId(courseId);
-        long completedLectures = lectureCompletionRepository.countCompletedLecturesByUserAndCourse(userId, courseId);
-
-        double progressPercent = totalLectures == 0
-                ? 0.0
-                : Math.min(100.0, (completedLectures * 100.0) / totalLectures);
-        List<Long> completedLectureIds = lectureCompletionRepository.findCompletedLectureIdsByUserAndCourse(userId, courseId)
+        List<CourseSection> sections = course.getSections()
                 .stream()
-                .distinct()
-                .toList();
-        Long lastLectureId = resolveLastLectureId(userId, courseId);
+                .sorted(Comparator.comparing(CourseSection::getOrderIndex))
+                .collect(Collectors.toList());
+
+        int totalLectures = 0;
+        int completedLectures = 0;
+        List<CourseProgressDto.SectionProgress> sectionProgresses = new ArrayList<>();
+
+        for (CourseSection section : sections) {
+            List<Lecture> lectures = section.getLectures() != null
+                    ? section.getLectures().stream()
+                    .sorted(Comparator.comparing(Lecture::getOrderIndex))
+                    .collect(Collectors.toList())
+                    : List.of();
+
+            int sectionTotal = lectures.size();
+            int sectionCompleted = 0;
+
+            for (Lecture lecture : lectures) {
+                boolean done = lectureCompletionRepository.existsByUserIdAndLectureId(userId, lecture.getId());
+                if (done) {
+                    sectionCompleted++;
+                }
+            }
+
+            totalLectures += sectionTotal;
+            completedLectures += sectionCompleted;
+
+            boolean unlocked = isSectionUnlocked(userId, courseId, section.getId());
+
+            sectionProgresses.add(CourseProgressDto.SectionProgress.builder()
+                    .sectionId(section.getId())
+                    .sectionTitle(section.getTitle())
+                    .totalLectures(sectionTotal)
+                    .completedLectures(sectionCompleted)
+                    .progressPercent(sectionTotal > 0
+                            ? (int) Math.round(sectionCompleted * 100.0 / sectionTotal)
+                            : 0)
+                    .unlocked(unlocked)
+                    .build());
+        }
+
+        double progressPercent = totalLectures > 0
+                ? (double) Math.round(completedLectures * 100.0 / totalLectures)
+                : 0.0;
+        Long nextRecommendedLectureId = findNextLecture(userId, sections);
 
         enrollment.setProgressPercent(progressPercent);
         if (progressPercent >= 100.0) {
@@ -130,9 +251,8 @@ public class EnrollmentService {
                 .totalLectures(totalLectures)
                 .completedLectures(completedLectures)
                 .progressPercent(progressPercent)
-                .completedLectureIds(completedLectureIds)
-                .lastLectureId(lastLectureId)
-                .status(enrollment.getStatus())
+                .nextRecommendedLectureId(nextRecommendedLectureId)
+                .sectionProgresses(sectionProgresses)
                 .build();
     }
 
@@ -191,6 +311,24 @@ public class EnrollmentService {
             enrollment.setCompletedAt(LocalDateTime.now());
         }
         enrollmentRepository.save(enrollment);
+    }
+
+    private Long findNextLecture(Long userId, List<CourseSection> sections) {
+        for (CourseSection section : sections) {
+            List<Lecture> lectures = section.getLectures() != null
+                    ? section.getLectures().stream()
+                    .sorted(Comparator.comparing(Lecture::getOrderIndex))
+                    .collect(Collectors.toList())
+                    : List.of();
+
+            for (Lecture lecture : lectures) {
+                boolean done = lectureCompletionRepository.existsByUserIdAndLectureId(userId, lecture.getId());
+                if (!done) {
+                    return lecture.getId();
+                }
+            }
+        }
+        return null;
     }
 
     private EnrollmentDto toEnrollmentDto(CourseEnrollment enrollment) {

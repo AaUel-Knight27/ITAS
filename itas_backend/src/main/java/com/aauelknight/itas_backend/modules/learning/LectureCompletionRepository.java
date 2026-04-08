@@ -11,6 +11,8 @@ public interface LectureCompletionRepository extends JpaRepository<LectureComple
 
     Optional<LectureCompletion> findByUserIdAndLectureId(Long userId, Long lectureId);
 
+    boolean existsByUserIdAndLectureId(Long userId, Long lectureId);
+
     Optional<LectureCompletion> findTopByUserIdAndLectureSectionCourseIdAndCompletedTrueOrderByCompletedAtDesc(
             Long userId,
             Long courseId);
