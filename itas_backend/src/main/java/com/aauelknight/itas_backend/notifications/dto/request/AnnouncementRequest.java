@@ -23,3 +23,4 @@ public class AnnouncementRequest {
 
     private Boolean isActive = true;
 }
+

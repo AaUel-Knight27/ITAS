@@ -12,3 +12,4 @@ public class ItasBackendApplication {
         SpringApplication.run(ItasBackendApplication.class, args);
     }
 }
+

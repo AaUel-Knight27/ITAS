@@ -16,7 +16,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.courses.entity.Course;
 @Entity
@@ -65,3 +64,4 @@ public class Certificate {
         }
     }
 }
+

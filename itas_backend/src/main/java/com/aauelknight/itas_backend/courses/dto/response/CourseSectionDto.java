@@ -1,5 +1,6 @@
 package com.aauelknight.itas_backend.courses.dto.response;
 
+import com.aauelknight.itas_backend.lecture.dto.response.LectureDto;
 import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,3 +21,4 @@ public class CourseSectionDto {
     private Integer orderIndex;
     private List<LectureDto> lectures;
 }
+

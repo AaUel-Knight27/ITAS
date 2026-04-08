@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.dto.response;
-
 import com.aauelknight.itas_backend.learning.entity.EnrollmentStatus;
 import java.time.LocalDateTime;
 import lombok.AllArgsConstructor;
@@ -28,3 +27,4 @@ public class EnrollmentDto {
     private LocalDateTime enrolledAt;
     private LocalDateTime completedAt;
 }
+

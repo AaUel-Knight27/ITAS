@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.controller;
-
 import com.aauelknight.itas_backend.learning.dto.response.CertificateDto;
 import com.aauelknight.itas_backend.learning.dto.request.CertificateGenerateRequest;
 import com.aauelknight.itas_backend.learning.entity.Certificate;
@@ -150,3 +149,4 @@ public class CertificateController {
         return user.getId();
     }
 }
+

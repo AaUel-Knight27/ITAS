@@ -24,3 +24,4 @@ public class AssessmentDto {
     private LocalDateTime createdAt;
     private List<AssessmentQuestionDto> questions;
 }
+

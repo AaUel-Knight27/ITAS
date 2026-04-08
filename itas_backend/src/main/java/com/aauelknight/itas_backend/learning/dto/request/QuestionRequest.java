@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.dto.request;
-
 import com.aauelknight.itas_backend.learning.entity.QuestionType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,3 +28,4 @@ public class QuestionRequest {
 
     private Integer points = 1;
 }
+

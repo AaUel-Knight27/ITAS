@@ -15,7 +15,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 @Entity
 @Table(name = "webinar_registrations")
@@ -49,3 +48,4 @@ public class WebinarRegistration {
         registeredAt = LocalDateTime.now();
     }
 }
+

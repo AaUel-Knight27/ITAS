@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.service;
-
 import com.aauelknight.itas_backend.courses.dto.request.ContentVersionDto;
 import com.aauelknight.itas_backend.courses.entity.ContentVersion;
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
@@ -155,3 +154,4 @@ public class ContentVersionService {
                 .build();
     }
 }
+

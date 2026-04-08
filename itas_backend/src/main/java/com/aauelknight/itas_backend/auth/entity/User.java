@@ -122,3 +122,4 @@ public class User implements UserDetails {
                 || "MANAGER".equals(roleName);
     }
 }
+

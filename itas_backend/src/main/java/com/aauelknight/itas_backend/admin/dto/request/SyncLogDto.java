@@ -24,3 +24,4 @@ public class SyncLogDto {
     private Long durationMs;
     private String durationFormatted;
 }
+

@@ -16,3 +16,4 @@ public class SyncRequestDto {
     @NotBlank(message = "Sync type is required")
     private String syncType;
 }
+

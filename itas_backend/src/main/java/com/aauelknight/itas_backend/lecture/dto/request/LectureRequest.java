@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.lecture.dto.request;
-
 import com.aauelknight.itas_backend.lecture.entity.LectureType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -28,3 +27,4 @@ public class LectureRequest {
 
     private String content;
 }
+

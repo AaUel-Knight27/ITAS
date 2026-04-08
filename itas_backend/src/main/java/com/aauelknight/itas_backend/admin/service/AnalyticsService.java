@@ -1,5 +1,4 @@
-package com.aauelknight.itas_backend.admin.entity;
-
+package com.aauelknight.itas_backend.admin.service;
 import com.aauelknight.itas_backend.admin.dto.response.ActivityLogDto;
 import com.aauelknight.itas_backend.admin.dto.response.AnalyticsDashboardDto;
 import com.aauelknight.itas_backend.admin.dto.response.CourseCompletionRateDto;
@@ -137,3 +136,4 @@ public class AnalyticsService {
         }
     }
 }
+

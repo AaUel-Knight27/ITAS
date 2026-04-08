@@ -1,12 +1,11 @@
 package com.aauelknight.itas_backend.admin.controller;
-
 import com.aauelknight.itas_backend.admin.dto.response.ActivityLogDto;
 import com.aauelknight.itas_backend.admin.dto.response.AnalyticsDashboardDto;
 import com.aauelknight.itas_backend.admin.dto.response.CourseCompletionRateDto;
 import com.aauelknight.itas_backend.admin.dto.response.DailyEnrollmentDto;
 import com.aauelknight.itas_backend.admin.dto.response.QuizPassRateDto;
 import com.aauelknight.itas_backend.admin.dto.response.RoleCountDto;
-import com.aauelknight.itas_backend.admin.entity.AnalyticsService;
+import com.aauelknight.itas_backend.admin.service.AnalyticsService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -56,3 +55,4 @@ public class AnalyticsController {
         return ResponseEntity.ok(analyticsService.getRecentActivity(limit));
     }
 }
+

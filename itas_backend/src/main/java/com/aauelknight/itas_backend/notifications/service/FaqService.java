@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.service;
-
 import com.aauelknight.itas_backend.notifications.dto.response.FaqDto;
 import com.aauelknight.itas_backend.notifications.dto.response.FaqRequest;
 import com.aauelknight.itas_backend.notifications.entity.Faq;
@@ -86,3 +85,4 @@ public class FaqService {
                 .build();
     }
 }
+

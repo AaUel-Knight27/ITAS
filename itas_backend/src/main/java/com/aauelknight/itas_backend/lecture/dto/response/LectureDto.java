@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.lecture.dto.response;
-
 import com.aauelknight.itas_backend.lecture.entity.LectureType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -25,3 +24,4 @@ public class LectureDto {
     private Integer orderIndex;
     private boolean preview;
 }
+

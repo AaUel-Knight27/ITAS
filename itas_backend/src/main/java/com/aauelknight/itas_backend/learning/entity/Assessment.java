@@ -16,7 +16,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import com.aauelknight.itas_backend.courses.entity.Course;
 import com.aauelknight.itas_backend.courses.entity.CourseSection;
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
@@ -64,3 +63,4 @@ public class Assessment {
         }
     }
 }
+

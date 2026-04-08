@@ -15,5 +15,6 @@ public class ActivityLogDto {
     private String username;
     private String activityType;
     private String resourceId;
-    private String timestamp;
+    private String createdAt;
 }
+

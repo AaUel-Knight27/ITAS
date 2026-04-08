@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.entity;
-
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -54,3 +53,4 @@ public class CourseSection {
     @Builder.Default
     private Set<Lecture> lectures = new LinkedHashSet<>();
 }
+

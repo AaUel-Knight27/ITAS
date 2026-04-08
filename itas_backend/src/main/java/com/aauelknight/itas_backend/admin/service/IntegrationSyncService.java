@@ -1,8 +1,8 @@
-package com.aauelknight.itas_backend.admin.entity;
-
+package com.aauelknight.itas_backend.admin.service;
 import com.aauelknight.itas_backend.admin.dto.request.SyncLogDto;
 import com.aauelknight.itas_backend.admin.dto.request.SyncRequestDto;
 import com.aauelknight.itas_backend.admin.dto.request.SyncStatsDto;
+import com.aauelknight.itas_backend.admin.entity.IntegrationSyncLog;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.admin.repository.IntegrationSyncLogRepository;
 import com.aauelknight.itas_backend.auth.repository.UserRepository;
@@ -185,3 +185,4 @@ public class IntegrationSyncService {
                 .build();
     }
 }
+

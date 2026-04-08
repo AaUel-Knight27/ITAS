@@ -21,3 +21,4 @@ public class CourseSectionRequest {
     @NotNull(message = "orderIndex is required")
     private Integer orderIndex;
 }
+

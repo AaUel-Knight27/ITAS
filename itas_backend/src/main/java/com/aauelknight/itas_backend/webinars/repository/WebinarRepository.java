@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.webinars.repository;
-
 import com.aauelknight.itas_backend.webinars.entity.Webinar;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,3 +27,4 @@ public interface WebinarRepository extends JpaRepository<Webinar, Long> {
             "ORDER BY w.scheduledAt DESC")
     List<Webinar> findAllWithPresenter();
 }
+

@@ -27,3 +27,4 @@ public class CertificateDto {
     private LocalDateTime issuedAt;
     private String status;
 }
+

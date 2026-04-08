@@ -25,3 +25,4 @@ public class AssessmentCreateRequest {
     @NotNull(message = "maxAttempts is required")
     private Integer maxAttempts;
 }
+

@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.controller;
-
 import com.aauelknight.itas_backend.notifications.dto.response.FaqDto;
 import com.aauelknight.itas_backend.notifications.dto.response.FaqRequest;
 import com.aauelknight.itas_backend.notifications.service.FaqService;
@@ -65,3 +64,4 @@ public class FaqController {
         return ResponseEntity.ok(Map.of("message", "FAQ deleted successfully"));
     }
 }
+

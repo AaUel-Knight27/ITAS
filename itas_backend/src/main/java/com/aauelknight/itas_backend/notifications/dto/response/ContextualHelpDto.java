@@ -16,3 +16,4 @@ public class ContextualHelpDto {
     private String fieldId;
     private List<HelpArticleDto> articles;
 }
+

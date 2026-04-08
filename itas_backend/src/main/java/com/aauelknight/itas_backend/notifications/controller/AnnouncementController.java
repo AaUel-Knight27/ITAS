@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.controller;
-
 import com.aauelknight.itas_backend.notifications.dto.request.AnnouncementDto;
 import com.aauelknight.itas_backend.notifications.dto.request.AnnouncementRequest;
 import com.aauelknight.itas_backend.notifications.service.NotificationService;
@@ -63,3 +62,4 @@ public class AnnouncementController {
         return ResponseEntity.ok(Map.of("message", "Announcement deleted"));
     }
 }
+

@@ -29,7 +29,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.BatchSize;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 @Entity
 @Table(name = "courses")
@@ -118,3 +117,4 @@ public class Course {
         updatedAt = LocalDateTime.now();
     }
 }
+

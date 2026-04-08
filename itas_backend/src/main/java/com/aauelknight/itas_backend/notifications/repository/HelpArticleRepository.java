@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.repository;
-
 import com.aauelknight.itas_backend.notifications.entity.HelpArticle;
 import java.util.List;
 import java.util.Optional;
@@ -51,3 +50,4 @@ public interface HelpArticleRepository extends JpaRepository<HelpArticle, Long> 
             + "ORDER BY h.category ASC, h.title ASC")
     List<HelpArticle> findAllPublished();
 }
+

@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.repository;
-
 import com.aauelknight.itas_backend.notifications.entity.Faq;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,3 +19,4 @@ public interface FaqRepository extends JpaRepository<Faq, Long> {
             + "ORDER BY f.createdAt DESC")
     List<Faq> findByCategory(@Param("category") String category);
 }
+

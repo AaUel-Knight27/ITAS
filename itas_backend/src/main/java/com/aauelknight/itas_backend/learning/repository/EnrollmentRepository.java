@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.repository;
-
 import com.aauelknight.itas_backend.learning.entity.CourseEnrollment;
 import com.aauelknight.itas_backend.learning.entity.EnrollmentStatus;
 import java.time.LocalDateTime;
@@ -40,3 +39,4 @@ public interface EnrollmentRepository extends JpaRepository<CourseEnrollment, Lo
             + "ORDER BY 2 DESC")
     List<Object[]> getCourseCompletionRates(Pageable pageable);
 }
+

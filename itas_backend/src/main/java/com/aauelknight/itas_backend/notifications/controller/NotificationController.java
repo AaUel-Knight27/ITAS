@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.controller;
-
 import com.aauelknight.itas_backend.notifications.dto.request.CampaignDto;
 import com.aauelknight.itas_backend.notifications.dto.request.NotificationRequest;
 import com.aauelknight.itas_backend.notifications.service.NotificationService;
@@ -40,3 +39,4 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.getAllCampaigns());
     }
 }
+

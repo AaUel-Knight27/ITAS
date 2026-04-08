@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.service;
-
 import com.aauelknight.itas_backend.learning.dto.response.CompletionDto;
 import com.aauelknight.itas_backend.learning.dto.response.CourseProgressDto;
 import com.aauelknight.itas_backend.learning.dto.response.EnrollmentDto;
@@ -15,7 +14,6 @@ import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.courses.repository.CourseRepository;
 import com.aauelknight.itas_backend.lecture.repository.LectureRepository;
 import com.aauelknight.itas_backend.auth.repository.UserRepository;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.time.LocalDateTime;
@@ -26,7 +24,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-
 import com.aauelknight.itas_backend.learning.entity.LectureCompletion;
 @Service
 public class EnrollmentService {
@@ -362,3 +359,4 @@ public class EnrollmentService {
                 .orElse(null);
     }
 }
+

@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.webinars.repository;
-
 import com.aauelknight.itas_backend.webinars.entity.WebinarRegistration;
 import java.util.List;
 import java.util.Optional;
@@ -19,3 +18,4 @@ public interface WebinarRegistrationRepository extends JpaRepository<WebinarRegi
 
     boolean existsByWebinarIdAndUserId(Long webinarId, Long userId);
 }
+

@@ -19,3 +19,4 @@ public class AttendeeDto {
     private LocalDateTime registeredAt;
     private Boolean attended;
 }
+

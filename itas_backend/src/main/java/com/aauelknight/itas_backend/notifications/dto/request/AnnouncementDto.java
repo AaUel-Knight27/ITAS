@@ -21,3 +21,4 @@ public class AnnouncementDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

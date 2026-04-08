@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.config;
-
 import com.aauelknight.itas_backend.notifications.entity.HelpArticle;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.notifications.repository.HelpArticleRepository;
@@ -147,3 +146,4 @@ public class HelpArticleSeeder implements CommandLineRunner {
         }
     }
 }
+

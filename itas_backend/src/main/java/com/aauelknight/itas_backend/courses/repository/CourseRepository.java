@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.repository;
-
 import com.aauelknight.itas_backend.courses.entity.Course;
 import java.util.List;
 import java.util.Optional;
@@ -134,3 +133,4 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
 
     boolean existsBySlugAndIdNot(String slug, Long id);
 }
+

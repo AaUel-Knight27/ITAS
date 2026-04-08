@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.lecture.repository;
-
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
 import java.util.List;
 import java.util.Optional;
@@ -37,3 +36,4 @@ public interface LectureRepository extends JpaRepository<Lecture, Long> {
             "ORDER BY l.title ASC")
     List<Lecture> searchLectures(@Param("query") String query);
 }
+

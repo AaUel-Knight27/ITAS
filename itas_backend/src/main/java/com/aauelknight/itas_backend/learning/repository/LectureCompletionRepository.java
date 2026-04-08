@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
 import com.aauelknight.itas_backend.learning.entity.LectureCompletion;
 public interface LectureCompletionRepository extends JpaRepository<LectureCompletion, Long> {
 
@@ -36,3 +35,4 @@ public interface LectureCompletionRepository extends JpaRepository<LectureComple
             """)
     long countCompletedLecturesByUserAndCourse(@Param("userId") Long userId, @Param("courseId") Long courseId);
 }
+

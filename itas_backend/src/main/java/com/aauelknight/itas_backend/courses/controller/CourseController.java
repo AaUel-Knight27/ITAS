@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.controller;
-
 import com.aauelknight.itas_backend.courses.dto.response.CategoryDto;
 import com.aauelknight.itas_backend.courses.dto.request.CourseCreateRequest;
 import com.aauelknight.itas_backend.courses.dto.response.CourseDto;
@@ -294,3 +293,4 @@ public class CourseController {
         return user.getId();
     }
 }
+

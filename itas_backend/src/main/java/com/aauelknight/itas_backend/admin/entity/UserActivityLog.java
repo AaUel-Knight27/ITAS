@@ -15,7 +15,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 @Entity
 @Table(name = "user_activity_logs")
@@ -47,3 +46,4 @@ public class UserActivityLog {
         createdAt = LocalDateTime.now();
     }
 }
+

@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.service;
-
 import com.aauelknight.itas_backend.notifications.dto.request.AnnouncementDto;
 import com.aauelknight.itas_backend.notifications.dto.request.AnnouncementRequest;
 import com.aauelknight.itas_backend.notifications.dto.request.CampaignDto;
@@ -8,7 +7,6 @@ import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.auth.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import com.aauelknight.itas_backend.notifications.entity.Announcement;
 import com.aauelknight.itas_backend.notifications.entity.NotificationCampaign;
 import com.aauelknight.itas_backend.notifications.repository.AnnouncementRepository;
@@ -195,3 +193,4 @@ public class NotificationService {
                 .build();
     }
 }
+

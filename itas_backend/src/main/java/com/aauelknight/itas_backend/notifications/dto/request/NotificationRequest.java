@@ -28,3 +28,4 @@ public class NotificationRequest {
 
     private LocalDateTime scheduledAt;
 }
+

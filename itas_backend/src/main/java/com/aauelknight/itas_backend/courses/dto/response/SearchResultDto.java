@@ -21,3 +21,4 @@ public class SearchResultDto {
     private Double relevanceScore;
     private String highlight;
 }
+

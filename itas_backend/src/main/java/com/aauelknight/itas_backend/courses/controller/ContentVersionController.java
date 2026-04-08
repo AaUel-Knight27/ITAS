@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.controller;
-
 import com.aauelknight.itas_backend.courses.dto.request.ContentVersionDto;
 import com.aauelknight.itas_backend.courses.service.ContentVersionService;
 import lombok.RequiredArgsConstructor;
@@ -65,3 +64,4 @@ public class ContentVersionController {
                 userDetails.getUsername()));
     }
 }
+

@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.auth.repository;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 import java.util.List;
 import java.util.Optional;
@@ -58,3 +57,4 @@ public interface UserRepository extends JpaRepository<User, Long> {
             + "GROUP BY u.role.name")
     List<Object[]> countLearnersByRole();
 }
+

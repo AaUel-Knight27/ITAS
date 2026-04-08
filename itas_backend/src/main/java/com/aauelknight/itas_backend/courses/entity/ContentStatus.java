@@ -4,3 +4,4 @@ public enum ContentStatus {
     ACTIVE,
     ARCHIVED
 }
+

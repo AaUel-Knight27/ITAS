@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.entity;
-
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -16,7 +15,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 @Entity
 @Table(name = "content_versions")
@@ -61,3 +59,4 @@ public class ContentVersion {
         createdAt = LocalDateTime.now();
     }
 }
+

@@ -16,7 +16,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
 @Entity
@@ -77,3 +76,4 @@ public class VideoProgress {
         }
     }
 }
+

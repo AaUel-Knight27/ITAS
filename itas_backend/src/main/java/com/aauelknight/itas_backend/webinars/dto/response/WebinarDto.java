@@ -24,3 +24,4 @@ public class WebinarDto {
     private String status;
     private LocalDateTime createdAt;
 }
+

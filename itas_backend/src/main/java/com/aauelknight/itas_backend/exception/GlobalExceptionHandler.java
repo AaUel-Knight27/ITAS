@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.exception;
-
 import com.aauelknight.itas_backend.api.ErrorResponse;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -198,3 +197,4 @@ public class GlobalExceptionHandler {
         return error.getField() + ": " + error.getDefaultMessage();
     }
 }
+

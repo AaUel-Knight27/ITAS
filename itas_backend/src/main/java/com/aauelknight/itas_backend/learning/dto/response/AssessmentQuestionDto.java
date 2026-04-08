@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.dto.response;
-
 import com.aauelknight.itas_backend.learning.entity.QuestionType;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -23,3 +22,4 @@ public class AssessmentQuestionDto {
     private String explanation;
     private Integer points;
 }
+

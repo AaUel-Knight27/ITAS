@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.dto.response;
-
 import com.aauelknight.itas_backend.courses.entity.CourseDifficulty;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,3 +37,4 @@ public class CourseDto {
     private double progressPercent;
     private List<CourseSectionDto> sections;
 }
+

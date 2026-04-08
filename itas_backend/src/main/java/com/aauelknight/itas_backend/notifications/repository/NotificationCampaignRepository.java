@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.repository;
-
 import com.aauelknight.itas_backend.notifications.entity.NotificationCampaign;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,3 +19,4 @@ public interface NotificationCampaignRepository extends JpaRepository<Notificati
             + "ORDER BY c.createdAt DESC")
     List<NotificationCampaign> findByAudienceType(@Param("audienceType") String audienceType);
 }
+

@@ -6,3 +6,4 @@ public enum LectureType {
     TEXT,
     QUIZ
 }
+

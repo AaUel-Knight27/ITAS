@@ -23,3 +23,4 @@ public class ContentVersionDto {
     private String createdAt;
     private Boolean isCurrent;
 }
+

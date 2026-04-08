@@ -15,3 +15,4 @@ public class EnrollRequest {
     @NotNull(message = "courseId is required")
     private Long courseId;
 }
+

@@ -19,3 +19,4 @@ public class SearchResponseDto {
     private List<SearchResultDto> lectures;
     private List<String> suggestions;
 }
+

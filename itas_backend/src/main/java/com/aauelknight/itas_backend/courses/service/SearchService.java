@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.service;
-
 import com.aauelknight.itas_backend.courses.dto.response.SearchFilterDto;
 import com.aauelknight.itas_backend.courses.dto.response.SearchResponseDto;
 import com.aauelknight.itas_backend.courses.dto.response.SearchResultDto;
@@ -141,3 +140,4 @@ public class SearchService {
                 .build();
     }
 }
+

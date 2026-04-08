@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.admin.repository;
-
 import com.aauelknight.itas_backend.admin.entity.UserActivityLog;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -30,3 +29,4 @@ public interface UserActivityLogRepository extends JpaRepository<UserActivityLog
             @Param("username") String username,
             Pageable pageable);
 }
+

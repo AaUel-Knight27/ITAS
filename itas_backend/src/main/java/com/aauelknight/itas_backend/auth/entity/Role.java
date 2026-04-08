@@ -31,3 +31,4 @@ public class Role {
     @Column(length = 255)
     private String description;
 }
+

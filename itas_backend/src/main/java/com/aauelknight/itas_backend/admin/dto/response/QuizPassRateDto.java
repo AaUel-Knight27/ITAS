@@ -14,3 +14,4 @@ public class QuizPassRateDto {
     private String courseName;
     private double passRate;
 }
+

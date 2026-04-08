@@ -1,8 +1,6 @@
 package com.aauelknight.itas_backend.learning.controller;
-
 import com.aauelknight.itas_backend.learning.dto.response.CertificateDto;
 import java.util.Map;
-
 import com.aauelknight.itas_backend.learning.service.CertificateService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,3 +48,4 @@ public class PublicVerifyController {
         }
     }
 }
+

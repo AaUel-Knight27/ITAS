@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.controller;
-
 import com.aauelknight.itas_backend.notifications.dto.response.ContextualHelpDto;
 import com.aauelknight.itas_backend.notifications.dto.response.HelpArticleDto;
 import com.aauelknight.itas_backend.notifications.dto.response.HelpArticleRequest;
@@ -99,3 +98,4 @@ public class HelpController {
         return ResponseEntity.ok(Map.of("message", "Help article deleted"));
     }
 }
+

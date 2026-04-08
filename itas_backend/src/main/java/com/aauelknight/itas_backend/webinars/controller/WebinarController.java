@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.webinars.controller;
-
 import com.aauelknight.itas_backend.webinars.dto.response.AttendeeDto;
 import com.aauelknight.itas_backend.webinars.dto.response.WebinarDto;
 import com.aauelknight.itas_backend.webinars.dto.response.WebinarRequest;
@@ -90,3 +89,4 @@ public class WebinarController {
         return ResponseEntity.ok(Map.of("message", "Registered successfully"));
     }
 }
+

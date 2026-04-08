@@ -18,3 +18,4 @@ public class SyncStatsDto {
     private long pendingSyncs;
     private List<SyncLogDto> latestPerSystem;
 }
+

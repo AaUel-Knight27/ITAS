@@ -24,3 +24,4 @@ public class VideoProgressRequest {
     @Min(value = 0, message = "completionPercentage must be >= 0")
     private Integer completionPercentage;
 }
+

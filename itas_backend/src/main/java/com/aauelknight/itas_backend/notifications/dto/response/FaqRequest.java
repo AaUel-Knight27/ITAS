@@ -22,3 +22,4 @@ public class FaqRequest {
     // Values: General, Tax Filing, VAT,
     //         Certificates, Technical
 }
+

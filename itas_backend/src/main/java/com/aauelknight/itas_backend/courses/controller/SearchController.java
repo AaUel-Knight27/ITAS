@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.controller;
-
 import com.aauelknight.itas_backend.courses.dto.response.SearchFilterDto;
 import com.aauelknight.itas_backend.courses.dto.response.SearchResponseDto;
 import com.aauelknight.itas_backend.courses.dto.response.SearchResultDto;
@@ -60,3 +59,4 @@ public class SearchController {
         return ResponseEntity.ok(searchService.getSuggestions(q));
     }
 }
+

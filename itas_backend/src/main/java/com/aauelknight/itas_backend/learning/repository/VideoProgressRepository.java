@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.repository;
-
 import com.aauelknight.itas_backend.learning.entity.VideoProgress;
 import java.util.List;
 import java.util.Optional;
@@ -31,3 +30,4 @@ public interface VideoProgressRepository extends JpaRepository<VideoProgress, Lo
             "LIMIT 1", nativeQuery = true)
     Optional<VideoProgress> findLastWatchedInCourse(@Param("userId") Long userId, @Param("courseId") Long courseId);
 }
+

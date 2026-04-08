@@ -53,3 +53,4 @@ public class AssessmentQuestion {
     @Column(nullable = false)
     private Integer points;
 }
+

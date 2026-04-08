@@ -18,3 +18,4 @@ public class SearchFilterDto {
     private Boolean publishedOnly;
     private String sortBy;
 }
+

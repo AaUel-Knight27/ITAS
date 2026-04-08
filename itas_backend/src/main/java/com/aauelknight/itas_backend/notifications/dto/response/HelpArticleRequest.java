@@ -24,3 +24,4 @@ public class HelpArticleRequest {
     private String tags;
     private Boolean isPublished = true;
 }
+

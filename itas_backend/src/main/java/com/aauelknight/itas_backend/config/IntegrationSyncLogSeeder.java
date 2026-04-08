@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.config;
-
 import com.aauelknight.itas_backend.admin.entity.IntegrationSyncLog;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.admin.repository.IntegrationSyncLogRepository;
@@ -132,3 +131,4 @@ public class IntegrationSyncLogSeeder implements CommandLineRunner {
         }
     }
 }
+

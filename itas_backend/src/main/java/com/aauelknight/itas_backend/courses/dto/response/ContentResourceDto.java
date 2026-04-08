@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.dto.response;
-
 import com.aauelknight.itas_backend.courses.entity.ContentStatus;
 import com.aauelknight.itas_backend.courses.entity.ContentType;
 import java.time.LocalDateTime;
@@ -29,3 +28,4 @@ public class ContentResourceDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

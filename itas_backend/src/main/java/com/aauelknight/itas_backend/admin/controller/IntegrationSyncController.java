@@ -1,9 +1,8 @@
 package com.aauelknight.itas_backend.admin.controller;
-
 import com.aauelknight.itas_backend.admin.dto.request.SyncLogDto;
 import com.aauelknight.itas_backend.admin.dto.request.SyncRequestDto;
 import com.aauelknight.itas_backend.admin.dto.request.SyncStatsDto;
-import com.aauelknight.itas_backend.admin.entity.IntegrationSyncService;
+import com.aauelknight.itas_backend.admin.service.IntegrationSyncService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -76,3 +75,4 @@ public class IntegrationSyncController {
                 .body(csv);
     }
 }
+

@@ -14,3 +14,4 @@ public class DailyEnrollmentDto {
     private String date;
     private long count;
 }
+

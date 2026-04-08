@@ -20,3 +20,4 @@ public class VideoProgressDto {
     private String lastWatchedAtDisplay;
     private String updatedAt;
 }
+

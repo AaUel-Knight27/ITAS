@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.service;
-
 import com.aauelknight.itas_backend.notifications.dto.response.ContextualHelpDto;
 import com.aauelknight.itas_backend.notifications.dto.response.HelpArticleDto;
 import com.aauelknight.itas_backend.notifications.dto.response.HelpArticleRequest;
@@ -178,3 +177,4 @@ public class HelpService {
                 .build();
     }
 }
+

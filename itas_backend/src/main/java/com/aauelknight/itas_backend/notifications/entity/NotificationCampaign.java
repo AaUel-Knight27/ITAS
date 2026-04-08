@@ -15,7 +15,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 @Entity
 @Table(name = "notification_campaigns")
@@ -61,3 +60,4 @@ public class NotificationCampaign {
         createdAt = LocalDateTime.now();
     }
 }
+

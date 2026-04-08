@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.auth.service;
-
 import com.aauelknight.itas_backend.auth.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -27,3 +26,4 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 }
+

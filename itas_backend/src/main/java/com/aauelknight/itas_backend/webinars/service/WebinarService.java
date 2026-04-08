@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.webinars.service;
-
 import com.aauelknight.itas_backend.webinars.dto.response.AttendeeDto;
 import com.aauelknight.itas_backend.webinars.dto.response.WebinarDto;
 import com.aauelknight.itas_backend.webinars.dto.response.WebinarRequest;
@@ -192,3 +191,4 @@ public class WebinarService {
                 .build();
     }
 }
+

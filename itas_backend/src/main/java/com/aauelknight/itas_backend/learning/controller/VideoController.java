@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.controller;
-
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.learning.service.VideoProgressService;
@@ -107,3 +106,4 @@ public class VideoController {
         return user.getId();
     }
 }
+

@@ -30,3 +30,4 @@ public class WebinarRequest {
 
     private String meetingLink;
 }
+

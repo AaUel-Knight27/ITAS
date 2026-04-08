@@ -23,3 +23,4 @@ public class CampaignDto {
     private LocalDateTime createdAt;
     private Long deliveryCount;
 }
+

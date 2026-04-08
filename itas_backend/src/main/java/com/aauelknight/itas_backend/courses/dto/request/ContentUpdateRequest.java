@@ -26,3 +26,4 @@ public class ContentUpdateRequest {
     @NotNull(message = "downloadAllowed is required")
     private Boolean downloadAllowed;
 }
+

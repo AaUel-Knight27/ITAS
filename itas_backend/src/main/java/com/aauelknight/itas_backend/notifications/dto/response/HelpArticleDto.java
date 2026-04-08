@@ -24,3 +24,4 @@ public class HelpArticleDto {
     private String createdAt;
     private String updatedAt;
 }
+

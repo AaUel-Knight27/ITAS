@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.lecture.entity;
-
 import com.aauelknight.itas_backend.courses.entity.CourseSection;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -63,3 +62,4 @@ public class Lecture {
     @Column(columnDefinition = "TEXT")
     private String content;
 }
+

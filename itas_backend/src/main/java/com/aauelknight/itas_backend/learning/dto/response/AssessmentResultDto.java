@@ -45,3 +45,4 @@ public class AssessmentResultDto {
         private Integer points;
     }
 }
+

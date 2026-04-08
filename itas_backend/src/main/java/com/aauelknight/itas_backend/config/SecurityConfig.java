@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.config;
-
 import com.aauelknight.itas_backend.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
@@ -340,3 +339,4 @@ public class SecurityConfig {
         return configuration.getAuthenticationManager();
     }
 }
+

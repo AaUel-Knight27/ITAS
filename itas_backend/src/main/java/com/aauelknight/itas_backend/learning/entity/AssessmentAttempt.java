@@ -16,7 +16,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 @Entity
 @Table(name = "assessment_attempts")
@@ -61,3 +60,4 @@ public class AssessmentAttempt {
         }
     }
 }
+

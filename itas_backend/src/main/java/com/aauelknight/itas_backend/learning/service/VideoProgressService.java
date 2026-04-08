@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.service;
-
 import com.aauelknight.itas_backend.lecture.dto.response.VideoProgressDto;
 import com.aauelknight.itas_backend.lecture.dto.request.VideoProgressRequest;
 import com.aauelknight.itas_backend.lecture.entity.Lecture;
@@ -123,3 +122,4 @@ public class VideoProgressService {
                 .build();
     }
 }
+

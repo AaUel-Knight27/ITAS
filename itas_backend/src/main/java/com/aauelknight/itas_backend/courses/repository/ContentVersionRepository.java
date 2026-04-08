@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.repository;
-
 import com.aauelknight.itas_backend.courses.entity.ContentVersion;
 import java.util.List;
 import java.util.Optional;
@@ -23,3 +22,4 @@ public interface ContentVersionRepository extends JpaRepository<ContentVersion, 
 
     long countByLectureId(Long lectureId);
 }
+

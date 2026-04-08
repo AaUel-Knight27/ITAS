@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.service;
-
 import com.aauelknight.itas_backend.learning.dto.response.CertificateDto;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.auth.repository.UserRepository;
@@ -299,7 +298,7 @@ public class CertificateService {
                     .setMarginTop(28f)
                     .setMarginBottom(6f));
 
-            doc.add(new Paragraph("─────────────────────────────────────────────────")
+            doc.add(new Paragraph("â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€")
                     .setFont(serif)
                     .setFontSize(8)
                     .setFontColor(GOLD)
@@ -448,3 +447,4 @@ public class CertificateService {
                 .build();
     }
 }
+

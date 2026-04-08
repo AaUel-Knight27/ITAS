@@ -21,3 +21,4 @@ public class AssessmentAttemptDto {
     private boolean passed;
     private LocalDateTime submittedAt;
 }
+

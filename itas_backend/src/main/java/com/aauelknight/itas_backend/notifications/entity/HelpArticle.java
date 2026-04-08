@@ -16,7 +16,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-
 import com.aauelknight.itas_backend.auth.entity.User;
 @Entity
 @Table(name = "help_articles")
@@ -77,3 +76,4 @@ public class HelpArticle {
         updatedAt = LocalDateTime.now();
     }
 }
+

@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.admin.repository;
-
 import com.aauelknight.itas_backend.admin.entity.IntegrationSyncLog;
 import java.util.List;
 import org.springframework.data.domain.Page;
@@ -55,3 +54,4 @@ public interface IntegrationSyncLogRepository extends JpaRepository<IntegrationS
             @Param("status") String status,
             Pageable pageable);
 }
+

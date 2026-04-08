@@ -17,3 +17,4 @@ public class AnalyticsDashboardDto {
     private long totalCertificates;
     private double avgQuizScore;
 }
+

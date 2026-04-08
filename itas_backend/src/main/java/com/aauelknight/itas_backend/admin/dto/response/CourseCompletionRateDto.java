@@ -14,3 +14,4 @@ public class CourseCompletionRateDto {
     private String courseName;
     private double completionRate;
 }
+

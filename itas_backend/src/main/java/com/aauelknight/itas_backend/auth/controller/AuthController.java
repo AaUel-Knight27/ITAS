@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.auth.controller;
-
 import com.aauelknight.itas_backend.auth.dto.response.JwtResponse;
 import com.aauelknight.itas_backend.auth.dto.request.LoginRequest;
 import com.aauelknight.itas_backend.auth.entity.User;
@@ -101,10 +100,10 @@ public class AuthController {
 
             tokenBlacklistService.blacklist(token, expiry);
         } catch (ExpiredJwtException e) {
-            // Token already expired — that's fine, user is effectively logged out already
+            // Token already expired â€” that's fine, user is effectively logged out already
             log.debug("Logout called with already expired token", e);
         } catch (Exception e) {
-            // Malformed token — ignore and proceed to clear context
+            // Malformed token â€” ignore and proceed to clear context
             log.warn("Logout called with malformed token", e);
         }
 
@@ -139,4 +138,5 @@ public class AuthController {
         return ResponseEntity.ok(payload);
     }
 }
+
 

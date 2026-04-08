@@ -14,3 +14,4 @@ public class RoleCountDto {
     private String role;
     private long count;
 }
+

@@ -11,3 +11,4 @@ public class UploadVersionRequest {
 
     private String changeNotes;
 }
+

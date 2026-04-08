@@ -33,3 +33,4 @@ public class FileStorageConfig implements WebMvcConfigurer {
                 .resourceChain(true);
     }
 }
+

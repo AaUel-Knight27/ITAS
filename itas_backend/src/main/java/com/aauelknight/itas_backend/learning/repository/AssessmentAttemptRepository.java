@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.repository;
-
 import com.aauelknight.itas_backend.learning.entity.AssessmentAttempt;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -24,3 +23,4 @@ public interface AssessmentAttemptRepository extends JpaRepository<AssessmentAtt
             + "GROUP BY a.assessment.course.title")
     List<Object[]> getQuizPassRatesByCourse();
 }
+

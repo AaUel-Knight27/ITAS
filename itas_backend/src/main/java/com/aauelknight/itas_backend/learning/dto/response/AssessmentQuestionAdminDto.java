@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.learning.dto.response;
-
 import com.aauelknight.itas_backend.learning.entity.QuestionType;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,3 +21,4 @@ public class AssessmentQuestionAdminDto {
     private String explanation;
     private Integer points;
 }
+

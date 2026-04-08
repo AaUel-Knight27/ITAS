@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.notifications.repository;
-
 import com.aauelknight.itas_backend.notifications.entity.Announcement;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -19,3 +18,4 @@ public interface AnnouncementRepository extends JpaRepository<Announcement, Long
             + "ORDER BY a.createdAt DESC")
     List<Announcement> findAllActive();
 }
+

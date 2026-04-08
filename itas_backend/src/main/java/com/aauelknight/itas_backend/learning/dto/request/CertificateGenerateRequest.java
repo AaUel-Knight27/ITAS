@@ -15,3 +15,4 @@ public class CertificateGenerateRequest {
     @NotNull(message = "courseId is required")
     private Long courseId;
 }
+

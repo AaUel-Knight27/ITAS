@@ -1,5 +1,4 @@
 package com.aauelknight.itas_backend.courses.dto.request;
-
 import com.aauelknight.itas_backend.courses.entity.CourseDifficulty;
 import com.aauelknight.itas_backend.courses.entity.AudienceType;
 import jakarta.validation.constraints.NotBlank;
@@ -34,3 +33,4 @@ public class CourseRequest {
 
     private Set<AudienceType> targetAudience = Set.of(AudienceType.ALL);
 }
+

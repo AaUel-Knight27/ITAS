@@ -21,3 +21,4 @@ public class AssessmentSubmitRequest {
     @NotEmpty(message = "answers cannot be empty")
     private Map<Long, String> answers;
 }
+
