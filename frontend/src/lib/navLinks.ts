@@ -3,6 +3,7 @@ import {
   CONTENT_ADMIN,
   MANAGER,
   MOR_STAFF,
+  SYSTEM_ADMIN,
   TAX_AGENT,
   TAXPAYER,
   TRAINING_ADMIN,
@@ -60,11 +61,21 @@ export const NAV_LINKS: Record<string, NavLink[]> = {
 
   [COMMUNICATION]: [
     { label: "Dashboard", href: getRoleHomePath(COMMUNICATION) },
-    { label: "Notifications", href: "/notifications" },
+    { label: "Communications", href: "/admin/communications" },
   ],
 
   [WEB_ADMIN]: [
     { label: "Dashboard", href: getRoleHomePath(WEB_ADMIN) },
+    { label: "Users", href: "/admin/users" },
+    { label: "Courses", href: "/admin/courses" },
+    { label: "Webinars", href: "/admin/webinars" },
+    { label: "Communications", href: "/admin/communications" },
+    { label: "Logs", href: "/admin/logs" },
+    { label: "Integrations", href: "/admin/integrations" },
+  ],
+
+  [SYSTEM_ADMIN]: [
+    { label: "Dashboard", href: getRoleHomePath(SYSTEM_ADMIN) },
     { label: "Users", href: "/admin/users" },
     { label: "Courses", href: "/admin/courses" },
     { label: "Webinars", href: "/admin/webinars" },

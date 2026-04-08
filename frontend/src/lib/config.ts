@@ -1,3 +1,4 @@
+/** Public: backend REST base (see `API_BASE` — `/api/v1` is appended when missing). */
 const rawBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 const rawStorageBase = process.env.NEXT_PUBLIC_STORAGE_URL ?? rawBase;
 

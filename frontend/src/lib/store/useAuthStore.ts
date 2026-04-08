@@ -1,5 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
+import {
+  ADMIN_ROLES,
+  CERTIFICATE_ROLES,
+  LEARNER_ROLES,
+  canAccessAdminSection,
+} from '@/lib/roles';
 import type { User } from '@/types';
 
 interface AuthState {
@@ -18,10 +25,6 @@ interface AuthState {
   canManageCourses: () => boolean;
   canGetCertificate: () => boolean;
 }
-
-const ADMIN_ROLES = ["CONTENT_ADMIN", "TRAINING_ADMIN", "WEB_ADMIN", "SYSTEM_ADMIN", "COMMUNICATION"];
-const LEARNER_ROLES = ["TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER"];
-const CERTIFICATE_ROLES = ["TAX_AGENT", "MOR_STAFF", "MANAGER"];
 
 export const useAuthStore = create<AuthState>()(
   persist(
@@ -65,8 +68,7 @@ export const useAuthStore = create<AuthState>()(
 
       canManageCourses: () => {
         const role = get().role;
-        // Communication officer cannot manage courses
-        return role ? ["CONTENT_ADMIN", "TRAINING_ADMIN", "WEB_ADMIN", "SYSTEM_ADMIN"].includes(role) : false;
+        return role ? canAccessAdminSection(role, 'courses') : false;
       },
 
       canGetCertificate: () => {

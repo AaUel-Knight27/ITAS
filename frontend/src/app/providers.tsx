@@ -1,6 +1,8 @@
 "use client";
 
 import { SessionProvider } from "next-auth/react";
+
+import { QueryProvider } from "@/components/providers/QueryProvider";
 import { SessionSync } from "@/components/providers/SessionSync";
 
 export function Providers({
@@ -17,8 +19,10 @@ export function Providers({
       refetchOnWindowFocus={false}
       refetchWhenOffline={false}
     >
-      <SessionSync />
-      {children}
+      <QueryProvider>
+        <SessionSync />
+        {children}
+      </QueryProvider>
     </SessionProvider>
   );
 }

@@ -1,0 +1,13 @@
+package com.aauelknight.itas_backend.courses.dto.request;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class UploadVersionRequest {
+
+    private String changeNotes;
+}
