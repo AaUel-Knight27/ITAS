@@ -1,4 +1,5 @@
 package com.aauelknight.itas_backend.security;
+
 import com.aauelknight.itas_backend.auth.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
