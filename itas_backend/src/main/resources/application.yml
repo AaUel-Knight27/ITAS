@@ -1,15 +1,15 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT}
   servlet:
-    context-path: ${SERVER_SERVLET_CONTEXT_PATH:/api/v1}
+    context-path: ${SERVER_SERVLET_CONTEXT_PATH}
 
 spring:
   config:
     import: optional:file:.env[.properties]
   datasource:
-    url: ${SPRING_DATASOURCE_URL:}  
-    username: ${SPRING_DATASOURCE_USERNAME:}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -52,13 +52,13 @@ spring:
             required: ${SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_REQUIRED:true}
 
 app:
-  frontend-url: ${APP_FRONTEND_URL:http://localhost:3000}
-  upload-dir: ${APP_UPLOAD_DIR:uploads}
+  frontend-url: ${APP_FRONTEND_URL}
+  upload-dir: ${APP_UPLOAD_DIR}
 
   email:
-    enabled: ${APP_EMAIL_ENABLED:true}
-    from: ${APP_EMAIL_FROM:${SPRING_MAIL_USERNAME:portal@itas.com}}
-    from-name: ${APP_EMAIL_FROM_NAME:ITAS Portal}
+    enabled: ${APP_EMAIL_ENABLED}
+    from: ${APP_EMAIL_FROM:${SPRING_MAIL_USERNAME}}
+    from-name: ${APP_EMAIL_FROM_NAME}
 
   jwt:
     secret: ${APP_JWT_SECRET:${JWT_SECRET:U3ByaW5nQm9vdDNKYXZhMjVKd3RTZWNyZXRLZXlGb3JQb3J0YWxMbXNfU3VwZXJTZWN1cmVfMjAyNg==}}
