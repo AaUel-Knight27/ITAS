@@ -1,3 +1,4 @@
+import { getSession } from "next-auth/react";
 import axios from "axios";
 
 import { API_BASE } from "../config";
@@ -5,45 +6,6 @@ import { API_BASE } from "../config";
 type AxiosConfigWithSuppressedStatuses = {
   suppressErrorStatuses?: number[];
 };
-
-function readAccessTokenFromStorage(): string | undefined {
-  if (typeof window === "undefined") {
-    return undefined;
-  }
-
-  try {
-    const raw = window.localStorage.getItem("itas-auth-storage");
-    if (raw) {
-      const parsed = JSON.parse(raw) as { state?: { accessToken?: string | null } };
-      const token = parsed?.state?.accessToken;
-      if (token) {
-        return token;
-      }
-    }
-
-    const keys = Object.keys(window.localStorage);
-    for (const key of keys) {
-      if (key.startsWith("nextauth.message") || key.includes("session")) {
-        try {
-          const value = JSON.parse(window.localStorage.getItem(key) ?? "{}") as {
-            accessToken?: string;
-            user?: { accessToken?: string };
-          };
-          const token = value?.accessToken ?? value?.user?.accessToken;
-          if (token) {
-            return token;
-          }
-        } catch {
-          // Skip malformed session entries.
-        }
-      }
-    }
-
-    return undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export const api = axios.create({
   baseURL: API_BASE,
@@ -63,7 +25,11 @@ api.interceptors.request.use(async (config) => {
     return config;
   }
 
-  const accessToken = readAccessTokenFromStorage();
+  // Use getSession to safely retrieve the session (and token) from NextAuth
+  // This is more secure than manual localStorage parsing and handles refresh logic
+  const session = await getSession();
+  const accessToken = (session?.user as any)?.accessToken;
+
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }

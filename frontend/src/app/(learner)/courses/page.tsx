@@ -14,41 +14,9 @@ import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { canAccessCourses } from "@/lib/roles";
+import { normalizeCourse, unwrap, type ApiResponse } from "@/lib/utils/api-utils";
 import type { Category, Course } from "@/types";
 import type { SearchResultDto } from "@/lib/types";
-
-type ApiResponse<T> = {
-  data?: T;
-  content?: T;
-  items?: T;
-  results?: T;
-};
-
-function unwrap<T>(payload: T | ApiResponse<T>): T {
-  const maybe = payload as ApiResponse<T>;
-  if (maybe.data !== undefined) return maybe.data;
-  if (maybe.content !== undefined) return maybe.content;
-  if (maybe.items !== undefined) return maybe.items;
-  if (maybe.results !== undefined) return maybe.results;
-  return payload as T;
-}
-
-function normalizeCourse(course: Course): Course {
-  const categoryId = course.category?.id ?? course.categoryId;
-  const categoryName = course.category?.name ?? course.categoryName;
-  const categoryDescription = course.category?.description ?? course.categoryDescription;
-  return {
-    ...course,
-    categoryId,
-    categoryName,
-    categoryDescription,
-    category: {
-      id: categoryId ?? "",
-      name: categoryName ?? "Uncategorized",
-      description: categoryDescription,
-    },
-  };
-}
 
 function searchResultToCourse(result: SearchResultDto): Course {
   const categoryName = result.categoryName ?? "Uncategorized";
@@ -106,8 +74,9 @@ export default function CoursesPage() {
         }
         if (!active) return;
         setCategories(data);
-      } catch {
+      } catch (err) {
         if (!active) return;
+        console.error("Failed to load categories:", err);
       }
     }
 
