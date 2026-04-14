@@ -83,7 +83,7 @@ public class CourseService {
 
     @Transactional(readOnly = true)
     public List<CourseDto> getAllAdminCourses() {
-        return courseRepository.findAllNonArchived().stream()
+        return courseRepository.findAllIncludingArchived().stream()
                 .map(course -> toCourseSummaryDto(course, null))
                 .collect(Collectors.toList());
     }
@@ -91,13 +91,6 @@ public class CourseService {
     @Transactional(readOnly = true)
     public List<CourseDto> getAllCoursesAdmin() {
         return courseRepository.findAllNonArchived().stream()
-                .map(course -> toCourseSummaryDto(course, null))
-                .collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<CourseDto> getAllCoursesWebAdmin() {
-        return courseRepository.findAllIncludingArchived().stream()
                 .map(course -> toCourseSummaryDto(course, null))
                 .collect(Collectors.toList());
     }
@@ -129,8 +122,7 @@ public class CourseService {
 
     @Transactional
     public CourseDto archiveCourse(Long courseId, String username) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Course not found: " + courseId));
+        Course course = getCourseEntity(courseId);
 
         User archivedBy = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
@@ -145,8 +137,7 @@ public class CourseService {
 
     @Transactional
     public CourseDto restoreCourse(Long courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Course not found: " + courseId));
+        Course course = getCourseEntity(courseId);
 
         course.setStatus("DRAFT");
         course.setPublished(false);
@@ -156,6 +147,7 @@ public class CourseService {
         return toCourseDetailDto(courseRepository.save(course), null);
     }
 
+    @Transactional(readOnly = true)
     public CourseDto getBySlug(String slug, Long userId) {
         Course course = courseRepository.findBySlugWithSectionsAndLectures(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
@@ -164,10 +156,12 @@ public class CourseService {
         return toCourseDetailDto(course, enrollment);
     }
 
+    @Transactional(readOnly = true)
     public CourseDto getBySlug(String slug) {
         return getBySlug(slug, null);
     }
 
+    @Transactional(readOnly = true)
     public CourseDto getBySlugAdmin(String slug, Long userId) {
         Course course = courseRepository.findBySlugWithSectionsAndLecturesAdmin(slug)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
@@ -176,6 +170,7 @@ public class CourseService {
         return toCourseDetailDto(course, enrollment);
     }
 
+    @Transactional(readOnly = true)
     public CourseDto getCourseByIdAdmin(Long courseId) {
         Course course = getCourseWithContent(courseId);
         return toCourseDetailDto(course, null);
@@ -187,6 +182,7 @@ public class CourseService {
         return toCourseDetailDto(course, null);
     }
 
+    @Transactional(readOnly = true)
     public CourseDto getBySlugAdmin(String slug) {
         return getBySlugAdmin(slug, null);
     }
@@ -285,23 +281,42 @@ public class CourseService {
     }
 
     private String generateUniqueSlug(String preferredSlug, String courseTitle, Long excludedCourseId) {
-        String base = SlugGenerator.normalize(preferredSlug);
+        String base = (preferredSlug != null && !preferredSlug.isBlank())
+                ? SlugGenerator.normalize(preferredSlug)
+                : SlugGenerator.fallbackBase(courseTitle);
+
         if (base.isBlank()) {
-            base = SlugGenerator.fallbackBase(courseTitle);
+            base = "course";
         }
 
-        for (int attempt = 0; attempt < 25; attempt++) {
-            String candidate = SlugGenerator.appendRandomSuffix(base);
-            boolean exists = excludedCourseId == null
-                    ? courseRepository.existsBySlug(candidate)
-                    : courseRepository.existsBySlugAndIdNot(candidate, excludedCourseId);
+        // 1. Try the base slug first
+        if (isSlugAvailable(base, excludedCourseId)) {
+            return base;
+        }
 
-            if (!exists) {
+        // 2. Try with a few short numeric suffixes
+        for (int i = 1; i <= 10; i++) {
+            String candidate = base + "-" + i;
+            if (isSlugAvailable(candidate, excludedCourseId)) {
+                return candidate;
+            }
+        }
+
+        // 3. Last resort: random suffix
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String candidate = SlugGenerator.appendRandomSuffix(base);
+            if (isSlugAvailable(candidate, excludedCourseId)) {
                 return candidate;
             }
         }
 
         throw new ResponseStatusException(HttpStatus.CONFLICT, "Unable to generate a unique course slug");
+    }
+
+    private boolean isSlugAvailable(String slug, Long excludedCourseId) {
+        return excludedCourseId == null
+                ? !courseRepository.existsBySlug(slug)
+                : !courseRepository.existsBySlugAndIdNot(slug, excludedCourseId);
     }
 
     @Transactional
@@ -392,6 +407,14 @@ public class CourseService {
     @Transactional
     public void deleteSection(Long courseId, Long sectionId) {
         CourseSection section = getSection(courseId, sectionId);
+        // Clean up files for each lecture in the section
+        if (section.getLectures() != null) {
+            for (Lecture lecture : section.getLectures()) {
+                if (lecture.getVideoUrl() != null) {
+                    fileStorageService.deleteFile(lecture.getVideoUrl());
+                }
+            }
+        }
         courseSectionRepository.delete(section);
     }
 
@@ -428,42 +451,59 @@ public class CourseService {
     public void deleteLecture(Long courseId, Long sectionId, Long lectureId) {
         Lecture lecture = getLecture(sectionId, lectureId);
         validateLectureHierarchy(courseId, sectionId, lecture);
+        // Clean up video file if exists
+        if (lecture.getVideoUrl() != null) {
+            fileStorageService.deleteFile(lecture.getVideoUrl());
+        }
         lectureRepository.delete(lecture);
     }
 
     @Transactional
     public LectureDto uploadLectureFile(Long courseId, Long sectionId, Long lectureId, MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new IllegalArgumentException("File is empty");
+        }
+
+        long maxSize = 100L * 1024 * 1024;
+        if (file.getSize() > maxSize) {
+            throw new IllegalArgumentException(
+                    "File size exceeds 100MB limit. Actual size: " + (file.getSize() / (1024 * 1024)) + "MB");
+        }
+
+        String contentType = file.getContentType();
+        String filename = file.getOriginalFilename() != null
+                ? file.getOriginalFilename().toLowerCase()
+                : "";
+
+        boolean isVideo = (contentType != null && contentType.startsWith("video/"))
+                || filename.endsWith(".mp4")
+                || filename.endsWith(".webm")
+                || filename.endsWith(".mov");
+
+        boolean isPdf = "application/pdf".equals(contentType) || filename.endsWith(".pdf");
+
+        if (!isVideo && !isPdf) {
+            throw new IllegalArgumentException(
+                    "Invalid file type: " + contentType
+                            + ". Only video files (MP4, WebM, MOV) and PDF files are accepted.");
+        }
+
         Lecture lecture = lectureRepository.findById(lectureId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lecture not found: " + lectureId));
         validateLectureHierarchy(courseId, sectionId, lecture);
 
-        log.info("=== UPLOAD SERVICE START ===");
-        log.info("Storing file for lectureId={}", lectureId);
-        log.info("Before upload - lecture type: {}, videoUrl: {}", lecture.getType(), lecture.getVideoUrl());
+        // Clean up old files if they exist
+        if (isPdf && lecture.getPdfUrl() != null) {
+            fileStorageService.deleteFile(lecture.getPdfUrl());
+        } else if (isVideo && lecture.getVideoUrl() != null) {
+            fileStorageService.deleteFile(lecture.getVideoUrl());
+        }
 
         String filePath = fileStorageService.storeLectureFile(courseId, sectionId, lectureId, file);
-        log.info("File stored at path: {}", filePath);
-
-        String name = Optional.ofNullable(file.getOriginalFilename())
-                .orElse("")
-                .toLowerCase();
-        String type = Optional.ofNullable(file.getContentType())
-                .orElse("")
-                .toLowerCase();
-
-        boolean isVideo = type.startsWith("video/")
-                || name.endsWith(".mp4")
-                || name.endsWith(".webm")
-                || name.endsWith(".mov")
-                || name.endsWith(".avi")
-                || name.endsWith(".mkv");
-
-        boolean isPdf = type.equals("application/pdf")
-                || name.endsWith(".pdf");
 
         if (isPdf) {
             lecture.setPdfUrl(filePath);
-            lecture.setVideoUrl(null);
+            lecture.setVideoUrl(null); // Optional: decide if you want to keep both or replace
             lecture.setType(LectureType.PDF);
         } else {
             lecture.setVideoUrl(filePath);
@@ -471,12 +511,7 @@ public class CourseService {
             lecture.setType(LectureType.VIDEO);
         }
 
-        log.info("After setting - videoUrl: {}, pdfUrl: {}", lecture.getVideoUrl(), lecture.getPdfUrl());
-
-        Lecture saved = lectureRepository.saveAndFlush(lecture);
-        log.info("Lecture updated - videoUrl={}", lecture.getVideoUrl());
-        log.info("Saved lecture - videoUrl: {}, pdfUrl: {}", saved.getVideoUrl(), saved.getPdfUrl());
-        return toLectureDto(saved);
+        return toLectureDto(lectureRepository.save(lecture));
     }
 
     @Transactional
@@ -492,10 +527,33 @@ public class CourseService {
     }
 
     @Transactional
-    public void updateThumbnail(Long courseId, String url) {
+    public String uploadThumbnail(Long id, MultipartFile file) {
+        String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
+        if (!originalName.endsWith(".jpg")
+                && !originalName.endsWith(".jpeg")
+                && !originalName.endsWith(".png")
+                && !originalName.endsWith(".webp")) {
+            throw new IllegalArgumentException("Only JPG, PNG, WEBP images allowed for thumbnail");
+        }
+
+        if (file.getSize() > 5_242_880) {
+            throw new IllegalArgumentException("Thumbnail must be under 5MB");
+        }
+
+        String thumbnailUrl = fileStorageService.storeThumbnail(id, file);
+        updateThumbnail(id, thumbnailUrl);
+        return thumbnailUrl;
+    }
+
+    @Transactional
+    public CourseDto updateThumbnail(Long courseId, String url) {
         Course course = getCourseEntity(courseId);
+        // Clean up old thumbnail file if it's internal
+        if (course.getThumbnailUrl() != null && !course.getThumbnailUrl().equals(url)) {
+            fileStorageService.deleteFile(course.getThumbnailUrl());
+        }
         course.setThumbnailUrl(url);
-        courseRepository.save(course);
+        return toCourseSummaryDto(courseRepository.save(course), null);
     }
 
     @Transactional

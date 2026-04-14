@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
-
 import CommunicationDashboard from "@/components/dashboard/CommunicationDashboard";
 import ContentAdminDashboard from "@/components/dashboard/ContentAdminDashboard";
 import ManagerDashboard from "@/components/dashboard/ManagerDashboard";
 import TrainingAdminDashboard from "@/components/dashboard/TrainingAdminDashboard";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { usePersistedTab } from "@/hooks/usePersistedTab";
 import IntegrationLogsSection from "@/components/webadmin/IntegrationLogsSection";
 import SystemLogsSection from "@/components/webadmin/SystemLogsSection";
 import UserManagementSection from "@/components/webadmin/UserManagementSection";
@@ -35,7 +34,11 @@ const SECTIONS: { id: Section; label: string; icon: string }[] = [
 ];
 
 export default function WebAdminDashboard({ initialSection = "overview" }: Props) {
-  const [activeSection, setActiveSection] = useState<Section>(initialSection);
+  const [activeSection, setActiveSection] = usePersistedTab(
+    "webadmin-tab",
+    initialSection,
+    ["overview", "users", "courses", "webinars", "communications", "logs", "integrations"]
+  );
   const current = SECTIONS.find((section) => section.id === activeSection);
 
   return (

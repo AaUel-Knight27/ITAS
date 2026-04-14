@@ -24,8 +24,8 @@ public class JwtUtil {
     private final long expirationMs;
 
     public JwtUtil(
-            @Value("${app.jwt.secret:${JWT_SECRET:itas-dev-secret-change-me-please-32b}}") String secret,
-            @Value("${app.jwt.expiration-ms:${JWT_EXPIRATION_MS:86400000}}") long expirationMs) {
+            @Value("${app.jwt.secret:${JWT_SECRET}}") String secret,
+            @Value("${app.jwt.expiration-ms:${JWT_EXPIRATION_MS}}") long expirationMs) {
         this.signingKey = Keys.hmacShaKeyFor(resolveSecretBytes(secret));
         this.expirationMs = expirationMs;
     }
@@ -40,14 +40,10 @@ public class JwtUtil {
                 .expiration(expiryDate);
 
         // If the principal is our domain User, include the role and id as claims
-        try {
-            if (userDetails instanceof User u && u.getRole() != null) {
-                String role = u.getRole().getName();
-                builder.claim("role", role);
-                builder.claim("id", u.getId());
-            }
-        } catch (Throwable ignored) {
-            // Do not fail token generation if optional claims cannot be read
+        if (userDetails instanceof User u && u.getRole() != null) {
+            String role = u.getRole().getName();
+            builder.claim("role", role);
+            builder.claim("id", u.getId());
         }
 
         return builder.signWith(signingKey).compact();
@@ -69,6 +65,10 @@ public class JwtUtil {
 
     public long getExpirationMs() {
         return expirationMs;
+    }
+
+    public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
     }
 
     public SecretKey getSigningKey() {

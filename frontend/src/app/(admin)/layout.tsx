@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import AppShell from '@/components/ui/AppShell'
+import PageTransition from '@/components/ui/PageTransition'
 import { isAdminRole } from '@/lib/roles'
 
 export default function AdminLayout({
@@ -53,5 +54,11 @@ export default function AdminLayout({
         return null
     }
 
-    return <AppShell>{children}</AppShell>
+    return (
+        <AppShell>
+            <PageTransition>
+                {children}
+            </PageTransition>
+        </AppShell>
+    )
 }

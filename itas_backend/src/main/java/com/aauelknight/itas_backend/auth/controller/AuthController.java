@@ -9,6 +9,7 @@ import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import jakarta.validation.Valid;
 import java.time.Instant;
+import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.crypto.SecretKey;
@@ -90,21 +91,16 @@ public class AuthController {
         String token = authHeader.substring(BEARER_PREFIX.length());
         
         try {
-            Instant expiry = Jwts.parser()
-                    .verifyWith(signingKey)
-                    .build()
-                    .parseSignedClaims(token)
-                    .getPayload()
-                    .getExpiration()
-                    .toInstant();
-
-            tokenBlacklistService.blacklist(token, expiry);
+            Date expiryDate = jwtUtil.extractExpiration(token);
+            if (expiryDate != null) {
+                tokenBlacklistService.blacklist(token, expiryDate.toInstant());
+            }
         } catch (ExpiredJwtException e) {
             // Token already expired â€” that's fine, user is effectively logged out already
             log.debug("Logout called with already expired token", e);
         } catch (Exception e) {
-            // Malformed token â€” ignore and proceed to clear context
-            log.warn("Logout called with malformed token", e);
+            // Malformed token or other error â€” ignore and proceed to clear context
+            log.warn("Logout called with invalid token", e);
         }
 
         SecurityContextHolder.clearContext();

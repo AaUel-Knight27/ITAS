@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/admin-courses";
 import { versionApi } from "@/lib/api";
 import RichTextEditor from "@/components/editor/RichTextEditor";
+import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage, getUploadErrorMessage } from "@/lib/errors";
 import { getFileUrl } from "@/lib/utils";
 import VersionHistoryPanel from "@/components/versioning/VersionHistoryPanel";
@@ -127,6 +128,14 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
 
   const sections = useMemo(() => byOrder((course.sections ?? []).filter((section): section is CourseSection => section != null)), [course.sections]);
 
+  function invalidateCourseCaches(nextSlug?: string) {
+    courseCache.invalidate(CACHE_KEYS.courses());
+    courseCache.invalidate(CACHE_KEYS.course(course.slug));
+    if (nextSlug && nextSlug !== course.slug) {
+      courseCache.invalidate(CACHE_KEYS.course(nextSlug));
+    }
+  }
+
   const activeLecture = useMemo(() => {
     if (!sections || sections.length === 0 || !activeLectureId) return null;
     return sections
@@ -205,6 +214,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
   function updateCourse(mutator: (next: Course) => void) {
     const next = cloneCourse(course);
     mutator(next);
+    invalidateCourseCaches(next.slug);
     onCourseChange(next);
   }
 

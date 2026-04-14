@@ -581,6 +581,7 @@ export default function LearnLecturePage() {
     link.rel = "preload";
     link.as = "video";
     link.href = nextSrc;
+    // Hint the browser about the next lesson's media once we know the next item.
     document.head.appendChild(link);
 
     return () => {
@@ -810,8 +811,17 @@ export default function LearnLecturePage() {
 
   if (!activeLecture) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-950">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+      <div className="flex h-screen overflow-hidden bg-gray-950">
+        <SidebarSkeleton />
+        <main className="flex flex-1 flex-col overflow-hidden">
+          <div className="border-b border-gray-800 bg-gray-900 px-4 py-3">
+            <div className="h-5 w-48 animate-pulse rounded bg-gray-800" />
+          </div>
+          <div className="flex-1 overflow-hidden bg-gray-950">
+            <VideoSkeleton />
+            <ContentSkeleton />
+          </div>
+        </main>
       </div>
     );
   }
@@ -1122,6 +1132,8 @@ export default function LearnLecturePage() {
                         autoPlay={autoPlayLectureId === String(activeLecture.id)}
                         onProgress={handleVideoProgress}
                         onEnded={handleVideoEnded}
+                        onComplete={() => void handleMarkComplete()}
+                        isCompleted={completedIds.has(String(activeLecture.id))}
                       />
                     ) : (
                       <div className="flex h-64 items-center justify-center bg-gray-900">

@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import CourseCard from "@/components/course/CourseCard";
+import EmptyState from "@/components/ui/EmptyState";
+import { useScrollMemory } from "@/hooks/useScrollMemory";
 import api, { searchApi } from "@/lib/api";
 import { getCategories } from "@/lib/api/courses";
 import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
@@ -47,6 +49,7 @@ export default function CoursesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const role = session?.user?.role ?? "";
+  useScrollMemory();
 
   const [courses, setCourses] = useState<Course[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -60,6 +63,11 @@ export default function CoursesPage() {
 
   const debouncedQuery = useDebounce(query.trim(), 500);
   const isSearchActive = debouncedQuery.length > 0;
+
+  function handleClearFilters() {
+    setQuery("");
+    setSelectedCategory("all");
+  }
 
   useEffect(() => {
     let active = true;
@@ -268,21 +276,16 @@ export default function CoursesPage() {
         {/* Results */}
         {filteredCourses.length === 0 ? (
           isSearchActive ? (
-            <div className="rounded-xl border-2 border-dashed border-border bg-card/50 p-12 text-center">
-              <Search className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h2 className="mt-4 text-lg font-semibold text-foreground">
-                No results for "{debouncedQuery}"
-              </h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Try different keywords or browse all courses.
-              </p>
-              <button
-                type="button"
-                onClick={() => setQuery("")}
-                className="mt-4 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-              >
-                Clear Search
-              </button>
+            <div className="rounded-xl border-2 border-dashed border-border bg-card/50">
+              <EmptyState
+                icon="🔍"
+                title="No courses found"
+                description="Try adjusting your search or filters."
+                action={{
+                  label: "Clear Filters",
+                  onClick: handleClearFilters,
+                }}
+              />
             </div>
           ) : (
             <div className="rounded-xl border-2 border-dashed border-border bg-card/50 p-12 text-center">

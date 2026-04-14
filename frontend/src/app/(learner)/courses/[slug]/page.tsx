@@ -11,6 +11,7 @@ import ProgressBar from "@/components/course/ProgressBar";
 import ScrollReveal from "@/components/ui/ScrollReveal";
 import { getCourseBySlug } from "@/lib/api/courses";
 import { enrollCourse, getCourseProgress } from "@/lib/api/enrollment";
+import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getCourseLearnHref } from "@/lib/learn";
 import { canAccessCourses } from "@/lib/roles";
 import type { Course, CourseProgress, CourseSection, Lecture } from "@/types";
@@ -61,7 +62,12 @@ export default function CourseDetailPage() {
         setError(null);
         setNeedsLogin(false);
 
-        const data = await getCourseBySlug(slug);
+        const cacheKey = CACHE_KEYS.course(slug);
+        let data = courseCache.get<Course>(cacheKey);
+        if (!data) {
+          data = await getCourseBySlug(slug);
+          courseCache.set(cacheKey, data);
+        }
         if (!active) return;
 
         setCourse(data);
@@ -113,7 +119,9 @@ export default function CourseDetailPage() {
       setError(null);
       await enrollCourse(course.id);
 
-      setCourse((prev) => (prev ? { ...prev, enrolled: true } : prev));
+      const nextCourse = { ...course, enrolled: true };
+      setCourse(nextCourse);
+      courseCache.set(CACHE_KEYS.course(course.slug), nextCourse);
 
       if (firstLecture) {
         router.push(getCourseLearnHref(course.slug, firstLecture));

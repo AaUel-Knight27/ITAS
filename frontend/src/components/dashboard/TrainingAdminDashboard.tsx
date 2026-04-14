@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 
+import EmptyState from "@/components/ui/EmptyState";
 import AttendeesModal from "@/components/webinars/AttendeesModal";
 import WebinarFormModal from "@/components/webinars/WebinarFormModal";
+import { usePersistedTab } from "@/hooks/usePersistedTab";
 import { webinarApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
 import { normalizeRole } from "@/lib/roles";
@@ -21,7 +23,11 @@ export default function TrainingAdminDashboard() {
   const { data: session, status } = useSession();
   const [upcoming, setUpcoming] = useState<WebinarDto[]>([]);
   const [past, setPast] = useState<WebinarDto[]>([]);
-  const [activeTab, setActiveTab] = useState<"upcoming" | "past">("upcoming");
+  const [activeTab, setActiveTab] = usePersistedTab(
+    "trainingadmin-tab",
+    "upcoming",
+    ["upcoming", "past"]
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -235,13 +241,23 @@ export default function TrainingAdminDashboard() {
           ))}
         </div>
       ) : displayList.length === 0 ? (
-        <div className="py-16 text-center text-gray-500">
-          <p className="mb-3 text-4xl">W</p>
-          <p className="text-lg font-medium">No {activeTab} webinars</p>
-          {activeTab === "upcoming" ? (
-            <p className="mt-1 text-sm">Click "Schedule New Webinar" to create one</p>
-          ) : null}
-        </div>
+        <EmptyState
+          icon="🎥"
+          title={`No ${activeTab} webinars`}
+          description={
+            activeTab === "upcoming"
+              ? 'Click "Schedule New Webinar" to create one.'
+              : "Past webinars will appear here once sessions are completed."
+          }
+          action={
+            activeTab === "upcoming"
+              ? {
+                  label: "Schedule New Webinar",
+                  onClick: handleOpenCreate,
+                }
+              : undefined
+          }
+        />
       ) : (
         <div className="space-y-3">
           {displayList.map((webinar) => (

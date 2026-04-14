@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
-
 import AnnouncementsTab from "@/components/communication/AnnouncementsTab";
 import FaqTab from "@/components/communication/FaqTab";
 import HelpArticlesTab from "@/components/communication/HelpArticlesTab";
 import NotificationsTab from "@/components/communication/NotificationsTab";
+import { usePersistedTab } from "@/hooks/usePersistedTab";
 
 type Tab = "notifications" | "faq" | "announcements" | "help";
 
@@ -17,7 +16,11 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function CommunicationDashboard() {
-  const [activeTab, setActiveTab] = useState<Tab>("notifications");
+  const [activeTab, setActiveTab] = usePersistedTab(
+    "comms-tab",
+    "notifications",
+    ["notifications", "faq", "announcements", "help"]
+  );
 
   return (
     <div className="mx-auto max-w-4xl p-6">

@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
+import { useScrollMemory } from "@/hooks/useScrollMemory";
 import {
   isCommunicationRole,
   isContentAdminRole,
@@ -63,6 +64,7 @@ export default function DashboardPage() {
   const { data: session, status: sessionStatus } = useSession();
   const rawRole = session?.user?.role ?? "";
   const normalizedRole = normalizeRole(rawRole);
+  useScrollMemory();
 
   useEffect(() => {
     if (sessionStatus === "unauthenticated") {

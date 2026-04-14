@@ -1,17 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import HelpButton from "@/components/help/HelpButton";
+import EmptyState from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/Toast";
 import { learnerApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
 import type { CertificateDto } from "@/lib/types";
 
 export default function CertificatesPage() {
+  const router = useRouter();
+  const { success, error: showError } = useToast();
   const [certificates, setCertificates] = useState<CertificateDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [toastMsg, setToastMsg] = useState("");
 
   useEffect(() => {
     learnerApi
@@ -20,11 +24,6 @@ export default function CertificatesPage() {
       .catch((error) => setError(getErrorMessage(error) || "Could not load certificates. Please refresh."))
       .finally(() => setLoading(false));
   }, []);
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    window.setTimeout(() => setToastMsg(""), 3000);
-  };
 
   const handleDownload = async (cert: CertificateDto) => {
     try {
@@ -36,17 +35,18 @@ export default function CertificatesPage() {
       link.download = `certificate-${cert.certificateCode}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
+      success("Certificate download started.");
     } catch (error) {
-      showToast(getErrorMessage(error));
+      showError(getErrorMessage(error));
     }
   };
 
   const handleShare = async (cert: CertificateDto) => {
     try {
       await learnerApi.shareCertificate(cert.id);
-      showToast("Certificate link sent to your email!");
+      success("Certificate link sent to your email!");
     } catch (error) {
-      showToast(getErrorMessage(error));
+      showError(getErrorMessage(error));
     }
   };
 
@@ -56,12 +56,6 @@ export default function CertificatesPage() {
         <h1 className="text-2xl font-bold text-gray-900">My Certificates</h1>
         <p className="mt-1 text-sm text-gray-500">Download or share your earned certificates</p>
       </div>
-
-      {toastMsg && (
-        <div className="animate-fade-in fixed bottom-6 right-6 z-50 rounded-xl bg-gray-900 px-5 py-3 text-sm text-white shadow-lg">
-          {toastMsg}
-        </div>
-      )}
 
       {error && <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
@@ -90,11 +84,15 @@ export default function CertificatesPage() {
           </div>
         </div>
       ) : certificates.length === 0 ? (
-        <div className="py-16 text-center text-gray-500">
-          <p className="mb-4 text-4xl">Trophy</p>
-          <p className="text-lg font-medium">No certificates yet</p>
-          <p className="mt-1 text-sm">Complete a course and pass the quiz to earn your certificate</p>
-        </div>
+        <EmptyState
+          icon="🏆"
+          title="No certificates yet"
+          description="Complete a course and pass the final quiz to earn your certificate."
+          action={{
+            label: "Browse Courses",
+            onClick: () => router.push("/courses"),
+          }}
+        />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {certificates.map((cert) => (

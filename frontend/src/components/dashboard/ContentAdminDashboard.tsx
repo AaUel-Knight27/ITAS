@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import EmptyState from "@/components/ui/EmptyState";
+import { useToast } from "@/components/ui/Toast";
+import { usePersistedTab } from "@/hooks/usePersistedTab";
 import { adminCourseApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
 import type { AdminCourseDto } from "@/lib/types";
@@ -24,23 +27,22 @@ const STATUS_LABELS = {
 
 export default function ContentAdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("active");
+  const { success, error: showError } = useToast();
+  const [activeTab, setActiveTab] = usePersistedTab(
+    "contentadmin-tab",
+    "active",
+    ["active", "archived"]
+  );
   const [activeCourses, setActiveCourses] = useState<AdminCourseDto[]>([]);
   const [archivedCourses, setArchivedCourses] = useState<AdminCourseDto[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionLoading, setActionLoading] = useState<number | null>(null);
-  const [toast, setToast] = useState("");
 
   useEffect(() => {
     void fetchAll();
   }, []);
-
-  const showToast = (message: string) => {
-    setToast(message);
-    window.setTimeout(() => setToast(""), 3000);
-  };
 
   const fetchAll = async () => {
     setLoading(true);
@@ -63,10 +65,10 @@ export default function ContentAdminDashboard() {
     setActionLoading(course.id);
     try {
       await adminCourseApi.publishCourse(course.id);
-      showToast(`"${course.title}" published`);
+      success(`"${course.title}" published`);
       await fetchAll();
     } catch (error) {
-      showToast(getErrorMessage(error) || "Could not publish course. Please try again.");
+      showError(getErrorMessage(error) || "Could not publish course. Please try again.");
     } finally {
       setActionLoading(null);
     }
@@ -76,10 +78,10 @@ export default function ContentAdminDashboard() {
     setActionLoading(course.id);
     try {
       await adminCourseApi.unpublishCourse(course.id);
-      showToast(`"${course.title}" moved to draft`);
+      success(`"${course.title}" moved to draft`);
       await fetchAll();
     } catch (error) {
-      showToast(getErrorMessage(error));
+      showError(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -97,10 +99,10 @@ export default function ContentAdminDashboard() {
     setActionLoading(course.id);
     try {
       await adminCourseApi.archiveCourse(course.id);
-      showToast(`"${course.title}" archived`);
+      success(`"${course.title}" archived`);
       await fetchAll();
     } catch (error) {
-      showToast(getErrorMessage(error));
+      showError(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -110,10 +112,10 @@ export default function ContentAdminDashboard() {
     setActionLoading(course.id);
     try {
       await adminCourseApi.restoreCourse(course.id);
-      showToast(`"${course.title}" restored to draft`);
+      success(`"${course.title}" restored to draft`);
       await fetchAll();
     } catch (error) {
-      showToast(getErrorMessage(error));
+      showError(getErrorMessage(error));
     } finally {
       setActionLoading(null);
     }
@@ -131,10 +133,10 @@ export default function ContentAdminDashboard() {
     setActionLoading(course.id);
     try {
       await adminCourseApi.deleteCourse(course.id);
-      showToast(`"${course.title}" permanently deleted`);
+      success(`"${course.title}" permanently deleted`);
       await fetchAll();
     } catch (error) {
-      showToast(getErrorMessage(error) || "Could not delete course. Please try again.");
+      showError(getErrorMessage(error) || "Could not delete course. Please try again.");
     } finally {
       setActionLoading(null);
     }
@@ -160,12 +162,6 @@ export default function ContentAdminDashboard() {
 
   return (
     <div className="mx-auto max-w-7xl p-6">
-      {toast && (
-        <div className="animate-fade-in fixed bottom-6 right-6 z-50 rounded-xl bg-gray-900 px-5 py-3 text-sm text-white shadow-lg">
-          {toast}
-        </div>
-      )}
-
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Course Management</h1>

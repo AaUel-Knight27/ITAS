@@ -227,6 +227,11 @@ export default function Sidebar() {
     const newState = !collapsed;
     setCollapsed(newState);
     localStorage.setItem("sidebar-collapsed", String(newState));
+    window.dispatchEvent(
+      new CustomEvent("sidebar-toggle", {
+        detail: { collapsed: newState },
+      })
+    );
   };
 
   if (!session?.user) {
@@ -369,30 +374,34 @@ export function SidebarSpacer({ collapsed }: { collapsed?: boolean }) {
   const [isCollapsed, setIsCollapsed] = useState(collapsed ?? false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("sidebar-collapsed");
-    if (stored === "true") {
-      setIsCollapsed(true);
+    try {
+      const stored = localStorage.getItem("sidebar-collapsed");
+      setIsCollapsed(stored === "true");
+    } catch {
+      // Ignore localStorage access issues.
     }
 
-    // Listen for storage changes
-    const handleStorage = () => {
-      const stored = localStorage.getItem("sidebar-collapsed");
-      setIsCollapsed(stored === "true");
+    const handleToggle = (
+      event: Event
+    ) => {
+      const customEvent = event as CustomEvent<{
+        collapsed: boolean;
+      }>;
+      setIsCollapsed(customEvent.detail.collapsed);
     };
 
-    window.addEventListener("storage", handleStorage);
-    
-    // Also listen for custom events for same-tab updates
-    const handleSidebarChange = () => {
-      const stored = localStorage.getItem("sidebar-collapsed");
-      setIsCollapsed(stored === "true");
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "sidebar-collapsed") {
+        setIsCollapsed(event.newValue === "true");
+      }
     };
-    
-    const interval = setInterval(handleSidebarChange, 100);
+
+    window.addEventListener("sidebar-toggle", handleToggle);
+    window.addEventListener("storage", handleStorage);
 
     return () => {
+      window.removeEventListener("sidebar-toggle", handleToggle);
       window.removeEventListener("storage", handleStorage);
-      clearInterval(interval);
     };
   }, [collapsed]);
 

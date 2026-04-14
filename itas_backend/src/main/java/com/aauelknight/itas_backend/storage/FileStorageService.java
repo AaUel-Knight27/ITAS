@@ -40,11 +40,19 @@ public class FileStorageService {
         String fileName = UUID.randomUUID() + extension;
 
         Path targetDir = uploadRoot.resolve(folder).normalize();
-        Path targetFile = targetDir.resolve(fileName);
+        if (!targetDir.startsWith(uploadRoot)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload directory");
+        }
+
+        Path targetFile = targetDir.resolve(fileName).normalize();
+        if (!targetFile.startsWith(uploadRoot)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+        }
+
         try {
             Files.createDirectories(targetDir);
             Files.copy(file.getInputStream(), targetFile, StandardCopyOption.REPLACE_EXISTING);
-            String relative = Paths.get(folder, fileName).toString().replace("\\", "/");
+            String relative = uploadRoot.relativize(targetFile).toString().replace("\\", "/");
             log.info("Stored file: {}", relative);
             return toPublicUploadPath(relative);
         } catch (IOException ex) {
@@ -54,6 +62,9 @@ public class FileStorageService {
     }
 
     public String storeLectureFile(Long courseId, Long sectionId, Long lectureId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is required");
+        }
         try {
             String original = file.getOriginalFilename() == null
                     ? "file.mp4"
@@ -64,15 +75,21 @@ public class FileStorageService {
             String uuid = UUID.randomUUID().toString();
             String fileName = uuid + "." + ext;
 
-            Path dir = Paths.get(uploadDir, "courses", courseId.toString(), "lectures", lectureId.toString());
+            Path dir = uploadRoot.resolve(Paths.get("courses", courseId.toString(), "lectures", lectureId.toString())).normalize();
+            if (!dir.startsWith(uploadRoot)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload directory");
+            }
             Files.createDirectories(dir);
             log.info("Saving to directory: {}", dir.toAbsolutePath());
 
-            Path dest = dir.resolve(fileName);
+            Path dest = dir.resolve(fileName).normalize();
+            if (!dest.startsWith(uploadRoot)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            }
             Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
             log.info("File saved: {} ({} bytes)", dest.toAbsolutePath(), file.getSize());
 
-            String relativePath = "uploads/courses/" + courseId + "/lectures/" + lectureId + "/" + fileName;
+            String relativePath = uploadRoot.relativize(dest).toString().replace("\\", "/");
             log.info("Returning path: {}", relativePath);
             return toPublicUploadPath(relativePath);
         } catch (IOException ex) {
@@ -82,17 +99,26 @@ public class FileStorageService {
     }
 
     public String storeThumbnail(Long courseId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is required");
+        }
         try {
             String extension = getNormalizedExtension(file.getOriginalFilename());
             String fileName = UUID.randomUUID() + "." + extension;
 
             Path dir = uploadRoot.resolve(Paths.get("courses", courseId.toString(), "thumbnail")).normalize();
+            if (!dir.startsWith(uploadRoot)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload directory");
+            }
             Files.createDirectories(dir);
 
-            Path dest = dir.resolve(fileName);
+            Path dest = dir.resolve(fileName).normalize();
+            if (!dest.startsWith(uploadRoot)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid file path");
+            }
             Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
 
-            String relativePath = "uploads/courses/" + courseId + "/thumbnail/" + fileName;
+            String relativePath = uploadRoot.relativize(dest).toString().replace("\\", "/");
             log.info("Stored thumbnail: {}", relativePath);
             return toPublicUploadPath(relativePath);
         } catch (IOException ex) {

@@ -1,0 +1,271 @@
+Category	        Use Case ID	Use Case Name				Primary Actor	Priority	Effort
+Authentication	        UC-AUTH-001	Single Sign-On Login 			All Users	Critical	Medium
+Content Management	UC-CM-001	Upload/Create Educational Resource	Content Admin	High		Medium
+Content Management	UC-CM-002	Update Resource Version	Content		 Admin		Medium		Low
+Content Management	UC-CM-003	Search Learning Resources		All Users	High		Low
+Learning Management	UC-LMS-001	Enroll in Training Course		User		High		Low
+Learning Management	UC-LMS-002	Complete Learning Module 		User		High		Medium 
+					Assessment should be in 
+					a separate use case.			
+Learning Management	UC-LMS-003	Generate Certificate			System/User	Medium		Medium
+Learning Management	UC-LMS-004	Track Learning Progress			User		Medium		Low
+Taxpayer Portal		UC-TP-002	Watch Video Tutorial			User		High		Low
+Taxpayer Portal		UC-TP-003	Download Resource Guide			User		Medium		Low
+Administration		UC-ADM-001	Schedule Webinar			Training Admin	Medium		Medium
+Administration		UC-ADM-002	Send Notifications			Comm Officer	High		Low
+Administration		UC-ADM-003	View Analytics Dashboard		Manager		Medium		High
+Administration		UC-ADM-004	Manage User Roles			System Admin	Low		Medium
+Integration		UC-INT-001	Sync Training Records			System		Medium		High
+Maintenance		UC-MNT-001	Archive Old Content			System/Admin	Low		Low
+
+
+
+
+Use Case ID	UC-AUTH-001
+Use Case Name	Single Sign-On Login
+Actor		All Users (Taxpayer/MOR Staff)
+Description	User logs into education portal using existing ITAS credentials
+Priority	Critical
+Preconditions	
+1. User has active ITAS account
+2. SSO is configured
+Main Flow	
+1. User clicks "Login" on education portal
+2. Redirected to ITAS login page
+3. User enters ITAS username/password
+4. ITAS validates credentials
+5. Returns authentication token
+6. Education portal creates/updates user profile
+7. Redirects to portal dashboard
+Alternative Flow	Invalid credentials
+User sees error message, can retry or reset password
+Postconditions	User logged in with appropriate permissions
+API Endpoint	POST /api/v1/auth/login
+
+
+Use Case ID	UC-CM-001
+Use Case Name	Upload/ Create Educational Resource
+Actor	MOR Content Administrator
+Description	Admin uploads new learning material (video, PDF, guide)
+Priority	High
+Preconditions	
+1. Admin logged in with upload permissions
+2. File is ready and approved
+Main Flow	
+1. Admin goes to Content Management
+2. Clicks "Upload/Create New"
+3. Selects file from computer
+4. Fills metadata (title, category, tags, audience)
+5. Clicks "Upload"
+6. System validates and stores file
+7. Shows success message
+Validation Rules	• File types: PDF, MP4, PNG, JPG
+• Max size: 100MB
+• Required fields: Title, Category
+Postconditions	Resource available in library, searchable
+
+API Endpoint	POST /api/v1/content/upload
+
+
+Use Case ID	UC-CM-002
+Use Case Name	Search Learning Resources
+Actor	All Users
+Description	User searches for specific learning materials
+Priority	High
+Preconditions	User is logged in
+Main Flow	
+1. User goes to Resource Library
+2. Enters search term in search box
+3. System shows matching results
+4. User can filter by:
+• Resource type (video, PDF, article)
+• Category (VAT, Income Tax, TCC)
+• Difficulty level
+5. User clicks result to view details
+Alternative Flow	No results found
+System suggests similar terms or popular resources
+Postconditions	User finds needed resources
+API Endpoint	GET /api/v1/content/search?q={query}
+
+
+Use Case ID	UC-LMS-001
+Use Case Name	Enroll in Training Course
+Actor	User (Taxpayer/Staff)
+Description	User enrolls in an online training course
+Priority	High
+Preconditions	
+1. User logged in
+2. Course is published and available
+Main Flow	
+1. User browses course catalog
+2. Selects desired course
+3. Views course details (duration, modules)
+4. Clicks "Enroll Now"
+5. System adds to "My Courses"
+6. Shows enrollment confirmation
+Alternative Flow	Already enrolled
+Button shows "Continue Learning" instead
+Postconditions	Course appears in user's dashboard, progress tracking starts
+API Endpoint	POST /api/v1/lms/enroll
+
+
+Use Case ID	UC-LMS-002
+Use Case Name	Complete Learning Module
+Actor	User
+Description	User completes a module and takes assessment
+Priority	High
+Preconditions	
+1. User enrolled in course
+2. Module is available
+Main Flow	
+1. User opens module
+2. Views all content (videos, reading)
+3. Takes final quiz
+4. System scores quiz
+5. If passing score (≥70%):
+• Marks module complete
+• Updates progress
+• Unlocks next module
+6. If failing score:
+• Shows incorrect answers
+• Allows retry (max 3 attempts)
+Postconditions	Progress updated, certificate generated if course complete
+API Endpoint	POST /api/v1/lms/module/complete
+
+
+
+Use Case ID	UC-LMS-003
+Use Case Name	Generate Certificate of Completion
+Actor	System / User
+Description	System generates PDF certificate when user completes course
+Priority	Medium
+Preconditions	User has completed all course requirements
+Main Flow	
+1. System detects course completion
+2. Generates PDF certificate with:
+• User name
+• Course title
+• Completion date
+• Certificate ID
+• MOR logo
+3. Stores certificate in user profile
+4. Sends email with download link
+5. Updates training records
+Alternative Flow	User requests copy
+User can download new copy anytime from profile
+Postconditions	Certificate available, training record updated
+API Endpoint	POST /api/v1/lms/certificate/generate
+
+
+Use Case ID	UC-TP-001
+Use Case Name	Access Context-Sensitive Help
+Actor	Taxpayer
+Description	Get help while filling tax forms in ITAS
+Priority	High
+Preconditions	User is logged into ITAS, on form page
+Main Flow	
+1. User sees help icon (?) next to form field
+2. Hovers over icon
+3. Tooltip shows brief explanation
+4. Clicks icon for detailed help
+5. Panel opens with:
+• Step-by-step instructions
+• Example images
+• Related video link
+6. User closes panel when done
+Alternative Flow	Field has no specific help
+Shows general form instructions
+Post conditions	User understands how to complete field
+Technical Note	JavaScript tooltip with AJAX content loading
+
+
+Use Case ID	UC-TP-002
+Use Case Name	Watch Video Tutorial
+Actor	User
+Description	User watches instructional video
+Priority	High
+Preconditions	User has access to video resource
+Main Flow	
+1. User finds video in library
+2. Clicks to play
+3. Video player opens with controls
+4. User can:
+• Play/pause
+• Adjust volume
+• Change speed
+• Enable subtitles
+5. System tracks viewing progress
+6. User can mark as completed
+Alternative Flow	Download for offline
+User can download video if allowed
+Postconditions	User learns from video, progress tracked
+API Endpoint	GET /api/v1/content/video/{id}/stream
+
+
+Use Case ID	UC-ADM-001
+Use Case Name	Schedule Live Webinar
+Actor	Training Administrator
+Description	Schedule and manage live training sessions
+Priority	Medium
+Preconditions	Admin has webinar permissions
+Main Flow	
+1. Admin goes to Webinar Management
+2. Clicks "Schedule New"
+3. Enters details:
+• Title & description
+• Date & time
+• Duration
+• Presenter(s)
+• Max attendees
+4. Selects target audience
+5. System creates registration page
+6. Sends notifications to eligible users
+7. Manages registrations
+Alternative Flow	Recurring webinar
+Set weekly/monthly series
+Postconditions	Webinar scheduled, registration open
+API Endpoint	POST /api/v1/webinars/schedule
+
+
+Use Case ID	UC-ADM-002
+Use Case Name	Send Educational Notifications
+Actor	Communication Officer 
+Description	Send targeted messages to user groups
+Priority	High
+Preconditions	Notification system configured
+Main Flow	
+1. Admin goes to Notifications
+2. Selects "New Campaign"
+3. Chooses audience:
+   • All taxpayers
+   • Specific category (SME, Individual)
+   • Users who completed specific training
+4. Creates message (email/SMS)
+5. Schedules send time
+6. System sends and tracks delivery
+Alternative Flow	Immediate send
+Skip scheduling, send now
+Postconditions	Users receive notification
+API Endpoint	POST /api/v1/notifications/send
+
+
+Use Case ID	UC-ADM-003
+Use Case Name	View Analytics Dashboard
+Actor	Manager / Administrator
+Description	View reports on training effectiveness
+Priority	Medium
+Preconditions	Sufficient data exists
+Main Flow	
+1. Admin logs into Analytics Dashboard
+2. Views key metrics:
+    • Total users trained
+    • Course completion rates
+    • Popular resources
+    • User satisfaction scores
+3. Filters by date range, user type
+4. Exports reports (PDF, Excel)
+5. Views trends and insights
+Alternative Flow	Custom report
+Create custom metrics view
+Post conditions	Insights gained for decision making
+API Endpoint	GET /api/v1/analytics/dashboard

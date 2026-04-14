@@ -68,7 +68,7 @@ public class CourseController {
             if (!isWebAdmin) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only WEB_ADMIN can include archived courses");
             }
-            return ResponseEntity.ok(courseService.getAllCoursesWebAdmin());
+            return ResponseEntity.ok(courseService.getAllAdminCourses());
         }
 
         if (Boolean.TRUE.equals(admin)) {
@@ -181,78 +181,14 @@ public class CourseController {
             @PathVariable Long sectionId,
             @PathVariable Long lectureId,
             @RequestParam("file") MultipartFile file) {
-        log.info("=== UPLOAD START ===");
-        log.info("courseId={} sectionId={} lectureId={}", courseId, sectionId, lectureId);
-        log.info("file name: {}", file.getOriginalFilename());
-        log.info("file size: {}", file.getSize());
-        log.info("file type: {}", file.getContentType());
-        log.info("file empty: {}", file.isEmpty());
-        log.info(
-                "Upload: courseId={} sectionId={} lectureId={} file={} size={} type={}",
-                courseId,
-                sectionId,
-                lectureId,
-                file.getOriginalFilename(),
-                file.getSize(),
-                file.getContentType());
-
-        if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
-        }
-
-        long maxSize = 100L * 1024 * 1024;
-        if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException(
-                    "File size exceeds 100MB limit. Actual size: " + (file.getSize() / (1024 * 1024)) + "MB");
-        }
-
-        String contentType = file.getContentType();
-        String filename = file.getOriginalFilename() != null
-                ? file.getOriginalFilename().toLowerCase()
-                : "";
-
-        boolean isVideo = (contentType != null && contentType.startsWith("video/"))
-                || filename.endsWith(".mp4")
-                || filename.endsWith(".webm")
-                || filename.endsWith(".mov");
-
-        boolean isPdf = "application/pdf".equals(contentType) || filename.endsWith(".pdf");
-
-        if (!isVideo && !isPdf) {
-            throw new IllegalArgumentException(
-                    "Invalid file type: " + contentType
-                            + ". Only video files (MP4, WebM, MOV) and PDF files are accepted.");
-        }
-
-        try {
-            LectureDto updated = courseService.uploadLectureFile(courseId, sectionId, lectureId, file);
-            log.info("Upload result: videoUrl={} pdfUrl={}", updated.getVideoUrl(), updated.getPdfUrl());
-            return ResponseEntity.ok(updated);
-        } catch (IllegalArgumentException | ResourceNotFoundException | ResponseStatusException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new RuntimeException("File upload failed: " + ex.getMessage(), ex);
-        }
+        return ResponseEntity.ok(courseService.uploadLectureFile(courseId, sectionId, lectureId, file));
     }
 
     @PostMapping("/{id}/thumbnail")
-        @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
     public ResponseEntity<Map<String, String>> uploadThumbnail(@PathVariable Long id,
             @RequestParam("file") MultipartFile file) {
-        String originalName = file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase();
-        if (!originalName.endsWith(".jpg")
-                && !originalName.endsWith(".jpeg")
-                && !originalName.endsWith(".png")
-                && !originalName.endsWith(".webp")) {
-            throw new IllegalArgumentException("Only JPG, PNG, WEBP images allowed for thumbnail");
-        }
-
-        if (file.getSize() > 5_242_880) {
-            throw new IllegalArgumentException("Thumbnail must be under 5MB");
-        }
-
-        String thumbnailUrl = fileStorageService.storeThumbnail(id, file);
-        courseService.updateThumbnail(id, thumbnailUrl);
+        String thumbnailUrl = courseService.uploadThumbnail(id, file);
         return ResponseEntity.ok(Map.of("thumbnailUrl", thumbnailUrl));
     }
 

@@ -129,7 +129,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(LazyInitializationException.class)
     public ResponseEntity<ErrorResponse> handleLazy(LazyInitializationException ex) {
-        log.error("LazyInitializationException: {}", ex.getMessage(), ex);
+        log.error("LazyInitializationException: {}. This usually indicates a fetch strategy issue in the service layer.", ex.getMessage(), ex);
         return ResponseEntity.status(500)
                 .body(new ErrorResponse(
                         500,

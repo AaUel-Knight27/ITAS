@@ -53,14 +53,14 @@ export default function CourseCard({ course, highlightTerm }: CourseCardProps) {
     <Link
       href={`/courses/${course.slug}`}
       onMouseEnter={() => router.prefetch(`/courses/${course.slug}`)}
-      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-soft transition-all hover:-translate-y-1 hover:shadow-soft-lg"
+      className="group relative flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-lg"
     >
       {/* Thumbnail */}
       <div className="relative aspect-video overflow-hidden bg-muted">
         <CourseThumbnail
           title={course.title}
           thumbnailUrl={course.thumbnailUrl}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-105"
           fallbackClassName="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700"
           iconClassName="h-12 w-12 text-white"
         />

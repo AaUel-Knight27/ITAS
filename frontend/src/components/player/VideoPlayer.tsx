@@ -7,6 +7,7 @@ import {
     useCallback,
     forwardRef,
     useImperativeHandle,
+    useState,
 } from 'react'
 
 export interface VideoPlayerHandle {
@@ -26,6 +27,8 @@ interface VideoPlayerProps {
         duration: number
     ) => void
     onEnded?: () => void
+    onComplete?: () => void
+    isCompleted?: boolean
     autoPlay?: boolean
 }
 
@@ -39,6 +42,8 @@ const VideoPlayer = forwardRef<
         resumeAt = 0,
         onProgress,
         onEnded,
+        onComplete,
+        isCompleted = false,
         autoPlay = false,
     },
     ref
@@ -47,6 +52,7 @@ const VideoPlayer = forwardRef<
         useRef<HTMLVideoElement>(null)
     const onProgressRef = useRef(onProgress)
     const onEndedRef = useRef(onEnded)
+    const onCompleteRef = useRef(onComplete)
     const resumeAtRef = useRef(resumeAt)
     const intervalRef =
         useRef<ReturnType<
@@ -54,6 +60,10 @@ const VideoPlayer = forwardRef<
         > | null>(null)
     const hasResumedRef = useRef(false)
     const srcRef = useRef(src)
+    const [showComplete, setShowComplete] =
+        useState(false)
+    const [pctWatched, setPctWatched] =
+        useState(0)
 
     useEffect(() => {
         onProgressRef.current = onProgress
@@ -62,6 +72,10 @@ const VideoPlayer = forwardRef<
     useEffect(() => {
         onEndedRef.current = onEnded
     }, [onEnded])
+
+    useEffect(() => {
+        onCompleteRef.current = onComplete
+    }, [onComplete])
 
     useEffect(() => {
         resumeAtRef.current = resumeAt
@@ -89,6 +103,25 @@ const VideoPlayer = forwardRef<
         },
     }), [])
 
+    const updateProgressState = useCallback(
+        (current: number, duration: number) => {
+            if (duration <= 0 || current <= 0) {
+                return
+            }
+
+            onProgressRef.current?.(
+                current, duration)
+
+            const pct = (current / duration) * 100
+            setPctWatched(pct)
+
+            if (pct >= 80) {
+                setShowComplete(true)
+            }
+        },
+        []
+    )
+
     const startInterval =
         useCallback(() => {
             if (intervalRef.current) {
@@ -102,18 +135,12 @@ const VideoPlayer = forwardRef<
                     if (video.paused) return
                     if (video.ended) return
 
-                    const current =
-                        video.currentTime
-                    const duration =
+                    updateProgressState(
+                        video.currentTime,
                         video.duration
-
-                    if (duration > 0 &&
-                            current > 0) {
-                        onProgressRef.current?.(
-                            current, duration)
-                    }
+                    )
                 }, 10000)
-        }, [])
+        }, [updateProgressState])
 
     const stopInterval =
         useCallback(() => {
@@ -132,6 +159,9 @@ const VideoPlayer = forwardRef<
             hasResumedRef.current = false
             srcRef.current = src
         }
+
+        setShowComplete(false)
+        setPctWatched(0)
 
         video.src = src
         video.load()
@@ -158,25 +188,20 @@ const VideoPlayer = forwardRef<
 
         const handlePause = () => {
             stopInterval()
-            const current =
-                video.currentTime
-            const duration =
+            updateProgressState(
+                video.currentTime,
                 video.duration
-            if (duration > 0 &&
-                    current > 0) {
-                onProgressRef.current?.(
-                    current, duration)
-            }
+            )
         }
 
         const handleEnded = () => {
             stopInterval()
-            const duration =
+            updateProgressState(
+                video.duration,
                 video.duration
-            if (duration > 0) {
-                onProgressRef.current?.(
-                    duration, duration)
-            }
+            )
+            setPctWatched(100)
+            setShowComplete(true)
             onEndedRef.current?.()
         }
 
@@ -184,7 +209,8 @@ const VideoPlayer = forwardRef<
             stopInterval()
             console.warn(
                 'Video load error for src:',
-                src)
+                src
+            )
         }
 
         video.addEventListener(
@@ -232,12 +258,61 @@ const VideoPlayer = forwardRef<
             video.src = ''
             video.load()
         }
-    }, [src, autoPlay, startInterval,
-        stopInterval])
+    }, [
+        src,
+        autoPlay,
+        startInterval,
+        stopInterval,
+        updateProgressState,
+    ])
 
     return (
         <div className="relative w-full
             bg-black">
+            {showComplete &&
+            !isCompleted ? (
+                <div className="absolute bottom-16
+                    right-4 z-10">
+                    <button
+                        onClick={() => {
+                            onCompleteRef.current?.()
+                        }}
+                        title={`You've watched ${Math.round(
+                            pctWatched
+                        )}%`}
+                        className="flex items-center
+                            gap-2 rounded-xl
+                            bg-green-600 px-4 py-2
+                            text-sm font-medium
+                            text-white shadow-lg
+                            transition-all
+                            duration-200
+                            hover:scale-105
+                            hover:bg-green-700
+                            active:scale-95"
+                    >
+                        <span className="text-base">
+                            ✓
+                        </span>
+                        Mark as Complete
+                    </button>
+                </div>
+            ) : null}
+
+            {isCompleted ? (
+                <div className="absolute bottom-16
+                    right-4 z-10">
+                    <div className="flex items-center
+                        gap-2 rounded-xl
+                        border border-green-700
+                        bg-green-900/80 px-4 py-2
+                        text-sm text-green-400">
+                        <span>✓</span>
+                        Completed
+                    </div>
+                </div>
+            ) : null}
+
             <video
                 ref={videoRef}
                 className="aspect-video w-full"
