@@ -14,11 +14,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { title, type, content, description } = body as {
+    const { title, type, content, description, courseTitle, sectionTitle, learnerNotes, pageText, captions } = body as {
       title?: string;
       type?: string;
       content?: string;
       description?: string;
+      courseTitle?: string;
+      sectionTitle?: string;
+      learnerNotes?: string;
+      pageText?: string;
+      captions?: string;
     };
 
     if (!title?.trim()) {
@@ -26,6 +31,14 @@ export async function POST(request: NextRequest) {
     }
 
     let context = `Lesson: "${title.trim()}"\nType: ${type || "VIDEO"}\n`;
+
+    if (courseTitle?.trim()) {
+      context += `Course: ${courseTitle.trim()}\n`;
+    }
+
+    if (sectionTitle?.trim()) {
+      context += `Section: ${sectionTitle.trim()}\n`;
+    }
 
     if (description?.trim()) {
       context += `Description: ${description.trim()}\n`;
@@ -35,16 +48,33 @@ export async function POST(request: NextRequest) {
       context += `Content preview: ${content.trim().slice(0, 4000)}\n`;
     }
 
+    if (pageText?.trim()) {
+      context += `Learning material detected on page: ${pageText.trim().slice(0, 5000)}\n`;
+    }
+
+    if (captions?.trim()) {
+      context += `Video captions or transcript: ${captions.trim().slice(0, 7000)}\n`;
+    }
+
+    if (learnerNotes?.trim()) {
+      context += `My own notes so far: ${learnerNotes.trim().slice(0, 2000)}\n`;
+    }
+
     const systemPrompt =
-      "You are a helpful tutor for the ITAS Taxpayer Education Portal, a government learning platform that teaches tax law, VAT, income tax, and compliance to taxpayers and tax agents.\n\nKeep your language simple, clear, professional, and encouraging. Format responses with clear sections.";
+      "You are helping a learner create a short personal study note after watching a lesson on the ITAS Taxpayer Education Portal.\n\nWrite in simple, natural English as if the learner is jotting down their own quick notes. Keep it brief, clear, and practical. Do not sound formal, robotic, or like a textbook.";
 
     const userPrompt =
-      `Summarize this lesson for a learner who just finished it:\n\n${context}\n\n` +
-      "Provide:\n" +
-      "1. Overview (2-3 sentences)\n" +
-      "2. Key Points (3-5 bullets)\n" +
-      "3. Practical Takeaway (1 sentence)\n\n" +
-      "Be concise. Use plain English.";
+      `Write a short learner note for this lesson as if I watched the whole lesson and I am jotting down my own short notes.\n\n${context}\n\n` +
+      "Instructions:\n" +
+      "- If video captions are available, use them as the main signal for what the video taught.\n" +
+      "- Also use the learning material detected on the page as supporting context.\n" +
+      "- Focus on the whole lesson or video.\n" +
+      "- Keep it short and easy to review later.\n" +
+      "- Use first-person learner note style when natural.\n" +
+      "- Include 4 to 6 short bullet points.\n" +
+      "- End with one very short takeaway line.\n" +
+      "- Do not use long paragraphs.\n" +
+      "- Return only the short note.";
 
     const { text, model } = await callOpenRouter([{ role: "user", content: userPrompt }], {
       systemPrompt,
@@ -74,9 +104,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (message.includes("401") || message.toLowerCase().includes("unauthorized")) {
+      return NextResponse.json(
+        {
+          error: "AI features are configured with an invalid OpenRouter API key.",
+        },
+        { status: 502 }
+      );
+    }
+
+    if (message.includes("402")) {
+      return NextResponse.json(
+        {
+          error: "The configured OpenRouter account cannot serve this request right now.",
+        },
+        { status: 502 }
+      );
+    }
+
+    if (message.includes("403")) {
+      return NextResponse.json(
+        {
+          error: "OpenRouter rejected this request. Check the configured API key and model access.",
+        },
+        { status: 502 }
+      );
+    }
+
     return NextResponse.json(
       {
-        error: "Could not generate summary. Please try again.",
+        error: message || "Could not generate summary. Please try again.",
       },
       { status: 500 }
     );

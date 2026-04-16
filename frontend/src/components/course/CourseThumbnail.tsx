@@ -1,9 +1,9 @@
 "use client";
 
 import { BookOpen } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
-import { getFileUrl } from "@/lib/utils";
+import { useProtectedMediaUrl } from "@/hooks/useProtectedMediaUrl";
 
 type CourseThumbnailProps = {
   title: string;
@@ -23,9 +23,9 @@ export default function CourseThumbnail({
   alt,
 }: CourseThumbnailProps) {
   const [hasError, setHasError] = useState(false);
-  const src = useMemo(() => getFileUrl(thumbnailUrl) ?? "", [thumbnailUrl]);
+  const { resolvedUrl } = useProtectedMediaUrl(thumbnailUrl);
 
-  if (!thumbnailUrl || !src || hasError) {
+  if (!thumbnailUrl || !resolvedUrl || hasError) {
     return (
       <div className={fallbackClassName}>
         <BookOpen className={iconClassName} />
@@ -36,7 +36,7 @@ export default function CourseThumbnail({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={src}
+      src={resolvedUrl}
       alt={alt ?? title}
       className={className}
       onError={() => setHasError(true)}

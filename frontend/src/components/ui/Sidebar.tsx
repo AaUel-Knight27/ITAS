@@ -2,33 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import {
-  BookOpen,
   Award,
-  LayoutDashboard,
-  GraduationCap,
-  Settings,
-  FileText,
-  Calendar,
-  MessageSquare,
-  Users,
   BarChart3,
+  Bell,
+  BookOpen,
+  Building2,
+  Calendar,
   ChevronLeft,
   ChevronRight,
-  Bell,
+  FileText,
+  GraduationCap,
   HelpCircle,
+  LayoutDashboard,
   LogOut,
-  Building2,
+  MessageSquare,
+  Settings,
+  Users,
 } from "lucide-react";
-import { useState, useEffect } from "react";
-import { signOut } from "next-auth/react";
+import { useEffect, useMemo, useState } from "react";
 
+import { useLanguage } from "@/context/LanguageContext";
 import {
   canAccessCourses,
-  getRoleHomePath,
   canGetCertificate,
-  isAdminRole,
+  getRoleHomePath,
   isCommunicationRole,
   isContentAdminRole,
   isManagerRole,
@@ -53,7 +52,6 @@ function getNavSections(role: string): NavSection[] {
   const normalizedRole = normalizeRole(role);
   const sections: NavSection[] = [];
 
-  // Main section for everyone
   const mainItems: NavItem[] = [
     {
       label: "Dashboard",
@@ -62,7 +60,6 @@ function getNavSections(role: string): NavSection[] {
     },
   ];
 
-  // Manager specific - My Learning
   if (isManagerRole(normalizedRole)) {
     mainItems.push({
       label: "My Learning",
@@ -73,7 +70,6 @@ function getNavSections(role: string): NavSection[] {
 
   sections.push({ title: "Main", items: mainItems });
 
-  // Learning section for learner roles
   if (canAccessCourses(role)) {
     const learningItems: NavItem[] = [
       {
@@ -94,7 +90,6 @@ function getNavSections(role: string): NavSection[] {
     sections.push({ title: "Learning", items: learningItems });
   }
 
-  // Admin sections based on role
   if (isContentAdminRole(normalizedRole)) {
     sections.push({
       title: "Content Management",
@@ -190,7 +185,7 @@ function getNavSections(role: string): NavSection[] {
 
 function getRoleBadgeColor(role: string): string {
   const normalizedRole = normalizeRole(role);
-  
+
   if (isWebAdminRole(normalizedRole)) return "bg-destructive/10 text-destructive";
   if (isContentAdminRole(normalizedRole)) return "bg-primary/10 text-primary";
   if (isTrainingAdminRole(normalizedRole)) return "bg-warning/10 text-warning-foreground";
@@ -204,19 +199,38 @@ function getRoleDisplayName(role: string): string {
   return normalized.replace(/_/g, " ");
 }
 
+function toTranslationKey(prefix: string, value: string) {
+  return `${prefix}.${value.toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, "_")}`;
+}
+
 export default function Sidebar() {
   const { data: session } = useSession();
+  const { t, isAmharic } = useLanguage();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const userName = session?.user?.name ?? session?.user?.username ?? "User";
   const role = session?.user?.role ?? "";
-  const sections = getNavSections(role);
+  const sections = useMemo(
+    () =>
+      getNavSections(role).map((section) => ({
+        ...section,
+        translatedTitle: t(toTranslationKey("sidebar", section.title)),
+        items: section.items.map((item) => {
+          const key = toTranslationKey("sidebar", item.label);
+          const translated = t(key);
+          return {
+            ...item,
+            translatedLabel: translated === key ? item.label : translated,
+          };
+        }),
+      })),
+    [role, t]
+  );
 
   useEffect(() => {
     setMounted(true);
-    // Restore collapsed state from localStorage
     const stored = localStorage.getItem("sidebar-collapsed");
     if (stored === "true") {
       setCollapsed(true);
@@ -227,11 +241,7 @@ export default function Sidebar() {
     const newState = !collapsed;
     setCollapsed(newState);
     localStorage.setItem("sidebar-collapsed", String(newState));
-    window.dispatchEvent(
-      new CustomEvent("sidebar-toggle", {
-        detail: { collapsed: newState },
-      })
-    );
+    window.dispatchEvent(new CustomEvent("sidebar-toggle", { detail: { collapsed: newState } }));
   };
 
   if (!session?.user) {
@@ -239,9 +249,7 @@ export default function Sidebar() {
   }
 
   if (!mounted) {
-    return (
-      <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-sidebar-border bg-sidebar" />
-    );
+    return <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-sidebar-border bg-sidebar" />;
   }
 
   return (
@@ -250,7 +258,6 @@ export default function Sidebar() {
         collapsed ? "w-[72px]" : "w-64"
       }`}
     >
-      {/* Header */}
       <div className={`flex h-16 items-center border-b border-sidebar-border px-4 ${collapsed ? "justify-center" : "justify-between"}`}>
         {!collapsed && (
           <div className="flex items-center gap-3">
@@ -259,7 +266,7 @@ export default function Sidebar() {
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-foreground">TEP</span>
-              <span className="text-[10px] text-muted-foreground">Education Portal</span>
+              <span className={`text-[10px] text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>{t("sidebar.education_portal")}</span>
             </div>
           </div>
         )}
@@ -270,7 +277,6 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* User Section */}
       <div className={`border-b border-sidebar-border p-4 ${collapsed ? "flex justify-center" : ""}`}>
         {collapsed ? (
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
@@ -282,9 +288,7 @@ export default function Sidebar() {
               {userName.charAt(0).toUpperCase()}
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="truncate text-sm font-medium text-sidebar-foreground">
-                {userName}
-              </span>
+              <span className="truncate text-sm font-medium text-sidebar-foreground">{userName}</span>
               <span className={`mt-0.5 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-medium ${getRoleBadgeColor(role)}`}>
                 {getRoleDisplayName(role)}
               </span>
@@ -293,14 +297,13 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto p-3">
         <div className="space-y-6">
           {sections.map((section) => (
             <div key={section.title}>
               {!collapsed && (
                 <h3 className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {section.title}
+                  <span className={isAmharic ? "ethiopic-text" : undefined}>{section.translatedTitle}</span>
                 </h3>
               )}
               <ul className="space-y-1">
@@ -315,12 +318,12 @@ export default function Sidebar() {
                             ? "bg-sidebar-primary text-sidebar-primary-foreground"
                             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                         } ${collapsed ? "justify-center" : ""}`}
-                        title={collapsed ? item.label : undefined}
+                        title={collapsed ? item.translatedLabel : undefined}
                       >
                         <span className={`flex-shrink-0 ${isActive ? "" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"}`}>
                           {item.icon}
                         </span>
-                        {!collapsed && <span className="truncate">{item.label}</span>}
+                        {!collapsed && <span className={`truncate ${isAmharic ? "ethiopic-text" : ""}`}>{item.translatedLabel}</span>}
                         {!collapsed && item.badge && (
                           <span className="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                             {item.badge}
@@ -336,17 +339,16 @@ export default function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer */}
       <div className="border-t border-sidebar-border p-3">
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 ${
             collapsed ? "justify-center" : ""
           }`}
-          title={collapsed ? "Logout" : undefined}
+          title={collapsed ? t("sidebar.logout") : undefined}
         >
           <LogOut className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span>Logout</span>}
+          {!collapsed && <span className={isAmharic ? "ethiopic-text" : undefined}>{t("sidebar.logout")}</span>}
         </button>
 
         <button
@@ -354,14 +356,14 @@ export default function Sidebar() {
           className={`mt-2 flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground ${
             collapsed ? "justify-center" : ""
           }`}
-          title={collapsed ? (collapsed ? "Expand" : "Collapse") : undefined}
+          title={collapsed ? t("sidebar.expand") : undefined}
         >
           {collapsed ? (
             <ChevronRight className="h-5 w-5 flex-shrink-0" />
           ) : (
             <>
               <ChevronLeft className="h-5 w-5 flex-shrink-0" />
-              <span>Collapse</span>
+              <span className={isAmharic ? "ethiopic-text" : undefined}>{t("sidebar.collapse")}</span>
             </>
           )}
         </button>
@@ -381,9 +383,7 @@ export function SidebarSpacer({ collapsed }: { collapsed?: boolean }) {
       // Ignore localStorage access issues.
     }
 
-    const handleToggle = (
-      event: Event
-    ) => {
+    const handleToggle = (event: Event) => {
       const customEvent = event as CustomEvent<{
         collapsed: boolean;
       }>;

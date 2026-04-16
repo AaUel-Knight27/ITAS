@@ -3,6 +3,7 @@
 import axios from "axios";
 import { Camera, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { useLanguage } from "@/context/LanguageContext";
 import { updateCourse, getCourseCategories, uploadCourseThumbnail } from "@/lib/api/admin-courses";
 import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
@@ -18,6 +19,7 @@ type CourseSettingsFormProps = {
 
 export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSettingsFormProps) {
   const { showToast } = useUIStore();
+  const { t } = useLanguage();
   const [isSaving, setIsSaving] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
@@ -96,7 +98,7 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
 
   function handleThumbnailSelect(file: File) {
     if (file.size > 5 * 1024 * 1024) {
-      setThumbnailError("Thumbnail must be under 5MB");
+      setThumbnailError(t("admin.thumbnail_limit"));
       return;
     }
     setThumbnailError("");
@@ -108,11 +110,11 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
 
   async function handleSaveSettings() {
     if (!form.title.trim() || !form.slug.trim() || !form.categoryId) {
-      showToast("Please complete required fields (Title, Slug, Category).", "error");
+      showToast(t("admin.required_fields_course"), "error");
       return;
     }
     if (targetAudience.length === 0) {
-      showToast("Please select at least one target audience.", "error");
+      showToast(t("admin.target_audience_required"), "error");
       return;
     }
 
@@ -157,11 +159,11 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
         courseCache.invalidate(CACHE_KEYS.course(nextCourse.slug));
       }
       onCourseUpdated(nextCourse);
-      showToast("Course settings updated successfully.", "success");
+      showToast(t("admin.course_settings_saved"), "success");
     } catch (error) {
       const message = axios.isAxiosError(error) ? String(error.response?.data?.message ?? "") : "";
       if (message.toLowerCase().includes("slug already exists")) {
-        setSlugError("This slug is already taken. Please choose a different one.");
+        setSlugError(t("admin.slug_taken"));
       } else {
         showToast(getErrorMessage(error), "error");
       }
@@ -171,21 +173,21 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="mb-4 text-base font-semibold text-slate-900">Course Settings</h2>
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <h2 className="mb-4 text-base font-semibold text-slate-900 dark:text-slate-100">{t("admin.course_settings")}</h2>
       
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Title *</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.title_required")}</span>
           <input
             value={form.title}
             onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
         </label>
 
         <label className="block sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Slug *</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.slug_required")}</span>
           <div className="flex items-start gap-2">
             <input
               value={form.slug}
@@ -194,36 +196,38 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
                 setSlugError("");
               }}
               className={`w-full rounded-lg border px-3 py-2 text-sm ${
-                slugError ? "border-rose-400" : "border-slate-300"
+                slugError
+                  ? "border-rose-400 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+                  : "border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               }`}
             />
             <button
               type="button"
               onClick={handleRegenerateSlug}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
             >
-              Regenerate Slug
+              {t("admin.regenerate_slug")}
             </button>
           </div>
           {slugError ? <p className="mt-1 text-xs text-rose-600">[!] {slugError}</p> : null}
         </label>
 
         <label className="block sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Description</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.description")}</span>
           <textarea
             rows={4}
             value={form.description}
             onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           />
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Category</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.category")}</span>
           <select
             value={form.categoryId}
             onChange={(event) => setForm((prev) => ({ ...prev, categoryId: event.target.value }))}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           >
             {categories.map((category) => (
               <option key={category.id} value={String(category.id)}>
@@ -234,29 +238,29 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
         </label>
 
         <label className="block">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Difficulty</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.difficulty")}</span>
           <select
             value={form.difficulty}
             onChange={(event) => setForm((prev) => ({ ...prev, difficulty: event.target.value }))}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
           >
-            <option value="BEGINNER">BEGINNER</option>
-            <option value="INTERMEDIATE">INTERMEDIATE</option>
-            <option value="ADVANCED">ADVANCED</option>
+            <option value="BEGINNER">{t("courses.beginner")}</option>
+            <option value="INTERMEDIATE">{t("courses.intermediate")}</option>
+            <option value="ADVANCED">{t("courses.advanced")}</option>
           </select>
         </label>
 
         <div className="block sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Target Audience</span>
-          <p className="text-xs text-slate-500">Select who can see this course</p>
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.target_audience")}</span>
+          <p className="text-xs text-slate-500 dark:text-slate-400">{t("admin.select_course_visibility")}</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {[
-              { value: "TAXPAYER", label: "Taxpayers" },
-              { value: "TAX_AGENT", label: "Tax Agents" },
-              { value: "MOR_STAFF", label: "MoR Staff" },
-              { value: "MANAGER", label: "Managers" },
+              { value: "TAXPAYER", label: t("admin.audience.taxpayer") },
+              { value: "TAX_AGENT", label: t("admin.audience.tax_agent") },
+              { value: "MOR_STAFF", label: t("admin.audience.mor_staff") },
+              { value: "MANAGER", label: t("admin.audience.manager") },
             ].map((option) => (
-              <label key={option.value} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
+              <label key={option.value} className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
                 <input
                   type="checkbox"
                   checked={targetAudience.includes(option.value)}
@@ -270,7 +274,7 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
         </div>
 
         <div className="sm:col-span-2">
-          <span className="mb-1 block text-sm font-medium text-slate-700">Thumbnail</span>
+          <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.thumbnail")}</span>
           <input
             ref={thumbnailInputRef}
             type="file"
@@ -286,18 +290,18 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
             <button
               type="button"
               onClick={() => thumbnailInputRef.current?.click()}
-              className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 p-6 text-center hover:bg-slate-50"
+              className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 p-6 text-center hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
             >
-              <Camera className="h-6 w-6 text-slate-500" />
-              <p className="mt-2 text-sm font-medium text-slate-700">Click to upload thumbnail</p>
-              <p className="text-xs text-slate-500">JPG, PNG, WEBP up to 5MB</p>
+              <Camera className="h-6 w-6 text-slate-500 dark:text-slate-400" />
+              <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.upload_thumbnail")}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t("admin.thumbnail_formats")}</p>
             </button>
           ) : (
             <div className="relative inline-block">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={getFileUrl(thumbnailPreview) ?? ""}
-                alt="Thumbnail preview"
+                alt={t("admin.thumbnail_preview")}
                 className="h-40 w-64 rounded-lg object-cover"
               />
               <button
@@ -308,7 +312,7 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
                   setThumbnailError("");
                   if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
                 }}
-                className="absolute right-2 top-2 rounded-full bg-white p-1 text-slate-700 shadow"
+                className="absolute right-2 top-2 rounded-full bg-white p-1 text-slate-700 shadow dark:bg-slate-900 dark:text-slate-200"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -318,14 +322,14 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
         </div>
       </div>
 
-      <div className="mt-6 flex items-center justify-end border-t border-slate-100 pt-4">
+      <div className="mt-6 flex items-center justify-end border-t border-slate-100 pt-4 dark:border-slate-800">
         <button
           type="button"
           onClick={() => void handleSaveSettings()}
           disabled={isSaving}
-          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
         >
-          {isSaving ? "Saving..." : "Save Course Details"}
+          {isSaving ? t("admin.saving") : t("admin.save_course_details")}
         </button>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import axios from "axios";
-import { Loader2, Search, X, Filter, BookOpen } from "lucide-react";
+import { BookOpen, Filter, Loader2, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import CourseCard from "@/components/course/CourseCard";
 import EmptyState from "@/components/ui/EmptyState";
+import { useLanguage } from "@/context/LanguageContext";
 import { useScrollMemory } from "@/hooks/useScrollMemory";
 import api, { searchApi } from "@/lib/api";
 import { getCategories } from "@/lib/api/courses";
@@ -16,9 +17,9 @@ import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { canAccessCourses } from "@/lib/roles";
+import type { SearchResultDto } from "@/lib/types";
 import { normalizeCourse, unwrap, type ApiResponse } from "@/lib/utils/api-utils";
 import type { Category, Course } from "@/types";
-import type { SearchResultDto } from "@/lib/types";
 
 function searchResultToCourse(result: SearchResultDto): Course {
   const categoryName = result.categoryName ?? "Uncategorized";
@@ -47,6 +48,7 @@ function isPublished(course: Course) {
 
 export default function CoursesPage() {
   const { data: session, status } = useSession();
+  const { t, isAmharic } = useLanguage();
   const router = useRouter();
   const role = session?.user?.role ?? "";
   useScrollMemory();
@@ -172,21 +174,21 @@ export default function CoursesPage() {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-6xl px-4 py-8">
-        <div className="mb-6 h-10 max-w-md animate-pulse rounded-xl bg-gray-200" />
+        <div className="mb-6 h-10 max-w-md animate-pulse rounded-xl bg-gray-200 dark:bg-gray-800" />
         <div className="mb-6 flex gap-2">
           {[1, 2, 3, 4].map((item) => (
-            <div key={item} className="h-8 w-20 animate-pulse rounded-full bg-gray-200" />
+            <div key={item} className="h-8 w-20 animate-pulse rounded-full bg-gray-200 dark:bg-gray-800" />
           ))}
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
             <div key={item} className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
-              <div className="h-40 animate-pulse bg-gray-200" />
+              <div className="h-40 animate-pulse bg-gray-200 dark:bg-gray-800" />
               <div className="space-y-2 p-4">
-                <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
-                <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
-                <div className="h-3 w-2/3 animate-pulse rounded bg-gray-100" />
-                <div className="mt-3 h-8 animate-pulse rounded-lg bg-gray-200" />
+                <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200 dark:bg-gray-800" />
+                <div className="h-3 w-full animate-pulse rounded bg-gray-100 dark:bg-gray-700" />
+                <div className="h-3 w-2/3 animate-pulse rounded bg-gray-100 dark:bg-gray-700" />
+                <div className="mt-3 h-8 animate-pulse rounded-lg bg-gray-200 dark:bg-gray-800" />
               </div>
             </div>
           ))}
@@ -202,13 +204,15 @@ export default function CoursesPage() {
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
             <BookOpen className="h-8 w-8 text-primary" />
           </div>
-          <h2 className="text-lg font-semibold text-foreground">Sign in required</h2>
-          <p className="mt-2 text-muted-foreground">Please sign in to browse courses.</p>
+          <h2 className={`text-lg font-semibold text-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+            {t("courses.sign_in_required")}
+          </h2>
+          <p className={`mt-2 text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>{t("courses.sign_in_prompt")}</p>
           <Link
             href="/login"
             className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
-            Sign in
+            {t("auth.sign_in")}
           </Link>
         </div>
       </div>
@@ -218,22 +222,22 @@ export default function CoursesPage() {
   return (
     <div className="animate-fade-in p-6 lg:p-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        {/* Header */}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Course Catalog</h1>
-          <p className="mt-1 text-muted-foreground">
-            Browse available learning content and start your educational journey.
+          <h1 className={`text-2xl font-bold tracking-tight text-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+            {t("courses.catalog_title")}
+          </h1>
+          <p className={`mt-1 text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+            {t("courses.catalog_subtitle")}
           </p>
         </div>
 
-        {/* Search and Filters */}
         <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-soft sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search courses..."
+              placeholder={t("courses.search_placeholder")}
               className="h-10 w-full rounded-lg border border-input bg-background pl-10 pr-12 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-ring focus:ring-1 focus:ring-ring"
             />
             <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1">
@@ -257,7 +261,7 @@ export default function CoursesPage() {
               onChange={(event) => setSelectedCategory(event.target.value)}
               className="h-10 rounded-lg border border-input bg-background px-3 pr-8 text-sm text-foreground outline-none transition-colors focus:border-ring focus:ring-1 focus:ring-ring"
             >
-              <option value="all">All categories</option>
+              <option value="all">{t("courses.all_categories")}</option>
               {categories.map((category) => (
                 <option key={category.id} value={String(category.id)}>
                   {category.name}
@@ -273,16 +277,15 @@ export default function CoursesPage() {
           </div>
         )}
 
-        {/* Results */}
         {filteredCourses.length === 0 ? (
           isSearchActive ? (
             <div className="rounded-xl border-2 border-dashed border-border bg-card/50">
               <EmptyState
                 icon="🔍"
-                title="No courses found"
-                description="Try adjusting your search or filters."
+                title={t("courses.no_courses_found")}
+                description={t("courses.adjust_filters")}
                 action={{
-                  label: "Clear Filters",
+                  label: t("courses.clear_filters"),
                   onClick: handleClearFilters,
                 }}
               />
@@ -290,19 +293,20 @@ export default function CoursesPage() {
           ) : (
             <div className="rounded-xl border-2 border-dashed border-border bg-card/50 p-12 text-center">
               <BookOpen className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h2 className="mt-4 text-lg font-semibold text-foreground">No courses found</h2>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {selectedCategory !== "all"
-                  ? "No courses found for the selected category."
-                  : "Check back later for new courses."}
+              <h2 className={`mt-4 text-lg font-semibold text-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+                {t("courses.no_courses_found")}
+              </h2>
+              <p className={`mt-2 text-sm text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+                {selectedCategory !== "all" ? t("courses.none_selected_category") : t("courses.check_back_later")}
               </p>
             </div>
           )
         ) : (
           <>
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                {filteredCourses.length} course{filteredCourses.length !== 1 ? "s" : ""} found
+              <p className={`text-sm text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+                {filteredCourses.length}{" "}
+                {filteredCourses.length !== 1 ? t("courses.found_count") : t("courses.found_count_single")}
               </p>
             </div>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">

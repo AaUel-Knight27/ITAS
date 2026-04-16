@@ -2,6 +2,8 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useProtectedMediaUrl } from "@/hooks/useProtectedMediaUrl";
+
 interface TocItem {
   title: string;
   pageNumber: number;
@@ -70,9 +72,16 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
   const [error, setError] = useState<string | null>(null);
   const [toc, setToc] = useState<TocItem[]>([]);
   const [showToc, setShowToc] = useState(false);
+  const [showPages, setShowPages] = useState(true);
   const [highlights, setHighlights] = useState<Highlight[]>([]);
   const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
   const [hasMarked, setHasMarked] = useState(false);
+  const {
+    resolvedUrl,
+    isLoading: isAssetLoading,
+    error: assetError,
+  } = useProtectedMediaUrl(url);
+  const [pageInput, setPageInput] = useState("1");
 
   const highlightStorageKey = useMemo(
     () => (lectureId ? `pdf_highlights_${lectureId}` : `pdf_highlights_${url}`),
@@ -179,12 +188,15 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
   );
 
   useEffect(() => {
-    if (!url) {
+    if (!resolvedUrl) {
+      if (assetError) {
+        setLoading(false);
+        setPdfDoc(null);
+        setNumPages(0);
+        setToc([]);
+        setError("Could not load PDF. Authentication may be missing or the file is unavailable.");
+      }
       setLoading(false);
-      setPdfDoc(null);
-      setNumPages(0);
-      setToc([]);
-      setError(null);
       return;
     }
 
@@ -210,7 +222,7 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
         setPdfModule(pdfjs);
 
         loadingTask = pdfjs.getDocument({
-          url,
+          url: resolvedUrl,
           cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/cmaps/`,
           cMapPacked: true,
           standardFontDataUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/standard_fonts/`,
@@ -254,7 +266,7 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
       loadingTask?.destroy();
       void activeDoc?.destroy();
     };
-  }, [buildToc, url]);
+  }, [assetError, buildToc, resolvedUrl]);
 
   const renderPage = useCallback(
     async (pageNumber: number) => {
@@ -419,6 +431,10 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
     }
   }, [currentPage, hasMarked, numPages, persistProgress, triggerCompletion]);
 
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) {
@@ -479,29 +495,53 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
     );
   }
 
+  if (isAssetLoading) {
+    return (
+      <div className="flex h-64 items-center justify-center bg-gray-900">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+          <p className="text-sm text-gray-500">Preparing PDF...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-4 bg-gray-900">
         <p className="text-sm text-red-400">{error}</p>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
         >
-          Open PDF Directly
-        </a>
+          Reload Reader
+        </button>
       </div>
     );
   }
 
   return (
     <div className="flex h-full flex-col bg-gray-950">
-      <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-gray-800 bg-gray-900 px-4 py-2">
+      <div className="sticky top-0 z-20 flex shrink-0 flex-wrap items-center gap-3 border-b border-gray-800 bg-gray-900/95 px-4 py-2 backdrop-blur">
         <div className="mr-2 flex min-w-0 items-center gap-2">
           <span className="text-xs uppercase tracking-[0.24em] text-gray-500">PDF</span>
           <span className="max-w-xs truncate text-sm font-medium text-white">{title}</span>
         </div>
+
+        {numPages > 0 ? (
+          <button
+            type="button"
+            onClick={() => setShowPages((previous) => !previous)}
+            className={`rounded-lg border px-3 py-1.5 text-xs transition-colors ${
+              showPages
+                ? "border-amber-500 bg-amber-900/30 text-amber-300"
+                : "border-gray-700 text-gray-400 hover:bg-gray-800"
+            }`}
+          >
+            Pages
+          </button>
+        ) : null}
 
         {toc.length > 0 ? (
           <button
@@ -526,9 +566,25 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
           >
             Prev
           </button>
-          <span className="min-w-[92px] text-center text-xs text-gray-400">
-            {loading ? "Loading..." : `${currentPage} / ${numPages}`}
-          </span>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const targetPage = Number(pageInput);
+              if (Number.isFinite(targetPage)) {
+                scrollToPage(targetPage);
+              }
+            }}
+            className="flex items-center gap-2"
+          >
+            <input
+              value={pageInput}
+              onChange={(event) => setPageInput(event.target.value.replace(/[^\d]/g, ""))}
+              className="w-14 rounded-lg border border-gray-700 bg-gray-950 px-2 py-1 text-center text-xs text-white outline-none focus:border-blue-500"
+              inputMode="numeric"
+              aria-label="Page number"
+            />
+            <span className="min-w-[40px] text-center text-xs text-gray-400">/ {numPages || "-"}</span>
+          </form>
           <button
             type="button"
             onClick={() => scrollToPage(currentPage + 1)}
@@ -581,13 +637,9 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
         </div>
 
         <div className="ml-auto flex items-center gap-2">
-          <a
-            href={url}
-            download
-            className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800"
-          >
-            Download
-          </a>
+          <span className="rounded-lg border border-gray-800 bg-gray-950 px-3 py-1.5 text-xs text-gray-500">
+            Read on page
+          </span>
           {!hasMarked ? (
             <button
               type="button"
@@ -605,10 +657,35 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
       </div>
 
       <div className="flex min-h-0 flex-1 overflow-hidden">
+        {showPages && numPages > 0 ? (
+          <aside className="w-24 shrink-0 overflow-y-auto border-r border-gray-800 bg-[#0f1319] px-2 py-3">
+            <div className="mb-3 px-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-gray-500">Pages</p>
+            </div>
+            <div className="space-y-2">
+              {Array.from({ length: numPages }, (_, index) => index + 1).map((pageNumber) => (
+                <button
+                  key={pageNumber}
+                  type="button"
+                  onClick={() => scrollToPage(pageNumber)}
+                  className={`flex w-full flex-col items-center rounded-xl border px-2 py-3 text-center transition-colors ${
+                    currentPage === pageNumber
+                      ? "border-blue-500 bg-blue-900/30 text-blue-300"
+                      : "border-gray-800 bg-gray-900 text-gray-400 hover:border-gray-700 hover:bg-gray-800"
+                  }`}
+                >
+                  <span className="mb-2 block h-12 w-full rounded-md border border-gray-800 bg-gradient-to-b from-white to-slate-200" />
+                  <span className="text-[11px] font-medium">Page {pageNumber}</span>
+                </button>
+              ))}
+            </div>
+          </aside>
+        ) : null}
+
         {showToc && toc.length > 0 ? (
           <aside className="w-64 shrink-0 overflow-y-auto border-r border-gray-800 bg-gray-900">
             <div className="border-b border-gray-800 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-white">Table of Contents</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-white">Outline</p>
             </div>
             <div className="py-2">
               {toc.map((item, index) => (
@@ -644,6 +721,7 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
                   key={pageNumber}
                   id={`pdf-page-${pageNumber}`}
                   data-page-number={pageNumber}
+                  onContextMenu={(event) => event.preventDefault()}
                   ref={(element) => {
                     if (element) {
                       pageRefs.current.set(pageNumber, element);

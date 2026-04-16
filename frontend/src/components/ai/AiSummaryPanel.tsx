@@ -2,15 +2,44 @@
 
 import { memo, useCallback, useState } from "react";
 
+import { API_BASE } from "@/lib/config";
+
 interface Props {
   lectureId: number;
   lectureTitle: string;
   lectureType: string;
   description?: string;
   content?: string;
+  courseTitle?: string;
+  sectionTitle?: string;
+  learnerNotes?: string;
 }
 
 type Status = "idle" | "loading" | "done" | "error";
+
+function cleanText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function stripVtt(value: string) {
+  return value
+    .replace(/^WEBVTT[\s\S]*?\n\n/i, "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => {
+      if (!line) {
+        return false;
+      }
+      if (/^\d+$/.test(line)) {
+        return false;
+      }
+      if (/^\d{2}:\d{2}:\d{2}\.\d{3}\s+-->\s+\d{2}:\d{2}:\d{2}\.\d{3}$/.test(line)) {
+        return false;
+      }
+      return true;
+    })
+    .join(" ");
+}
 
 const AiSummaryPanel = memo(function AiSummaryPanel({
   lectureId,
@@ -18,11 +47,42 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
   lectureType,
   description,
   content,
+  courseTitle,
+  sectionTitle,
+  learnerNotes,
 }: Props) {
   const [status, setStatus] = useState<Status>("idle");
   const [summary, setSummary] = useState("");
   const [error, setError] = useState("");
   const [usedModel, setUsedModel] = useState("");
+
+  const collectPageText = useCallback(() => {
+    const elements = Array.from(document.querySelectorAll<HTMLElement>("[data-ai-note-source]"));
+    const chunks = elements
+      .map((element) => cleanText(element.innerText || element.textContent || ""))
+      .filter(Boolean);
+
+    return Array.from(new Set(chunks)).join("\n").slice(0, 6000);
+  }, []);
+
+  const loadVideoCaptions = useCallback(async () => {
+    if (lectureType.toUpperCase() !== "VIDEO" || !Number.isFinite(lectureId)) {
+      return "";
+    }
+
+    try {
+      const src = `${API_BASE}/content/video/${lectureId}/captions`;
+      const response = await fetch(`/api/media?src=${encodeURIComponent(src)}`);
+      if (!response.ok) {
+        return "";
+      }
+
+      const text = await response.text();
+      return cleanText(stripVtt(text)).slice(0, 8000);
+    } catch {
+      return "";
+    }
+  }, [lectureId, lectureType]);
 
   const generate = useCallback(async () => {
     setStatus("loading");
@@ -31,6 +91,8 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
     setUsedModel("");
 
     try {
+      const [pageText, captions] = await Promise.all([Promise.resolve(collectPageText()), loadVideoCaptions()]);
+
       const response = await fetch("/api/ai/summarize", {
         method: "POST",
         headers: {
@@ -42,6 +104,11 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
           type: lectureType,
           description,
           content,
+          courseTitle,
+          sectionTitle,
+          learnerNotes,
+          pageText,
+          captions,
         }),
       });
 
@@ -58,7 +125,7 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
       setError(requestError instanceof Error ? requestError.message : "Something went wrong");
       setStatus("error");
     }
-  }, [content, description, lectureId, lectureTitle, lectureType]);
+  }, [collectPageText, content, courseTitle, description, learnerNotes, lectureId, lectureTitle, lectureType, loadVideoCaptions, sectionTitle]);
 
   const renderSummary = (text: string) =>
     text.split("\n").map((line, index) => {
@@ -68,18 +135,10 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
         return <div key={index} className="h-1.5" />;
       }
 
-      if (/^\d+\.\s+\*{0,2}[A-Z]/.test(trimmed)) {
-        return (
-          <p key={index} className="mt-3 mb-1 text-sm font-semibold text-white first:mt-0">
-            {trimmed.replace(/\*\*/g, "")}
-          </p>
-        );
-      }
-
-      if (trimmed.startsWith("- ") || trimmed.startsWith("• ") || trimmed.startsWith("* ")) {
+      if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
         return (
           <div key={index} className="flex gap-2 text-sm leading-relaxed text-gray-300">
-            <span className="mt-0.5 shrink-0 text-purple-400">▸</span>
+            <span className="mt-0.5 shrink-0 text-purple-400">-</span>
             <span>{trimmed.slice(2).replace(/\*\*/g, "")}</span>
           </div>
         );
@@ -100,13 +159,13 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
           onClick={generate}
           className="group flex w-full items-center justify-center gap-2 rounded-xl border border-purple-700/60 bg-purple-900/20 px-4 py-3 text-sm font-medium text-purple-300 transition-all duration-200 hover:border-purple-600 hover:bg-purple-900/40"
         >
-          <span className="text-base transition-transform duration-200 group-hover:scale-110">✨</span>
-          Generate AI Summary
+          <span className="text-base transition-transform duration-200 group-hover:scale-110">*</span>
+          Generate Short Note
           <span className="ml-1 rounded border border-purple-700 px-1.5 py-0.5 font-mono text-[10px] text-purple-500">
             free
           </span>
         </button>
-        <p className="mt-2 text-center text-xs text-gray-600">Powered by free AI via OpenRouter</p>
+        <p className="mt-2 text-center text-xs text-gray-600">Get a quick learner-style note for this lesson</p>
       </div>
     );
   }
@@ -124,7 +183,7 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
               />
             ))}
           </div>
-          <p className="text-sm text-purple-300">Reading this lesson...</p>
+          <p className="text-sm text-purple-300">Writing your short note...</p>
         </div>
       </div>
     );
@@ -149,8 +208,8 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
     <div className="p-4">
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-base">✨</span>
-          <p className="text-xs font-semibold uppercase tracking-wider text-purple-400">AI Summary</p>
+          <span className="text-base">*</span>
+          <p className="text-xs font-semibold uppercase tracking-wider text-purple-400">Short Note</p>
         </div>
         <button
           type="button"
@@ -162,7 +221,7 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
           }}
           className="text-xs text-gray-600 transition-colors hover:text-gray-400"
         >
-          ✕ Dismiss
+          Close
         </button>
       </div>
 
@@ -174,8 +233,7 @@ const AiSummaryPanel = memo(function AiSummaryPanel({
           onClick={generate}
           className="flex items-center gap-1 text-xs text-gray-600 transition-colors hover:text-gray-400"
         >
-          <span>↺</span>
-          Regenerate
+          Refresh note
         </button>
         {usedModel ? (
           <p className="max-w-[180px] truncate font-mono text-[10px] text-gray-700" title={usedModel}>

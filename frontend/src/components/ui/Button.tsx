@@ -27,11 +27,11 @@ const VARIANTS: Record<Variant, string> = {
   primary:
     'bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 focus-visible:ring-blue-500',
   secondary:
-    'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 focus-visible:ring-gray-500',
+    'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 active:bg-gray-100 focus-visible:ring-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:active:bg-gray-600',
   danger:
     'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus-visible:ring-red-500',
   ghost:
-    'bg-transparent text-gray-600 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500',
+    'bg-transparent text-gray-600 hover:bg-gray-100 active:bg-gray-200 focus-visible:ring-gray-500 dark:text-gray-300 dark:hover:bg-gray-800 dark:active:bg-gray-700',
   success:
     'bg-green-600 text-white hover:bg-green-700 active:bg-green-800 focus-visible:ring-green-500',
 }

@@ -9,6 +9,7 @@ import { useSession } from "next-auth/react";
 import CourseBuilder from "@/components/admin/CourseBuilder";
 import HelpButton from "@/components/help/HelpButton";
 import HelpTooltip from "@/components/help/HelpTooltip";
+import { useLanguage } from "@/context/LanguageContext";
 import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import { createSlugCandidate, normalizeSlugInput } from "@/lib/slug";
@@ -29,6 +30,7 @@ function isAllowedRole(role: string | null | undefined) {
 export default function NewCoursePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { t } = useLanguage();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [categories, setCategories] = useState<Category[]>([]);
   const [course, setCourse] = useState<Course | null>(null);
@@ -98,9 +100,9 @@ export default function NewCoursePage() {
   }, [form.title]);
 
   const steps = [
-    { id: 1, label: "Step 1" },
-    { id: 2, label: "Step 2" },
-    { id: 3, label: "Step 3" },
+    { id: 1, label: `${t("admin.step")} 1` },
+    { id: 2, label: `${t("admin.step")} 2` },
+    { id: 3, label: `${t("admin.step")} 3` },
   ] as const;
 
   const slugSuggestion = useMemo(() => {
@@ -160,11 +162,11 @@ export default function NewCoursePage() {
 
   async function handleStep1Submit() {
     if (!form.title.trim() || !form.slug.trim() || !form.categoryId) {
-      setGeneralError("Please complete required fields.");
+      setGeneralError(t("admin.required_fields"));
       return;
     }
     if (targetAudience.length === 0) {
-      setGeneralError("Please select at least one target audience.");
+      setGeneralError(t("admin.target_audience_required"));
       return;
     }
     try {
@@ -195,7 +197,7 @@ export default function NewCoursePage() {
       const message = axios.isAxiosError(error) ? String(error.response?.data?.message ?? "") : "";
 
       if (message.toLowerCase().includes("slug already exists")) {
-        setSlugError("This slug is already taken. Please choose a different one.");
+        setSlugError(t("admin.slug_taken"));
       } else {
         setGeneralError(getErrorMessage(error));
       }
@@ -214,7 +216,7 @@ export default function NewCoursePage() {
       courseCache.invalidate(CACHE_KEYS.course(course.slug));
       router.push("/admin/courses");
     } catch (error) {
-      const message = getErrorMessage(error) || "Could not publish course. Please try again.";
+      const message = getErrorMessage(error) || t("admin.publish_failed");
       setPublishError(message);
       console.error("Publish error:", axios.isAxiosError(error) ? error.response?.data : error);
     } finally {
@@ -252,7 +254,7 @@ export default function NewCoursePage() {
 
   function handleThumbnailSelect(file: File) {
     if (file.size > 5 * 1024 * 1024) {
-      setThumbnailError("Thumbnail must be under 5MB");
+      setThumbnailError(t("admin.thumbnail_limit"));
       return;
     }
     setThumbnailError("");
@@ -269,21 +271,23 @@ export default function NewCoursePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10">
+    <main className="min-h-screen bg-slate-100 px-4 py-10 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <section className="mx-auto max-w-6xl">
-        <h1 className="text-2xl font-semibold text-slate-900">Create New Course</h1>
+        <h1 className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{t("admin.create_course")}</h1>
         <div className="mt-5 flex items-center gap-2">
           {steps.map((item, index) => (
             <div key={item.id} className="flex items-center gap-2">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
-                  step >= item.id ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-600"
+                  step >= item.id
+                    ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                    : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
                 }`}
               >
                 {item.id}
               </div>
-              <span className="text-sm text-slate-700">{item.label}</span>
-              {index < steps.length - 1 ? <span className="text-slate-400">-&gt;</span> : null}
+              <span className="text-sm text-slate-700 dark:text-slate-300">{item.label}</span>
+              {index < steps.length - 1 ? <span className="text-slate-400 dark:text-slate-600">-&gt;</span> : null}
             </div>
           ))}
         </div>
@@ -291,22 +295,22 @@ export default function NewCoursePage() {
         {generalError ? <p className="mt-4 text-sm text-rose-600">{generalError}</p> : null}
 
         {step === 1 ? (
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block sm:col-span-2">
-                <span className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                  Course Title
+                  <span className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("admin.course_title")}
                   <HelpTooltip pageId="course-builder" fieldId="title" />
                 </span>
                 <input
                   value={form.title}
                   onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 />
               </label>
 
               <label className="block sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Slug *</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.slug_required")}</span>
                 <div className="flex items-start gap-2">
                   <input
                     value={form.slug}
@@ -315,15 +319,17 @@ export default function NewCoursePage() {
                       setSlugError("");
                     }}
                     className={`w-full rounded-lg border px-3 py-2 text-sm ${
-                      slugError ? "border-rose-400" : "border-slate-300"
+                      slugError
+                        ? "border-rose-400 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100"
+                        : "border-slate-300 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                     }`}
                   />
                   <button
                     type="button"
                     onClick={handleRegenerateSlug}
-                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    Regenerate Slug
+                    {t("admin.regenerate_slug")}
                   </button>
                 </div>
                 {slugError ? (
@@ -336,9 +342,9 @@ export default function NewCoursePage() {
                           setForm((prev) => ({ ...prev, slug: slugSuggestion }));
                           setSlugError("");
                         }}
-                        className="text-xs font-medium text-blue-700 hover:underline"
+                        className="text-xs font-medium text-blue-700 hover:underline dark:text-blue-400"
                       >
-                        Try: {slugSuggestion}
+                        {t("admin.try_slug")}: {slugSuggestion}
                       </button>
                     ) : null}
                   </div>
@@ -346,24 +352,24 @@ export default function NewCoursePage() {
               </label>
 
               <label className="block sm:col-span-2">
-                <span className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                  Description
+                  <span className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("admin.description")}
                   <HelpTooltip pageId="course-builder" fieldId="description" />
                 </span>
                 <textarea
                   rows={4}
                   value={form.description}
                   onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Category</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.category")}</span>
                 <select
                   value={form.categoryId}
                   onChange={(event) => setForm((prev) => ({ ...prev, categoryId: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 >
                   {categories.map((category) => (
                     <option key={category.id} value={String(category.id)}>
@@ -374,34 +380,34 @@ export default function NewCoursePage() {
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Difficulty</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.difficulty")}</span>
                 <select
                   value={form.difficulty}
                   onChange={(event) => setForm((prev) => ({ ...prev, difficulty: event.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                 >
-                  <option value="BEGINNER">BEGINNER</option>
-                  <option value="INTERMEDIATE">INTERMEDIATE</option>
-                  <option value="ADVANCED">ADVANCED</option>
+                  <option value="BEGINNER">{t("courses.beginner")}</option>
+                  <option value="INTERMEDIATE">{t("courses.intermediate")}</option>
+                  <option value="ADVANCED">{t("courses.advanced")}</option>
                 </select>
               </label>
 
               <div className="block sm:col-span-2">
-                <span className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700">
-                  Target Audience
+                <span className="mb-1 flex items-center gap-1.5 text-sm font-medium text-slate-700 dark:text-slate-200">
+                  {t("admin.target_audience")}
                   <HelpTooltip pageId="course-builder" fieldId="targetAudience" />
                 </span>
-                <p className="text-xs text-slate-500">Select who can see this course</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{t("admin.select_course_visibility")}</p>
                 <div className="mt-2 grid gap-2 sm:grid-cols-2">
                   {[
-                    { value: "TAXPAYER", label: "Taxpayers" },
-                    { value: "TAX_AGENT", label: "Tax Agents" },
-                    { value: "MOR_STAFF", label: "MoR Staff" },
-                    { value: "MANAGER", label: "Managers" },
+                    { value: "TAXPAYER", label: t("admin.audience.taxpayer") },
+                    { value: "TAX_AGENT", label: t("admin.audience.tax_agent") },
+                    { value: "MOR_STAFF", label: t("admin.audience.mor_staff") },
+                    { value: "MANAGER", label: t("admin.audience.manager") },
                   ].map((option) => (
                     <label
                       key={option.value}
-                      className="flex cursor-pointer items-center gap-2 text-sm text-slate-700"
+                      className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-200"
                     >
                       <input
                         type="checkbox"
@@ -416,7 +422,7 @@ export default function NewCoursePage() {
               </div>
 
               <div className="sm:col-span-2">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Thumbnail</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.thumbnail")}</span>
                 <input
                   ref={thumbnailInputRef}
                   type="file"
@@ -432,16 +438,16 @@ export default function NewCoursePage() {
                   <button
                     type="button"
                     onClick={() => thumbnailInputRef.current?.click()}
-                    className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 p-6 text-center hover:bg-slate-50"
+                    className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 p-6 text-center hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
                   >
-                    <Camera className="h-6 w-6 text-slate-500" />
-                    <p className="mt-2 text-sm font-medium text-slate-700">Click to upload thumbnail</p>
-                    <p className="text-xs text-slate-500">JPG, PNG, WEBP up to 5MB</p>
+                    <Camera className="h-6 w-6 text-slate-500 dark:text-slate-400" />
+                    <p className="mt-2 text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.upload_thumbnail")}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t("admin.thumbnail_formats")}</p>
                   </button>
                 ) : (
                   <div className="relative inline-block">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={thumbnailPreview} alt="Thumbnail preview" className="h-40 w-64 rounded-lg object-cover" />
+                    <img src={thumbnailPreview} alt={t("admin.thumbnail_preview")} className="h-40 w-64 rounded-lg object-cover" />
                     <button
                       type="button"
                       onClick={() => {
@@ -450,7 +456,7 @@ export default function NewCoursePage() {
                         setThumbnailError("");
                         if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
                       }}
-                      className="absolute right-2 top-2 rounded-full bg-white p-1 text-slate-700 shadow"
+                      className="absolute right-2 top-2 rounded-full bg-white p-1 text-slate-700 shadow dark:bg-slate-900 dark:text-slate-200"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -464,9 +470,9 @@ export default function NewCoursePage() {
               type="button"
               onClick={() => void handleStep1Submit()}
               disabled={isSubmitting}
-              className="mt-6 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+              className="mt-6 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
             >
-              {isSubmitting ? "Saving..." : "Save & Continue"}
+              {isSubmitting ? t("admin.saving") : t("admin.save_continue")}
             </button>
           </div>
         ) : null}
@@ -478,16 +484,16 @@ export default function NewCoursePage() {
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                className="rounded border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                Back
+                {t("admin.back")}
               </button>
               <button
                 type="button"
                 onClick={() => setStep(3)}
-                className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+                className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
               >
-                Continue to Review
+                {t("admin.continue_review")}
               </button>
             </div>
           </div>
@@ -495,33 +501,33 @@ export default function NewCoursePage() {
 
         {step === 3 && course ? (
           <div className="mt-6 space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-900">Review & Publish</h2>
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{t("admin.review_publish")}</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                <p className="text-sm text-slate-700">Course: {course.title}</p>
-                <p className="text-sm text-slate-700">Category: {course.category?.name ?? "N/A"}</p>
-                <p className="text-sm text-slate-700">Difficulty: {course.difficulty}</p>
-                <p className="text-sm text-slate-700">Total sections: {summary.sections}</p>
-                <p className="text-sm text-slate-700">Total lectures: {summary.lectures}</p>
-                <p className="text-sm text-slate-700">Total video lectures: {summary.video}</p>
-                <p className="text-sm text-slate-700">Total quiz lectures: {summary.quiz}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t("admin.summary.course")}: {course.title}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t("admin.summary.category")}: {course.category?.name ?? t("common.not_available")}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t("admin.summary.difficulty")}: {course.difficulty}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t("admin.summary.total_sections")}: {summary.sections}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t("admin.summary.total_lectures")}: {summary.lectures}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t("admin.summary.total_video_lectures")}: {summary.video}</p>
+                <p className="text-sm text-slate-700 dark:text-slate-300">{t("admin.summary.total_quiz_lectures")}: {summary.quiz}</p>
               </div>
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h3 className="text-base font-semibold text-slate-900">Publishing Checklist</h3>
+            <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("admin.publish_checklist")}</h3>
               <ul className="mt-3 space-y-2 text-sm">
                 <li className={summary.checks[0] ? "text-emerald-700" : "text-rose-700"}>
-                  {summary.checks[0] ? "[OK]" : "[MISSING]"} At least 1 section
+                  {summary.checks[0] ? t("admin.check.ok") : t("admin.check.missing")} {t("admin.check.section")}
                 </li>
                 <li className={summary.checks[1] ? "text-emerald-700" : "text-rose-700"}>
-                  {summary.checks[1] ? "[OK]" : "[MISSING]"} At least 1 lecture in every section
+                  {summary.checks[1] ? t("admin.check.ok") : t("admin.check.missing")} {t("admin.check.lecture_per_section")}
                 </li>
                 <li className={summary.checks[2] ? "text-emerald-700" : "text-rose-700"}>
-                  {summary.checks[2] ? "[OK]" : "[MISSING]"} All video lectures have uploaded files
+                  {summary.checks[2] ? t("admin.check.ok") : t("admin.check.missing")} {t("admin.check.video_uploaded")}
                 </li>
                 <li className={summary.checks[3] ? "text-emerald-700" : "text-rose-700"}>
-                  {summary.checks[3] ? "[OK]" : "[MISSING]"} All quiz lectures have at least 1 question
+                  {summary.checks[3] ? t("admin.check.ok") : t("admin.check.missing")} {t("admin.check.quiz_questions")}
                 </li>
               </ul>
 
@@ -532,26 +538,26 @@ export default function NewCoursePage() {
                   disabled={!canPublish || isPublishing}
                   className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60"
                 >
-                  {isPublishing ? "Publishing..." : "Publish Course"}
+                  {isPublishing ? t("admin.publishing") : t("admin.publish_course")}
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleSaveDraft()}
                   disabled={isSavingDraft}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  {isSavingDraft ? "Saving..." : "Save as Draft"}
+                  {isSavingDraft ? t("admin.saving") : t("admin.save_draft")}
                 </button>
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  Back to Builder
+                  {t("admin.back_builder")}
                 </button>
               </div>
               {publishError ? (
-                <div className="mt-3 rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">
+                <div className="mt-3 rounded border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-300">
                   [!] {publishError}
                 </div>
               ) : null}

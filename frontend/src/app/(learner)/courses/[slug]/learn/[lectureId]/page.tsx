@@ -219,6 +219,10 @@ export default function LearnLecturePage() {
   const currentProgress = activeLecture ? displayProgress[activeLectureKey] ?? progressMap[activeLectureKey] : undefined;
   const resumeAt = currentProgress?.lastPosition ?? 0;
   const isCompleted = activeLecture ? completedIds.has(activeLectureKey) : false;
+  const currentSectionTitle =
+    sections.find((section) =>
+      (section.lectures ?? []).some((lecture) => String(lecture.id) === String(activeLecture?.id))
+    )?.title ?? "";
 
   const activeLectureIndex = activeLecture
     ? allLectures.findIndex((lecture) => String(lecture.id) === String(activeLecture.id))
@@ -981,7 +985,7 @@ export default function LearnLecturePage() {
                         {isDone ? "OK" : isLocked ? "L" : getLectureIcon(lecture.type)}
                       </div>
 
-                      <div className="min-w-0 flex-1">
+                      <div className="min-w-0 flex-1" data-ai-note-source>
                         <p
                           className={`line-clamp-2 text-sm ${
                             isActive
@@ -1028,9 +1032,9 @@ export default function LearnLecturePage() {
             </button>
 
             <div>
-              <p className="text-sm font-medium text-white">{activeLecture.title}</p>
+              <p className="text-sm font-medium text-white" data-ai-note-source>{activeLecture.title}</p>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-500">{lectureType}</span>
+                <span className="text-xs text-gray-500" data-ai-note-source>{lectureType}</span>
                 {currentProgress?.lastWatchedAt && !isCompleted ? (
                   <span className="text-xs text-blue-400">Last watched at {currentProgress.lastWatchedAt}</span>
                 ) : null}
@@ -1192,8 +1196,8 @@ export default function LearnLecturePage() {
 
                     {activeLecture?.description ? (
                       <div className="mx-auto max-w-4xl p-6">
-                        <h3 className="mb-2 text-sm font-semibold text-white">About this lesson</h3>
-                        <p className="text-sm leading-relaxed text-gray-400">{activeLecture.description}</p>
+                        <h3 className="mb-2 text-sm font-semibold text-white" data-ai-note-source>About this lesson</h3>
+                        <p className="text-sm leading-relaxed text-gray-400" data-ai-note-source>{activeLecture.description}</p>
                       </div>
                     ) : null}
                 </div>
@@ -1226,16 +1230,6 @@ export default function LearnLecturePage() {
             </div>
           </div>
 
-          {nextLecture && normalizeLectureType(nextLecture.type) === "VIDEO" && (nextLecture.videoUrl || nextLecture.contentUrl) ? (
-            <video
-              key={`preload-${nextLecture.id}`}
-              src={getFileUrl(nextLecture.videoUrl ?? nextLecture.contentUrl) ?? ""}
-              preload="metadata"
-              style={{ display: "none" }}
-              aria-hidden="true"
-            />
-          ) : null}
-
           {lectureType === "VIDEO" && activeTab === "notes" ? (
             <div className="flex w-1/2 flex-col border-l border-gray-800 bg-gray-900">
               <div className="shrink-0 border-b border-gray-800">
@@ -1245,6 +1239,9 @@ export default function LearnLecturePage() {
                   lectureType={activeLecture.type || "VIDEO"}
                   description={activeLecture.description || ""}
                   content={activeLecture.content || activeLecture.contentHtml || ""}
+                  courseTitle={course?.title || ""}
+                  sectionTitle={currentSectionTitle}
+                  learnerNotes={notes}
                 />
               </div>
               <div className="flex shrink-0 items-center justify-between border-b border-gray-800 px-4 py-3">

@@ -17,6 +17,7 @@ INSERT INTO users (username, email, password_hash, first_name, last_name, role_i
 ('john', 'john03@itas.local', '$2a$10$lcFOq1cZqywvuUlZrOPzXeHy7sKwu9oXp.3uAJP7cO7p4yDlCLErq', 'John', 'Smith', (SELECT id FROM roles WHERE name='TAXPAYER'), 'ACTIVE', NOW(), NOW()),
 ('lina', 'lina04@itas.local', '$2a$10$lcFOq1cZqywvuUlZrOPzXeHy7sKwu9oXp.3uAJP7cO7p4yDlCLErq', 'Lina', 'Verhoeven', (SELECT id FROM roles WHERE name='TAXPAYER'), 'ACTIVE', NOW(), NOW()),
 ('omar', 'omar05@itas.local', '$2a$10$lcFOq1cZqywvuUlZrOPzXeHy7sKwu9oXp.3uAJP7cO7p4yDlCLErq', 'Omar', 'Haddad', (SELECT id FROM roles WHERE name='TAXPAYER'), 'ACTIVE', NOW(), NOW()),
+('bemnet', 'razielmelaku@gmail.com', '$2a$10$lcFOq1cZqywvuUlZrOPzXeHy7sKwu9oXp.3uAJP7cO7p4yDlCLErq', 'Bemenet', 'Melaku', (SELECT id FROM roles WHERE name='MANAGER'), 'ACTIVE', NOW(), NOW()),
 
 ('mike', 'mike.agent@itas.local', '$2a$10$lcFOq1cZqywvuUlZrOPzXeHy7sKwu9oXp.3uAJP7cO7p4yDlCLErq', 'Mike', 'Johnson', (SELECT id FROM roles WHERE name='TAX_AGENT'), 'ACTIVE', NOW(), NOW()),
 ('emma', 'emma.agent@itas.local', '$2a$10$lcFOq1cZqywvuUlZrOPzXeHy7sKwu9oXp.3uAJP7cO7p4yDlCLErq', 'Emma', 'Brown', (SELECT id FROM roles WHERE name='TAX_AGENT'), 'ACTIVE', NOW(), NOW()),

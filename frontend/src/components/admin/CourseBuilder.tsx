@@ -17,6 +17,7 @@ import {
   uploadLectureFile,
   type QuizQuestionPayload,
 } from "@/lib/api/admin-courses";
+import { useLanguage } from "@/context/LanguageContext";
 import { versionApi } from "@/lib/api";
 import RichTextEditor from "@/components/editor/RichTextEditor";
 import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
@@ -96,7 +97,15 @@ function hasLectureFile(lecture: Lecture) {
   return Boolean(lecture.videoUrl || lecture.pdfUrl || lecture.contentUrl);
 }
 
+function formatTranslation(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (message, [key, value]) => message.replaceAll(`{${key}}`, String(value)),
+    template
+  );
+}
+
 export default function CourseBuilder({ course, onCourseChange }: CourseBuilderProps) {
+  const { t } = useLanguage();
   const [activeLectureId, setActiveLectureId] = useState<string | null>(null);
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionTitle, setEditingSectionTitle] = useState("");
@@ -187,7 +196,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
             questionText: question.questionText,
             questionType: question.questionType,
             options: question.questionType === "TRUE_FALSE"
-              ? ["True", "False"]
+              ? [t("admin.true"), t("admin.false")]
               : Array.isArray(question.options)
                 ? question.options
                 : ["", "", "", ""],
@@ -200,7 +209,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
         if (cancelled) {
           return;
         }
-        setBuilderError(getErrorMessage(error) || "Failed to load quiz questions.");
+        setBuilderError(getErrorMessage(error) || t("admin.quiz_load_failed"));
       }
     }
 
@@ -221,7 +230,11 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
   async function handleAddSection() {
     try {
       setBuilderError(null);
-      const section = await addSection(course.id, `Section ${sections.length + 1}`, sections.length + 1);
+      const section = await addSection(
+        course.id,
+        `${t("admin.section_default")} ${sections.length + 1}`,
+        sections.length + 1
+      );
       updateCourse((next) => {
         next.sections = [...(next.sections ?? []), { ...section, lectures: section.lectures ?? [] }];
       });
@@ -231,7 +244,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
   }
 
   async function handleDeleteSection(sectionId: number | string) {
-    const confirmed = window.confirm("Delete this section and all lectures?");
+    const confirmed = window.confirm(t("admin.delete_section_confirm"));
     if (!confirmed) return;
     try {
       await deleteSection(course.id, sectionId);
@@ -263,7 +276,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     const orderIndex = (section.lectures ?? []).length + 1;
     setAddingLectureSectionId(String(section.id));
     setAddLectureForm({
-      title: `Lecture ${orderIndex}`,
+      title: `${t("admin.lecture_default")} ${orderIndex}`,
       description: "",
       type: "VIDEO",
       orderIndex,
@@ -298,7 +311,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     const maxSize = 100 * 1024 * 1024;
     if (file.size > maxSize) {
       const sizeMB = (file.size / 1048576).toFixed(1);
-      setFileError(`File is too large (${sizeMB}MB). Maximum allowed size is 100MB.`);
+      setFileError(formatTranslation(t("admin.file_too_large"), { sizeMB }));
       setSelectedFile(null);
       return;
     }
@@ -318,7 +331,11 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     const valid = (isVideo && lower.endsWith(".mp4")) || (isPdf && lower.endsWith(".pdf"));
 
     if (!valid) {
-      setUploadError(`Invalid file type for ${addLectureForm.type}.`);
+      setUploadError(
+        formatTranslation(t("admin.invalid_type_for"), {
+          type: t(`admin.type.${addLectureForm.type.toLowerCase()}`),
+        })
+      );
       return;
     }
 
@@ -409,7 +426,10 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
         } catch (uploadError: any) {
           const message = getUploadErrorMessage(uploadError);
           throw new Error(
-            `File upload failed: ${message}. The lecture "${newLecture.title}" was created but has no video. You can re-upload the file from the version history panel.`
+            formatTranslation(t("admin.upload_failed"), {
+              message,
+              title: newLecture.title,
+            })
           );
         }
       }
@@ -422,7 +442,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
       setActiveLectureId(String(newLecture.id));
       closeAddLectureForm();
     } catch (error: any) {
-      const message = error?.response ? getErrorMessage(error) : error?.message || "An unexpected error occurred.";
+      const message = error?.response ? getErrorMessage(error) : error?.message || t("admin.unexpected_error");
       setUploadError(message);
       setBuilderError(message);
     } finally {
@@ -433,7 +453,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
   }
 
   async function handleDeleteLecture(sectionId: number | string, lectureId: number | string) {
-    const confirmed = window.confirm("Delete this lecture?");
+    const confirmed = window.confirm(t("admin.delete_lecture_confirm"));
     if (!confirmed) return;
     try {
       await deleteLecture(course.id, sectionId, lectureId);
@@ -495,7 +515,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
   async function handleUpload(sectionId: number | string, lecture: Lecture, file: File, expectedExt: ".mp4" | ".pdf") {
     const name = file.name.toLowerCase();
     if (!name.endsWith(expectedExt)) {
-      setBuilderError(`Invalid file type. Expected ${expectedExt}`);
+      setBuilderError(formatTranslation(t("admin.invalid_type_expected"), { ext: expectedExt }));
       return;
     }
 
@@ -536,7 +556,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
       patchActiveLecture({ assessmentId: created.id, type: "QUIZ" });
       setBuilderError(null);
     } catch {
-      setBuilderError("Failed to save quiz settings.");
+      setBuilderError(t("admin.quiz_save_failed"));
     } finally {
       setQuizSaving(false);
     }
@@ -545,17 +565,17 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
   async function handleAddQuestion() {
     if (!assessmentId) return;
     if (!newQuestion.questionText.trim()) {
-      setBuilderError("Question text is required.");
+      setBuilderError(t("admin.question_text_required"));
       return;
     }
 
     if (!newQuestion.correctAnswer) {
-      setBuilderError("Please select the correct answer.");
+      setBuilderError(t("admin.correct_answer_required"));
       return;
     }
 
     if (newQuestion.questionType === "MCQ" && newQuestion.options.some((option) => !option.trim())) {
-      setBuilderError("All MCQ options are required.");
+      setBuilderError(t("admin.mcq_options_required"));
       return;
     }
 
@@ -563,7 +583,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
       questionText: newQuestion.questionText.trim(),
       questionType: newQuestion.questionType,
       optionsJson: JSON.stringify(
-        newQuestion.questionType === "MCQ" ? newQuestion.options : ["True", "False"]
+        newQuestion.questionType === "MCQ" ? newQuestion.options : [t("admin.true"), t("admin.false")]
       ),
       correctAnswer: newQuestion.correctAnswer,
       points: Number(newQuestion.points) || 1,
@@ -630,11 +650,11 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm lg:col-span-1">
-        <h2 className="text-base font-semibold text-slate-900">Sections & Lectures</h2>
+      <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-1">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("admin.sections_lectures")}</h2>
         <div className="mt-4 space-y-3">
           {sections.map((section, index) => (
-            <div key={section.id} className="rounded-lg border border-slate-200 p-3">
+            <div key={section.id} className="rounded-lg border border-slate-200 p-3 dark:border-slate-800">
               <div className="flex items-center justify-between gap-2">
                 {editingSectionId === String(section.id) ? (
                   <input
@@ -645,7 +665,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                       if (event.key === "Enter") void handleSaveSectionTitle(section.id);
                     }}
                     autoFocus
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   />
                 ) : (
                   <button
@@ -654,7 +674,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                       setEditingSectionId(String(section.id));
                       setEditingSectionTitle(section.title);
                     }}
-                    className="text-left text-sm font-medium text-slate-900"
+                    className="text-left text-sm font-medium text-slate-900 dark:text-slate-100"
                   >
                     {index + 1}. {section.title}
                   </button>
@@ -664,7 +684,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                   onClick={() => void handleDeleteSection(section.id)}
                   className="text-xs text-rose-600 hover:underline"
                 >
-                  Delete
+                  {t("admin.delete")}
                 </button>
               </div>
 
@@ -675,7 +695,9 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                       type="button"
                       onClick={() => setActiveLectureId(String(lecture.id))}
                       className={`flex-1 truncate rounded px-2 py-1 text-left text-xs ${
-                        String(lecture.id) === activeLectureId ? "bg-slate-900 text-white" : "text-slate-700 hover:bg-slate-100"
+                        String(lecture.id) === activeLectureId
+                          ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                          : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                       }`}
                     >
                       {lectureTypeIcon(lecture.type)} {lecture.title}
@@ -691,26 +713,26 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                       onClick={() => void handleDeleteLecture(section.id, lecture.id)}
                       className="text-xs text-rose-600 hover:underline"
                     >
-                      Delete
+                      {t("admin.delete")}
                     </button>
                   </li>
                 ))}
               </ul>
 
               {addingLectureSectionId === String(section.id) ? (
-                <div className="mt-3 space-y-2 rounded border border-slate-200 p-2">
+                <div className="mt-3 space-y-2 rounded border border-slate-200 p-2 dark:border-slate-800">
                   <input
                     value={addLectureForm.title}
                     onChange={(event) => setAddLectureForm((prev) => ({ ...prev, title: event.target.value }))}
-                    placeholder="Lecture title"
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    placeholder={t("admin.lecture_title_placeholder")}
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   />
                   <textarea
                     value={addLectureForm.description}
                     onChange={(event) => setAddLectureForm((prev) => ({ ...prev, description: event.target.value }))}
                     rows={2}
-                    placeholder="Lecture description"
-                    className="w-full rounded border border-slate-300 px-2 py-1 text-xs"
+                    placeholder={t("admin.lecture_description_placeholder")}
+                    className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <select
@@ -724,22 +746,22 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                           return { ...prev, type: nextType };
                         })
                       }
-                      className="rounded border border-slate-300 px-2 py-1 text-xs"
+                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                     >
-                      <option value="VIDEO">VIDEO</option>
-                      <option value="PDF">PDF</option>
-                      <option value="TEXT">TEXT</option>
-                      <option value="QUIZ">QUIZ</option>
+                      <option value="VIDEO">{t("admin.type.video")}</option>
+                      <option value="PDF">{t("admin.type.pdf")}</option>
+                      <option value="TEXT">{t("admin.type.text")}</option>
+                      <option value="QUIZ">{t("admin.type.quiz")}</option>
                     </select>
                     <input
                       type="number"
                       value={addLectureForm.orderIndex}
                       onChange={(event) => setAddLectureForm((prev) => ({ ...prev, orderIndex: Number(event.target.value) }))}
-                      className="rounded border border-slate-300 px-2 py-1 text-xs"
+                      className="rounded border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                     />
                   </div>
 
-                  <label className="flex items-center gap-2 text-xs text-slate-700">
+                  <label className="flex items-center gap-2 text-xs text-slate-700 dark:text-slate-300">
                     <button
                       type="button"
                       onClick={() =>
@@ -749,18 +771,18 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                         }))
                       }
                       className={`relative inline-flex h-5 w-10 items-center rounded-full transition ${
-                        addLectureForm.isPreview ? "bg-emerald-500" : "bg-slate-300"
+                        addLectureForm.isPreview ? "bg-emerald-500" : "bg-slate-300 dark:bg-slate-700"
                       }`}
                     >
                       <span
-                        className={`h-4 w-4 rounded-full bg-white transition ${
+                        className={`h-4 w-4 rounded-full bg-white transition dark:bg-slate-100 ${
                           addLectureForm.isPreview ? "translate-x-5" : "translate-x-1"
                         }`}
                       />
                     </button>
-                    <span>Free Preview</span>
+                    <span>{t("admin.free_preview")}</span>
                   </label>
-                  <p className="text-[11px] text-slate-500">Free preview lectures are visible without enrollment.</p>
+                  <p className="text-[11px] text-slate-500">{t("admin.free_preview_help")}</p>
 
                   <div className="flex items-center gap-2">
                     <input
@@ -774,33 +796,33 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                       type="button"
                       onClick={() => void handleAddLecture(section)}
                       disabled={loading || uploading || !addLectureForm.title.trim() || fileError != null}
-                      className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                     >
-                      {uploading ? `Uploading... ${uploadProgress}%` : loading ? "Adding..." : "Add Lecture"}
+                      {uploading ? `${t("admin.uploading_file")}... ${uploadProgress}%` : loading ? t("admin.adding") : t("admin.add_lecture")}
                     </button>
                     <button
                       type="button"
                       onClick={handleSelectFileClick}
                       disabled={addLectureForm.type === "TEXT" || addLectureForm.type === "QUIZ"}
-                      title={addLectureForm.type === "TEXT" || addLectureForm.type === "QUIZ" ? "No file needed for this type" : ""}
-                      className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                      title={addLectureForm.type === "TEXT" || addLectureForm.type === "QUIZ" ? t("admin.no_file_needed") : ""}
+                    className="inline-flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 dark:disabled:bg-slate-900 dark:disabled:text-slate-600"
                     >
                       <Paperclip className="h-3.5 w-3.5" />
-                      Select File
+                      {t("admin.select_file")}
                     </button>
                     <button
                       type="button"
                       onClick={closeAddLectureForm}
-                      className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     >
-                      Cancel
+                      {t("admin.cancel")}
                     </button>
                   </div>
 
                   {uploading ? (
                     <div className="mt-3">
                       <div className="mb-1 flex justify-between text-sm text-gray-600">
-                        <span>Uploading {selectedFile?.name}...</span>
+                        <span>{t("admin.uploading_file")} {selectedFile?.name}...</span>
                         <span>{uploadProgress}%</span>
                       </div>
                       <div className="h-2 w-full rounded-full bg-gray-200">
@@ -810,13 +832,13 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                   ) : null}
 
                   {selectedFile ? (
-                    <div className="mt-1 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700">
+                  <div className="mt-1 rounded border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-800 dark:text-slate-300">
                       <div className="flex items-center justify-between gap-2">
                         <span>
-                          [FILE] {selectedFile.name} ({formatBytes(selectedFile.size)})
+                          [{t("admin.file_label")}] {selectedFile.name} ({formatBytes(selectedFile.size)})
                           {uploadSuccess ? <span className="ml-2 text-emerald-600">[OK]</span> : null}
                         </span>
-                        <button type="button" onClick={clearSelectedFile} className="text-slate-500 hover:text-slate-700">
+                    <button type="button" onClick={clearSelectedFile} className="text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200">
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
@@ -833,9 +855,9 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                 <button
                   type="button"
                   onClick={() => openAddLectureForm(section)}
-                  className="mt-2 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                  className="mt-2 rounded border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  Add Lecture
+                  {t("admin.add_lecture")}
                 </button>
               )}
             </div>
@@ -844,39 +866,39 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
         <button
           type="button"
           onClick={() => void handleAddSection()}
-          className="mt-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="mt-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
         >
-          Add Section
+          {t("admin.add_section")}
         </button>
       </aside>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
-        <h2 className="text-base font-semibold text-slate-900">Lecture Editor</h2>
+      <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 lg:col-span-2">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("admin.lecture_editor")}</h2>
         {!activeLecture ? (
-          <p className="mt-3 text-sm text-slate-600">Select a lecture from the left panel to edit.</p>
+          <p className="mt-3 text-sm text-slate-600 dark:text-slate-400">{t("admin.select_lecture_prompt")}</p>
         ) : (
           <div className="mt-4 space-y-4">
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Title</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.title")}</span>
               <input
                 value={activeLecture.title}
                 onChange={(event) => patchActiveLecture({ title: event.target.value })}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               />
             </label>
 
             <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">Description</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.description")}</span>
               <textarea
                 value={activeLecture.description ?? ""}
                 onChange={(event) => patchActiveLecture({ description: event.target.value })}
                 rows={3}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
               />
             </label>
 
             <div>
-              <span className="mb-1 block text-sm font-medium text-slate-700">Type</span>
+              <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.type")}</span>
               <div className="flex flex-wrap gap-2">
                 {["VIDEO", "PDF", "TEXT", "QUIZ"].map((type) => (
                   <button
@@ -885,29 +907,31 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                     onClick={() => patchActiveLecture({ type })}
                     className={`rounded-full px-3 py-1 text-xs font-medium ${
                       (activeLecture.type ?? "VIDEO") === type
-                        ? "bg-slate-900 text-white"
-                        : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900"
+                        : "border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     }`}
                   >
-                    {type}
+                    {t(`admin.type.${type.toLowerCase()}`)}
                   </button>
                 ))}
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input
                 type="checkbox"
                 checked={Boolean(activeLecture.preview ?? activeLecture.isPreview)}
                 onChange={(event) => patchActiveLecture({ preview: event.target.checked, isPreview: event.target.checked })}
               />
-              Free Preview
+              {t("admin.free_preview")}
             </label>
 
             {(activeLecture.type ?? "VIDEO") === "VIDEO" || (activeLecture.type ?? "VIDEO") === "PDF" ? (
-              <div className="rounded-lg border border-dashed border-slate-300 p-4">
-                <p className="text-sm text-slate-700">
-                  Upload {activeLecture.type === "PDF" ? ".pdf" : ".mp4"} file
+              <div className="rounded-lg border border-dashed border-slate-300 p-4 dark:border-slate-700">
+                <p className="text-sm text-slate-700 dark:text-slate-300">
+                  {formatTranslation(t("admin.upload_file"), {
+                    ext: activeLecture.type === "PDF" ? ".pdf" : ".mp4",
+                  })}
                 </p>
                 <input
                   type="file"
@@ -921,7 +945,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                 />
                 {uploadMap[String(activeLecture.id)]?.isUploading ? (
                   <div className="mt-2">
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                       <div
                         className="h-full bg-blue-600"
                         style={{ width: `${uploadMap[String(activeLecture.id)]?.progress ?? 0}%` }}
@@ -930,7 +954,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                   </div>
                 ) : null}
                 {activeLecture.contentUrl ? (
-                  <p className="mt-2 text-xs text-slate-600">Uploaded: {activeLecture.contentUrl}</p>
+                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{t("admin.uploaded")}: {activeLecture.contentUrl}</p>
                 ) : null}
                 {activeLecture.thumbnailUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -962,24 +986,24 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
 
             {(activeLecture.type ?? "VIDEO") === "TEXT" ? (
               <div className="block">
-                <span className="mb-1 block text-sm font-medium text-slate-700">Enter the Article</span>
+                <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.enter_article")}</span>
                 <RichTextEditor
                   value={activeLecture.contentHtml ?? activeLecture.content ?? ""}
-                  placeholder="Write the lesson content here..."
+                  placeholder={t("admin.article_placeholder")}
                   onChange={(value) => patchActiveLecture({ contentHtml: value, content: value })}
                 />
               </div>
             ) : null}
 
             {(activeLecture.type ?? "VIDEO") === "QUIZ" ? (
-              <div className="space-y-4 rounded-lg border border-slate-200 p-4">
-                <h3 className="text-sm font-semibold text-slate-900">Quiz Builder</h3>
+              <div className="space-y-4 rounded-lg border border-slate-200 p-4 dark:border-slate-800">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("admin.quiz_builder")}</h3>
 
-                <div className="space-y-3 rounded border border-slate-200 p-3">
-                  <p className="text-xs font-semibold text-slate-700">Section A - Quiz Settings</p>
+                <div className="space-y-3 rounded border border-slate-200 p-3 dark:border-slate-800">
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t("admin.quiz_section_settings")}</p>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-slate-600">Passing Score (%)</span>
+                      <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{t("admin.passing_score_percent")}</span>
                       <input
                         type="number"
                         min={1}
@@ -988,11 +1012,11 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                         onChange={(event) =>
                           setQuizConfig((prev) => ({ ...prev, passingScore: Number(event.target.value) }))
                         }
-                        className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                       />
                     </label>
                     <label className="block">
-                      <span className="mb-1 block text-xs font-medium text-slate-600">Maximum Attempts</span>
+                      <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{t("admin.maximum_attempts")}</span>
                       <input
                         type="number"
                         min={1}
@@ -1001,7 +1025,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                         onChange={(event) =>
                           setQuizConfig((prev) => ({ ...prev, maxAttempts: Number(event.target.value) }))
                         }
-                        className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                        className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                       />
                     </label>
                   </div>
@@ -1009,26 +1033,26 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                     type="button"
                     onClick={() => void handleSaveQuizSettings()}
                     disabled={quizSaving}
-                    className="rounded bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+                    className="rounded bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                   >
-                    {quizSaving ? "Saving..." : "Save Settings"}
+                    {quizSaving ? t("admin.saving") : t("admin.save_settings")}
                   </button>
                 </div>
 
                 {assessmentId ? (
                   <>
-                    <div className="space-y-3 rounded border border-slate-200 p-3">
-                      <p className="text-xs font-semibold text-slate-700">Section B - Add Question</p>
+                    <div className="space-y-3 rounded border border-slate-200 p-3 dark:border-slate-800">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t("admin.quiz_section_add_question")}</p>
                       <label className="block">
-                        <span className="mb-1 block text-xs font-medium text-slate-600">Question Text</span>
+                        <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{t("admin.question_text")}</span>
                         <textarea
                           rows={3}
-                          placeholder="Enter your question here..."
+                          placeholder={t("admin.question_placeholder")}
                           value={newQuestion.questionText}
                           onChange={(event) =>
                             setNewQuestion((prev) => ({ ...prev, questionText: event.target.value }))
                           }
-                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                          className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                         />
                       </label>
 
@@ -1046,7 +1070,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                           className={`rounded px-3 py-1 text-xs font-medium ${
                             newQuestion.questionType === "MCQ"
                               ? "bg-blue-600 text-white"
-                              : "border border-slate-300 text-slate-700"
+                              : "border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200"
                           }`}
                         >
                           MCQ
@@ -1063,10 +1087,10 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                           className={`rounded px-3 py-1 text-xs font-medium ${
                             newQuestion.questionType === "TRUE_FALSE"
                               ? "bg-blue-600 text-white"
-                              : "border border-slate-300 text-slate-700"
+                              : "border border-slate-300 text-slate-700 dark:border-slate-700 dark:text-slate-200"
                           }`}
                         >
-                          TRUE / FALSE
+                          {t("admin.true_false")}
                         </button>
                       </div>
 
@@ -1074,9 +1098,10 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                         <div className="space-y-2">
                           {newQuestion.options.map((option, index) => (
                             <div key={`option-${index}`} className="flex items-center gap-2">
-                              <span className="w-16 text-xs font-medium text-slate-600">{`Option ${
-                                ["A", "B", "C", "D"][index]
-                              }:`}</span>
+                              <span className="w-16 text-xs font-medium text-slate-600 dark:text-slate-400">{`${formatTranslation(
+                                t("admin.option_label"),
+                                { label: ["A", "B", "C", "D"][index] }
+                              )}:`}</span>
                               <input
                                 value={option}
                                 onChange={(event) =>
@@ -1092,7 +1117,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                                     };
                                   })
                                 }
-                                className="flex-1 rounded border border-slate-300 px-2 py-1 text-sm"
+                                className="flex-1 rounded border border-slate-300 bg-white px-2 py-1 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                               />
                               <input
                                 type="radio"
@@ -1114,35 +1139,35 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                             <input
                               type="radio"
                               name="tf-correct-answer"
-                              checked={newQuestion.correctAnswer === "True"}
+                              checked={newQuestion.correctAnswer === t("admin.true")}
                               onChange={() =>
                                 setNewQuestion((prev) => ({
                                   ...prev,
-                                  correctAnswer: "True",
+                                  correctAnswer: t("admin.true"),
                                 }))
                               }
                             />
-                            True
+                            {t("admin.true")}
                           </label>
                           <label className="flex items-center gap-1">
                             <input
                               type="radio"
                               name="tf-correct-answer"
-                              checked={newQuestion.correctAnswer === "False"}
+                              checked={newQuestion.correctAnswer === t("admin.false")}
                               onChange={() =>
                                 setNewQuestion((prev) => ({
                                   ...prev,
-                                  correctAnswer: "False",
+                                  correctAnswer: t("admin.false"),
                                 }))
                               }
                             />
-                            False
+                            {t("admin.false")}
                           </label>
                         </div>
                       )}
 
                       <label className="block">
-                        <span className="mb-1 block text-xs font-medium text-slate-600">Points</span>
+                        <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{t("admin.points")}</span>
                         <input
                           type="number"
                           min={1}
@@ -1153,15 +1178,15 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                               points: Number(event.target.value),
                             }))
                           }
-                          className="w-24 rounded border border-slate-300 px-2 py-1.5 text-sm"
+                          className="w-24 rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                         />
                       </label>
 
                       <label className="block">
-                        <span className="mb-1 block text-xs font-medium text-slate-600">Explanation (optional)</span>
+                        <span className="mb-1 block text-xs font-medium text-slate-600 dark:text-slate-400">{t("admin.explanation_optional")}</span>
                         <textarea
                           rows={2}
-                          placeholder="Explain why this is the correct answer..."
+                          placeholder={t("admin.explanation_placeholder")}
                           value={newQuestion.explanation ?? ""}
                           onChange={(event) =>
                             setNewQuestion((prev) => ({
@@ -1169,7 +1194,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                               explanation: event.target.value,
                             }))
                           }
-                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                          className="w-full rounded border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                         />
                       </label>
 
@@ -1177,44 +1202,44 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                         type="button"
                         onClick={() => void handleAddQuestion()}
                         disabled={questionSaving}
-                        className="rounded border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                        className="rounded border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                       >
-                        {questionSaving ? "Adding..." : "Add Question"}
+                        {questionSaving ? t("admin.adding") : t("admin.add_question")}
                       </button>
                     </div>
 
-                    <div className="space-y-3 rounded border border-slate-200 p-3">
-                      <p className="text-xs font-semibold text-slate-700">Section C - Questions List</p>
-                      <p className="text-xs text-slate-600">{questions.length} questions added</p>
+                    <div className="space-y-3 rounded border border-slate-200 p-3 dark:border-slate-800">
+                      <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t("admin.questions_list")}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{formatTranslation(t("admin.questions_added"), { count: questions.length })}</p>
                       {questions.length === 0 ? (
-                        <p className="text-xs text-amber-700">⚠ Add at least 1 question before publishing</p>
+                        <p className="text-xs text-amber-700">{t("admin.question_required_before_publish")}</p>
                       ) : (
-                        <ol className="space-y-2 text-sm text-slate-700">
+                        <ol className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
                           {questions.map((question, index) => (
-                            <li key={question.id} className="rounded border border-slate-200 p-2">
+                            <li key={question.id} className="rounded border border-slate-200 p-2 dark:border-slate-800">
                               <p className="font-medium">
                                 {index + 1}. {question.questionText}
                               </p>
-                              <p className="text-xs text-slate-600">
-                                Type: {question.questionType} | Points: {question.points}
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
+                                {t("admin.type")}: {question.questionType} | {t("admin.points")}: {question.points}
                               </p>
-                              <p className="text-xs text-slate-600">
-                                Options:{" "}
+                              <p className="text-xs text-slate-600 dark:text-slate-400">
+                                {t("admin.options")}:{" "}
                                 {question.options.map((option, optionIndex) => {
                                   const label = ["A", "B", "C", "D"][optionIndex] ?? `${optionIndex + 1}`;
                                   return `${label}) ${option}`;
                                 }).join(" | ")}
                               </p>
-                              <p className="text-xs text-slate-600">Correct: {question.correctAnswer} ✅</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400">{t("admin.correct")}: {question.correctAnswer}</p>
                               {question.explanation ? (
-                                <p className="text-xs text-slate-600">Explanation: {question.explanation}</p>
+                                <p className="text-xs text-slate-600 dark:text-slate-400">{t("admin.explanation")}: {question.explanation}</p>
                               ) : null}
                               <button
                                 type="button"
                                 onClick={() => void handleDeleteQuestion(question.id)}
                                 className="mt-1 text-xs text-rose-600 hover:underline"
                               >
-                                Delete
+                                {t("admin.delete")}
                               </button>
                             </li>
                           ))}
@@ -1232,9 +1257,9 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
               type="button"
               onClick={() => void handleSaveLecture()}
               disabled={savingLecture}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
             >
-              {savingLecture ? "Saving..." : "Save Lecture"}
+              {savingLecture ? t("admin.saving") : t("admin.save_lecture")}
             </button>
           </div>
         )}

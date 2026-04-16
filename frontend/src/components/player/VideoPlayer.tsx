@@ -10,6 +10,8 @@ import {
     useState,
 } from 'react'
 
+import { useProtectedMediaUrl } from '@/hooks/useProtectedMediaUrl'
+
 export interface VideoPlayerHandle {
     getCurrentTime: () => number
     getDuration: () => number
@@ -64,6 +66,11 @@ const VideoPlayer = forwardRef<
         useState(false)
     const [pctWatched, setPctWatched] =
         useState(0)
+    const {
+        resolvedUrl,
+        isLoading,
+        error,
+    } = useProtectedMediaUrl(src)
 
     useEffect(() => {
         onProgressRef.current = onProgress
@@ -153,17 +160,17 @@ const VideoPlayer = forwardRef<
     useEffect(() => {
         const video = videoRef.current
         if (!video) return
-        if (!src) return
+        if (!resolvedUrl) return
 
-        if (src !== srcRef.current) {
+        if (resolvedUrl !== srcRef.current) {
             hasResumedRef.current = false
-            srcRef.current = src
+            srcRef.current = resolvedUrl
         }
 
         setShowComplete(false)
         setPctWatched(0)
 
-        video.src = src
+        video.src = resolvedUrl
         video.load()
 
         const handleLoadedMetadata = () => {
@@ -209,7 +216,7 @@ const VideoPlayer = forwardRef<
             stopInterval()
             console.warn(
                 'Video load error for src:',
-                src
+                resolvedUrl
             )
         }
 
@@ -259,12 +266,42 @@ const VideoPlayer = forwardRef<
             video.load()
         }
     }, [
-        src,
+        resolvedUrl,
         autoPlay,
         startInterval,
         stopInterval,
         updateProgressState,
     ])
+
+    if (!src) {
+        return null
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex aspect-video
+                w-full items-center
+                justify-center bg-black">
+                <div className="h-8 w-8
+                    animate-spin rounded-full
+                    border-2 border-blue-500
+                    border-t-transparent" />
+            </div>
+        )
+    }
+
+    if (error || !resolvedUrl) {
+        return (
+            <div className="flex aspect-video
+                w-full flex-col items-center
+                justify-center gap-3 bg-black
+                px-6 text-center">
+                <p className="text-sm text-red-400">
+                    Could not load this video.
+                </p>
+            </div>
+        )
+    }
 
     return (
         <div className="relative w-full
