@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import HelpButton from "@/components/help/HelpButton";
 import EmptyState from "@/components/ui/EmptyState";
 import { useToast } from "@/components/ui/Toast";
+import { useLanguage } from "@/context/LanguageContext";
 import { learnerApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
 import type { CertificateDto } from "@/lib/types";
@@ -13,6 +14,7 @@ import type { CertificateDto } from "@/lib/types";
 export default function CertificatesPage() {
   const router = useRouter();
   const { success, error: showError } = useToast();
+  const { t, isAmharic, language } = useLanguage();
   const [certificates, setCertificates] = useState<CertificateDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,7 +23,7 @@ export default function CertificatesPage() {
     learnerApi
       .getMyCertificates()
       .then((res) => setCertificates(res.data))
-      .catch((error) => setError(getErrorMessage(error) || "Could not load certificates. Please refresh."))
+      .catch((responseError) => setError(getErrorMessage(responseError) || "Could not load certificates. Please refresh."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -36,8 +38,8 @@ export default function CertificatesPage() {
       link.click();
       URL.revokeObjectURL(url);
       success("Certificate download started.");
-    } catch (error) {
-      showError(getErrorMessage(error));
+    } catch (responseError) {
+      showError(getErrorMessage(responseError));
     }
   };
 
@@ -45,16 +47,16 @@ export default function CertificatesPage() {
     try {
       await learnerApi.shareCertificate(cert.id);
       success("Certificate link sent to your email!");
-    } catch (error) {
-      showError(getErrorMessage(error));
+    } catch (responseError) {
+      showError(getErrorMessage(responseError));
     }
   };
 
   return (
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">My Certificates</h1>
-        <p className="mt-1 text-sm text-gray-500">Download or share your earned certificates</p>
+        <h1 className={`text-2xl font-bold text-gray-900 dark:text-white ${isAmharic ? "ethiopic-text" : ""}`}>{t("certs.title")}</h1>
+        <p className={`mt-1 text-sm text-gray-500 dark:text-gray-400 ${isAmharic ? "ethiopic-text" : ""}`}>{t("certs.subtitle")}</p>
       </div>
 
       {error && <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
@@ -68,14 +70,14 @@ export default function CertificatesPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="space-y-3 rounded-xl border border-gray-200 bg-white p-5">
+              <div key={item} className="space-y-3 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
                 <div className="flex items-center gap-2">
                   <div className="h-8 w-8 animate-pulse rounded bg-gray-200" />
                   <div className="h-4 flex-1 animate-pulse rounded bg-gray-200" />
                 </div>
                 <div className="h-3 w-32 animate-pulse rounded bg-gray-100" />
                 <div className="h-3 w-40 animate-pulse rounded bg-gray-100" />
-                <div className="flex justify-between border-t pt-3">
+                <div className="flex justify-between border-t pt-3 dark:border-gray-700">
                   <div className="h-8 w-20 animate-pulse rounded-lg bg-gray-200" />
                   <div className="h-8 w-24 animate-pulse rounded-lg bg-gray-200" />
                 </div>
@@ -86,10 +88,10 @@ export default function CertificatesPage() {
       ) : certificates.length === 0 ? (
         <EmptyState
           icon="🏆"
-          title="No certificates yet"
-          description="Complete a course and pass the final quiz to earn your certificate."
+          title={t("certs.none_title")}
+          description={t("certs.none_desc")}
           action={{
-            label: "Browse Courses",
+            label: t("dashboard.browse_courses"),
             onClick: () => router.push("/courses"),
           }}
         />
@@ -98,19 +100,21 @@ export default function CertificatesPage() {
           {certificates.map((cert) => (
             <div
               key={cert.id}
-              className="flex min-h-[11rem] flex-col justify-between rounded-xl border border-gray-200 bg-white p-5"
+              className="flex min-h-[11rem] flex-col justify-between rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-900"
             >
               <div>
                 <div className="mb-2 flex items-center gap-2">
                   <span className="text-2xl">Award</span>
-                  <h3 className="line-clamp-2 text-sm font-semibold text-gray-900">{cert.courseTitle}</h3>
+                  <h3 className={`line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white ${isAmharic ? "ethiopic-text" : ""}`}>
+                    {cert.courseTitle}
+                  </h3>
                 </div>
-                <p className="w-fit rounded bg-gray-50 px-2 py-1 font-mono text-xs text-gray-500">
+                <p className="w-fit rounded bg-gray-50 px-2 py-1 font-mono text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                   {cert.certificateCode}
                 </p>
-                <p className="mt-1 text-xs text-gray-400">
-                  Issued:{" "}
-                  {new Date(cert.issuedAt).toLocaleDateString("en-US", {
+                <p className={`mt-1 text-xs text-gray-400 dark:text-gray-500 ${isAmharic ? "ethiopic-text" : ""}`}>
+                  {t("certs.issued")}:{" "}
+                  {new Date(cert.issuedAt).toLocaleDateString(language === "am" ? "am-ET" : "en-US", {
                     year: "numeric",
                     month: "long",
                     day: "numeric",
@@ -118,33 +122,27 @@ export default function CertificatesPage() {
                 </p>
               </div>
 
-              <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+              <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4 dark:border-gray-700">
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
                     onClick={() => handleShare(cert)}
                     className="flex items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
                   >
-                    Link
+                    <span className={isAmharic ? "ethiopic-text" : undefined}>{t("certs.share")}</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => {
                       const verifyPath = cert.verifyUrl
-                        ? new URL(
-                            cert.verifyUrl,
-                            window.location.origin,
-                          ).pathname
-                        : `/verify/${
-                            cert.verificationUuid ||
-                            cert.certificateCode
-                          }`;
+                        ? new URL(cert.verifyUrl, window.location.origin).pathname
+                        : `/verify/${cert.verificationUuid || cert.certificateCode}`;
                       window.open(verifyPath, "_blank");
                     }}
-                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
+                    className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                   >
-                    Verify
+                    <span className={isAmharic ? "ethiopic-text" : undefined}>{t("certs.verify")}</span>
                   </button>
                 </div>
 
@@ -153,7 +151,7 @@ export default function CertificatesPage() {
                   onClick={() => handleDownload(cert)}
                   className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-blue-700"
                 >
-                  Download
+                  <span className={isAmharic ? "ethiopic-text" : undefined}>{t("certs.download")}</span>
                 </button>
               </div>
             </div>

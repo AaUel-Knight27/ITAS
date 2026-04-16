@@ -3,6 +3,7 @@
 import confetti from "canvas-confetti";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useLanguage } from "@/context/LanguageContext";
 import api from "@/lib/api";
 
 interface Question {
@@ -114,12 +115,14 @@ function FeedbackBanner({
   explanation,
   onNext,
   isLast,
+  t,
 }: {
   correct: boolean;
   correctAnswer: string;
   explanation?: string;
   onNext: () => void;
   isLast: boolean;
+  t: (key: string) => string;
 }) {
   return (
     <div
@@ -129,7 +132,7 @@ function FeedbackBanner({
     >
       <div className="mb-2 flex items-center gap-2">
         <span className={`text-sm font-semibold ${correct ? "text-green-400" : "text-red-400"}`}>
-          {correct ? "Correct" : "Incorrect"}
+          {correct ? t("quiz.correct") : t("quiz.incorrect")}
         </span>
       </div>
 
@@ -149,7 +152,7 @@ function FeedbackBanner({
         onClick={onNext}
         className="mt-3 w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
       >
-        {isLast ? "See Results" : "Next Question"}
+        {isLast ? "See Results" : t("quiz.next_question")}
       </button>
     </div>
   );
@@ -161,12 +164,14 @@ function ResultScreen({
   onRetryWrong,
   onReview,
   onComplete,
+  t,
 }: {
   result: AttemptResult;
   onRetryAll: () => void;
   onRetryWrong: () => void;
   onReview: () => void;
   onComplete: () => void;
+  t: (key: string) => string;
 }) {
   const wrongCount = result.incorrectAnswers || 0;
 
@@ -192,14 +197,14 @@ function ResultScreen({
           }`}
         >
           <h2 className={`mb-1 text-2xl font-bold ${result.passed ? "text-green-400" : "text-red-400"}`}>
-            {result.passed ? "You Passed" : "Not Yet"}
+            {result.passed ? t("quiz.passed") : t("quiz.failed")}
           </h2>
 
           <div className="my-4">
             <div className={`text-5xl font-bold ${result.passed ? "text-green-400" : "text-red-400"}`}>
               {Math.round(result.score)}%
             </div>
-            <p className="mt-1 text-xs text-gray-500">Passing score: {result.passingScore}%</p>
+            <p className="mt-1 text-xs text-gray-500">{t("quiz.passing_score")}: {result.passingScore}%</p>
           </div>
 
           <div className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-gray-900/50 p-4">
@@ -233,7 +238,7 @@ function ResultScreen({
               onClick={onComplete}
               className="w-full rounded-xl bg-green-600 py-3 font-semibold text-white transition-colors hover:bg-green-700"
             >
-              Continue Learning
+              {t("quiz.continue_learning")}
             </button>
           ) : null}
 
@@ -242,7 +247,7 @@ function ResultScreen({
             onClick={onReview}
             className="w-full rounded-xl border border-gray-700 py-2.5 text-sm text-gray-300 transition-colors hover:bg-gray-800"
           >
-            Review Answers
+            {t("quiz.review")}
           </button>
 
           {!result.passed && result.attemptsRemaining > 0 && wrongCount > 0 ? (
@@ -251,7 +256,7 @@ function ResultScreen({
               onClick={onRetryWrong}
               className="w-full rounded-xl bg-orange-600 py-2.5 text-sm font-medium text-white transition-colors hover:bg-orange-700"
             >
-              Retry Wrong Questions Only ({wrongCount})
+              {t("quiz.retry_wrong")} ({wrongCount})
             </button>
           ) : null}
 
@@ -261,7 +266,7 @@ function ResultScreen({
               onClick={onRetryAll}
               className="w-full rounded-xl border border-gray-600 py-2.5 text-sm text-gray-400 transition-colors hover:bg-gray-800"
             >
-              Retry All Questions
+              {t("quiz.retry_all")}
             </button>
           ) : null}
         </div>
@@ -351,6 +356,7 @@ function ReviewScreen({
 }
 
 const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }: Props) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<QuizMode>("loading");
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [activeQuestions, setActiveQuestions] = useState<Question[]>([]);
@@ -579,6 +585,7 @@ const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }:
         onRetryWrong={handleRetryWrong}
         onReview={() => setMode("review")}
         onComplete={() => onComplete?.()}
+        t={t}
       />
     );
   }
@@ -694,6 +701,7 @@ const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }:
               explanation={feedbackQuestion.explanation}
               onNext={handleNext}
               isLast={currentIndex >= totalQuestions - 1}
+              t={t}
             />
           ) : null}
 
@@ -705,7 +713,7 @@ const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }:
                 disabled={!selectedAnswer || submitting}
                 className="rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting ? "Submitting..." : "Check Answer"}
+                {submitting ? "Submitting..." : t("quiz.check_answer")}
               </button>
             </div>
           ) : null}

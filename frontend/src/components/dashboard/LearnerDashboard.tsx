@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { BookOpen, Award, TrendingUp, Clock, ArrowRight, Play } from "lucide-react";
 
 import ProgressBar from "@/components/course/ProgressBar";
+import { useLanguage } from "@/context/LanguageContext";
 import { getCourseLearnHref } from "@/lib/learn";
 import { useCertificateStore, useEnrollmentStore } from "@/lib/store";
 import { getFileUrl } from "@/lib/utils";
@@ -56,6 +57,7 @@ function StatCard({
 }
 
 export default function LearnerDashboard({ showCertificates, isTaxpayer }: LearnerDashboardProps) {
+  const { t, isAmharic } = useLanguage();
   const { enrollments, isLoading: enrollmentsLoading, error: enrollmentsError, fetchMyEnrollments } = useEnrollmentStore();
   const { certificates, isLoading: certsLoading, fetchCertificates } = useCertificateStore();
 
@@ -117,9 +119,11 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Learning Dashboard</h1>
-            <p className="mt-1 text-muted-foreground">
-              Track your progress and continue your learning journey.
+            <h1 className={`text-2xl font-bold tracking-tight text-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+              {t("dashboard.title")}
+            </h1>
+            <p className={`mt-1 text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+              {t("dashboard.subtitle")}
             </p>
           </div>
           <Link
@@ -127,26 +131,26 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             <BookOpen className="h-4 w-4" />
-            Browse Courses
+            <span className={isAmharic ? "ethiopic-text" : undefined}>{t("dashboard.browse_courses")}</span>
           </Link>
         </div>
 
         {/* Stats Grid */}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <StatCard
-            label="Total Enrollments"
+            label={t("dashboard.total_enrollments")}
             value={enrollments.length}
             icon={<BookOpen className="h-5 w-5" />}
             color="primary"
           />
           <StatCard
-            label="In Progress"
+            label={t("dashboard.in_progress")}
             value={activeCount}
             icon={<Clock className="h-5 w-5" />}
             color="warning"
           />
           <StatCard
-            label="Completed"
+            label={t("dashboard.completed")}
             value={completedCount}
             icon={<Award className="h-5 w-5" />}
             trend={completedCount > 0 ? "Great progress!" : undefined}
@@ -171,14 +175,17 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
                       <Award className="h-6 w-6" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-card-foreground">My Certificates</h2>
-                      <p className="mt-0.5 text-sm text-muted-foreground">
-                        You have earned <span className="font-semibold text-success">{certificates.length}</span> certificate{certificates.length !== 1 ? "s" : ""}
+                      <h2 className={`text-lg font-semibold text-card-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+                        {t("dashboard.my_certificates")}
+                      </h2>
+                      <p className={`mt-0.5 text-sm text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+                        <span className="font-semibold text-success">{certificates.length}</span>{" "}
+                        {certificates.length === 1 ? t("dashboard.certificates_earned") : t("dashboard.certificates_earned_plural")}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-card-foreground transition-colors group-hover:border-primary group-hover:text-primary">
-                    View All
+                    <span className={isAmharic ? "ethiopic-text" : undefined}>{t("dashboard.view_all")}</span>
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                   </div>
                 </div>
@@ -191,8 +198,12 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
                   <Award className="h-6 w-6" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-card-foreground">Certificates</h2>
-                  <p className="mt-0.5 text-sm text-muted-foreground">Certificates will appear here once available.</p>
+                  <h2 className={`text-lg font-semibold text-card-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+                    {t("dashboard.certificates_placeholder_title")}
+                  </h2>
+                  <p className={`mt-0.5 text-sm text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
+                    {t("dashboard.certificates_placeholder_desc")}
+                  </p>
                 </div>
               </div>
             </article>
@@ -202,8 +213,8 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
         {/* Enrolled Courses */}
         <section>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Your Courses</h2>
-            <span className="text-sm text-muted-foreground">{enrollments.length} enrolled</span>
+            <h2 className={`text-lg font-semibold text-foreground ${isAmharic ? "ethiopic-text" : ""}`}>{t("dashboard.your_courses")}</h2>
+            <span className={`text-sm text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>{enrollments.length} {t("dashboard.enrolled")}</span>
           </div>
 
           {enrollments.length === 0 ? (
@@ -211,15 +222,15 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
               <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
                 <BookOpen className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold text-card-foreground">No enrollments yet</h3>
+              <h3 className={`text-lg font-semibold text-card-foreground ${isAmharic ? "ethiopic-text" : ""}`}>{t("dashboard.no_enrollments")}</h3>
               <p className="mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-                Start your learning journey by exploring our course catalog and enrolling in your first course.
+                {t("dashboard.subtitle")}
               </p>
               <Link
                 href="/courses"
                 className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Explore Courses
+                <span className={isAmharic ? "ethiopic-text" : undefined}>{t("dashboard.explore_courses")}</span>
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </article>
@@ -259,7 +270,9 @@ export default function LearnerDashboard({ showCertificates, isTaxpayer }: Learn
                       className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-card-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                     >
                       <Play className="h-4 w-4" />
-                      {course.progressPercent > 0 ? "Continue" : "Start"}
+                      <span className={isAmharic ? "ethiopic-text" : undefined}>
+                        {course.progressPercent > 0 ? t("dashboard.continue") : t("dashboard.start")}
+                      </span>
                     </Link>
                   </div>
                 </article>

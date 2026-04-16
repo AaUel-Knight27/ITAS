@@ -76,7 +76,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen">
+    <main className="flex min-h-screen bg-slate-100 dark:bg-gray-950">
       {/* Left Panel - Branding */}
       <div className="hidden w-1/2 flex-col justify-between bg-primary p-12 lg:flex">
         <div className="flex items-center gap-3">
@@ -117,7 +117,7 @@ export default function LoginPage() {
       </div>
 
       {/* Right Panel - Login Form */}
-      <div className="flex w-full flex-col items-center justify-center px-6 py-12 lg:w-1/2">
+      <div className="flex w-full flex-col items-center justify-center bg-white px-6 py-12 dark:bg-gray-900 lg:w-1/2">
         <div className="w-full max-w-md space-y-8">
           {/* Mobile Logo */}
           <div className="flex items-center justify-center gap-3 lg:hidden">

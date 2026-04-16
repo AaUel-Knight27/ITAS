@@ -180,7 +180,7 @@ export default function CoursesPage() {
         </div>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((item) => (
-            <div key={item} className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+            <div key={item} className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
               <div className="h-40 animate-pulse bg-gray-200" />
               <div className="space-y-2 p-4">
                 <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />

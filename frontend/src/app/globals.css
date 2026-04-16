@@ -48,6 +48,50 @@
     
     --radius: 0.75rem;
   }
+
+  .dark {
+    --background: 222 47% 8%;
+    --foreground: 210 40% 96%;
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 221 83% 60%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 65%;
+
+    --accent: 217 33% 17%;
+    --accent-foreground: 210 40% 96%;
+
+    --destructive: 0 63% 55%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 210 40% 98%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 222 47% 8%;
+
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 221 83% 60%;
+
+    --sidebar: 222 47% 10%;
+    --sidebar-foreground: 210 40% 96%;
+    --sidebar-border: 217 33% 18%;
+    --sidebar-accent: 217 33% 15%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-primary: 221 83% 60%;
+    --sidebar-primary-foreground: 210 40% 98%;
+  }
 }
 
 @layer base {
@@ -251,4 +295,35 @@
 
 .itas-rich-editor .ProseMirror:focus {
   outline: none;
+}
+
+/* Smooth theme switching */
+*,
+*::before,
+*::after {
+  transition-property: background-color, border-color, color;
+  transition-duration: 150ms;
+  transition-timing-function: ease;
+}
+
+/* Exception: never animate transforms or layout properties */
+.no-transition,
+.no-transition *,
+button,
+a,
+input,
+select,
+textarea {
+  transition-property: background-color, border-color, color, opacity, box-shadow;
+}
+
+/* Amharic font class */
+.font-ethiopic {
+  font-family: "Noto Sans Ethiopic", sans-serif;
+}
+
+/* Apply Ethiopic font when language is Amharic */
+[data-lang="am"] .ethiopic-text {
+  font-family: "Noto Sans Ethiopic", sans-serif;
+  line-height: 1.8;
 }

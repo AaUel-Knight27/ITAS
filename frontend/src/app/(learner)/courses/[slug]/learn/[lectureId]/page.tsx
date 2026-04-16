@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable react/no-unescaped-entities */
 
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
@@ -76,6 +77,12 @@ const ArticleReader = dynamic(() => import("@/components/player/ArticleReader"),
 const QuizPlayer = dynamic(() => import("@/components/player/QuizPlayer"), {
   ssr: false,
   loading: () => <ContentSkeleton />,
+});
+const AiSummaryPanel = dynamic(() => import("@/components/ai/AiSummaryPanel"), {
+  ssr: false,
+});
+const CourseSearch = dynamic(() => import("@/components/ai/CourseSearch"), {
+  ssr: false,
 });
 
 type ProgressEntry = {
@@ -193,6 +200,20 @@ export default function LearnLecturePage() {
 
   const sections = useMemo(() => byOrder(course?.sections ?? []), [course?.sections]);
   const allLectures = useMemo(() => flattenLectures(sections), [sections]);
+  const allLecturesForSearch = useMemo(
+    () =>
+      (course?.sections ?? [])
+        .flatMap((section) =>
+          (section.lectures ?? []).map((lecture) => ({
+            id: Number(lecture.id),
+            title: lecture.title || "",
+            type: lecture.type || "VIDEO",
+            description: lecture.description || "",
+          }))
+        )
+        .filter((lecture) => Number.isFinite(lecture.id) && lecture.title.trim().length > 0),
+    [course]
+  );
 
   const activeLectureKey = String(activeLecture?.id ?? "");
   const currentProgress = activeLecture ? displayProgress[activeLectureKey] ?? progressMap[activeLectureKey] : undefined;
@@ -508,6 +529,13 @@ export default function LearnLecturePage() {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
       if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        const button = document.querySelector<HTMLElement>('[data-course-search="true"]');
+        button?.click();
         return;
       }
 
@@ -872,6 +900,24 @@ export default function LearnLecturePage() {
           </div>
         </div>
 
+        <div className="border-b border-gray-800 px-3 pb-2 pt-1">
+          <CourseSearch
+            courseTitle={course?.title || ""}
+            lectures={allLecturesForSearch}
+            onSelectLecture={(id) => {
+              const target = allLecturesForSearch.find((lecture) => lecture.id === id);
+              if (!target) {
+                return;
+              }
+
+              const lecture = getAllLecturesRef.current().find((entry) => Number(entry.id) === id);
+              if (lecture) {
+                selectLecture(lecture);
+              }
+            }}
+          />
+        </div>
+
         <div className="flex-1 overflow-y-auto py-2">
           {sections.map((section) => {
             const sectionProgress = courseProgress?.sectionProgresses?.find(
@@ -1192,6 +1238,15 @@ export default function LearnLecturePage() {
 
           {lectureType === "VIDEO" && activeTab === "notes" ? (
             <div className="flex w-1/2 flex-col border-l border-gray-800 bg-gray-900">
+              <div className="shrink-0 border-b border-gray-800">
+                <AiSummaryPanel
+                  lectureId={Number(activeLecture.id)}
+                  lectureTitle={activeLecture.title}
+                  lectureType={activeLecture.type || "VIDEO"}
+                  description={activeLecture.description || ""}
+                  content={activeLecture.content || activeLecture.contentHtml || ""}
+                />
+              </div>
               <div className="flex shrink-0 items-center justify-between border-b border-gray-800 px-4 py-3">
                 <p className="text-sm font-medium text-white">📝 My Notes</p>
                 <div className="flex items-center gap-2">
