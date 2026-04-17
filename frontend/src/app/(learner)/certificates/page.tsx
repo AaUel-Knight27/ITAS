@@ -45,8 +45,9 @@ export default function CertificatesPage() {
 
   const handleShare = async (cert: CertificateDto) => {
     try {
-      await learnerApi.shareCertificate(cert.id);
-      success("Certificate link sent to your email!");
+      const res = await learnerApi.shareCertificate(cert.id);
+      const email = res.data?.email || "your email";
+      success(`✉️ Certificate link sent to ${email}`);
     } catch (responseError) {
       showError(getErrorMessage(responseError));
     }
@@ -126,10 +127,10 @@ export default function CertificatesPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleShare(cert)}
-                    className="flex items-center gap-1.5 rounded-lg border border-blue-200 px-3 py-2 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50"
+                    onClick={() => void handleShare(cert)}
+                    className="flex items-center gap-1.5 rounded-lg border border-blue-200 px-4 py-2 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
                   >
-                    <span className={isAmharic ? "ethiopic-text" : undefined}>{t("certs.share")}</span>
+                    <span className={isAmharic ? "ethiopic-text" : undefined}>✉️ Email Link</span>
                   </button>
 
                   <button
