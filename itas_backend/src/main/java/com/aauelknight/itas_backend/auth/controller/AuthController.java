@@ -15,6 +15,7 @@ import java.util.Map;
 import javax.crypto.SecretKey;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/auth")
@@ -41,16 +43,28 @@ public class AuthController {
     private final UserRepository userRepository;
     private final TokenBlacklistService tokenBlacklistService;
     private final SecretKey signingKey;
+    private final boolean ssoEnabled;
+    private final String ssoProviderUrl;
+    private final String ssoClientId;
+    private final String ssoCallbackUrl;
 
     public AuthController(AuthenticationManager authenticationManager,  
                           JwtUtil jwtUtil,
                           UserRepository userRepository,
-                          TokenBlacklistService tokenBlacklistService) {
+                          TokenBlacklistService tokenBlacklistService,
+                          @Value("${app.sso.enabled:false}") boolean ssoEnabled,
+                          @Value("${app.sso.provider-url:https://sso.itas.gov.et/auth}") String ssoProviderUrl,
+                          @Value("${app.sso.client-id:itas-portal}") String ssoClientId,
+                          @Value("${app.sso.callback-url:http://localhost:3000/auth/sso/callback}") String ssoCallbackUrl) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.tokenBlacklistService = tokenBlacklistService;
         this.signingKey = jwtUtil.getSigningKey();
+        this.ssoEnabled = ssoEnabled;
+        this.ssoProviderUrl = ssoProviderUrl;
+        this.ssoClientId = ssoClientId;
+        this.ssoCallbackUrl = ssoCallbackUrl;
     }
 
     @PostMapping("/login")
@@ -132,6 +146,28 @@ public class AuthController {
         payload.put("updatedAt", user.getUpdatedAt());
 
         return ResponseEntity.ok(payload);
+    }
+
+    @GetMapping("/sso/config")
+    public ResponseEntity<Map<String, Object>> getSsoConfig() {
+        return ResponseEntity.ok(Map.of(
+                "enabled", ssoEnabled,
+                "providerUrl", ssoProviderUrl,
+                "clientId", ssoClientId,
+                "callbackUrl", ssoCallbackUrl));
+    }
+
+    @PostMapping("/sso/callback")
+    public ResponseEntity<JwtResponse> ssoCallback(@RequestBody Map<String, String> body) {
+        if (!ssoEnabled) {
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "SSO is not configured for this environment");
+        }
+
+        throw new ResponseStatusException(
+                HttpStatus.NOT_IMPLEMENTED,
+                "SSO callback not implemented for this provider");
     }
 }
 

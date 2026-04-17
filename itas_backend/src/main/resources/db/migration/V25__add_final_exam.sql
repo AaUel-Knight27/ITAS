@@ -1,0 +1,5 @@
+ALTER TABLE assessments
+    ADD COLUMN IF NOT EXISTS is_final_exam BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE assessments
+    ALTER COLUMN section_id DROP NOT NULL;

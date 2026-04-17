@@ -4,7 +4,7 @@ import axios from "axios";
 import { Camera, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { useLanguage } from "@/context/LanguageContext";
-import { updateCourse, getCourseCategories, uploadCourseThumbnail } from "@/lib/api/admin-courses";
+import { updateCourse, getCourseCategories, saveCourseThumbnailUrl, uploadCourseThumbnail } from "@/lib/api/admin-courses";
 import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { getErrorMessage } from "@/lib/errors";
 import { createSlugCandidate, normalizeSlugInput } from "@/lib/slug";
@@ -40,6 +40,8 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState(course.thumbnailUrl ?? "");
   const [thumbnailError, setThumbnailError] = useState("");
+  const [thumbnailUrlMode, setThumbnailUrlMode] = useState(false);
+  const [thumbnailUrlInput, setThumbnailUrlInput] = useState(course.thumbnailUrl ?? "");
   const courseIdRef = useRef(course.id);
 
   useEffect(() => {
@@ -83,6 +85,8 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
     setTargetAudience(course.targetAudience ?? ["TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER"]);
     setThumbnailPreview(course.thumbnailUrl ?? "");
     setThumbnailFile(null);
+    setThumbnailUrlMode(false);
+    setThumbnailUrlInput(course.thumbnailUrl ?? "");
   }, [course.id]);
 
   function handleRegenerateSlug() {
@@ -106,6 +110,8 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
     const reader = new FileReader();
     reader.onload = (event) => setThumbnailPreview(String(event.target?.result ?? ""));
     reader.readAsDataURL(file);
+    setThumbnailUrlMode(false);
+    setThumbnailUrlInput("");
   }
 
   async function handleSaveSettings() {
@@ -129,7 +135,11 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
         categoryId: form.categoryId,
         difficulty: form.difficulty,
         targetAudience,
-        thumbnailUrl: course.thumbnailUrl || undefined,
+        thumbnailUrl: thumbnailUrlMode
+          ? thumbnailUrlInput.trim() || undefined
+          : !thumbnailFile && !thumbnailPreview
+            ? ""
+            : course.thumbnailUrl || undefined,
       });
 
       let nextCourse: Course = {
@@ -145,6 +155,11 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
 
       if (thumbnailFile) {
         const uploaded = await uploadCourseThumbnail(course.id, thumbnailFile);
+        if (uploaded.thumbnailUrl) {
+          nextCourse = { ...nextCourse, thumbnailUrl: uploaded.thumbnailUrl };
+        }
+      } else if (thumbnailUrlMode && thumbnailUrlInput.trim()) {
+        const uploaded = await saveCourseThumbnailUrl(course.id, thumbnailUrlInput.trim());
         if (uploaded.thumbnailUrl) {
           nextCourse = { ...nextCourse, thumbnailUrl: uploaded.thumbnailUrl };
         }
@@ -275,6 +290,34 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
 
         <div className="sm:col-span-2">
           <span className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-200">{t("admin.thumbnail")}</span>
+          <div className="mb-3 flex gap-2">
+            <button
+              type="button"
+              onClick={() => setThumbnailUrlMode(false)}
+              className={`rounded px-2 py-1 text-xs ${
+                !thumbnailUrlMode
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              }`}
+            >
+              Upload File
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setThumbnailUrlMode(true);
+                setThumbnailFile(null);
+                if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
+              }}
+              className={`rounded px-2 py-1 text-xs ${
+                thumbnailUrlMode
+                  ? "bg-blue-600 text-white"
+                  : "text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              }`}
+            >
+              Paste URL
+            </button>
+          </div>
           <input
             ref={thumbnailInputRef}
             type="file"
@@ -286,7 +329,19 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
             }}
             className="hidden"
           />
-          {!thumbnailPreview ? (
+          {thumbnailUrlMode ? (
+            <input
+              type="url"
+              value={thumbnailUrlInput}
+              onChange={(event) => {
+                setThumbnailUrlInput(event.target.value);
+                setThumbnailPreview(event.target.value.trim());
+                setThumbnailError("");
+              }}
+              placeholder="https://res.cloudinary.com/..."
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+            />
+          ) : !thumbnailPreview ? (
             <button
               type="button"
               onClick={() => thumbnailInputRef.current?.click()}
@@ -309,6 +364,7 @@ export default function CourseSettingsForm({ course, onCourseUpdated }: CourseSe
                 onClick={() => {
                   setThumbnailFile(null);
                   setThumbnailPreview("");
+                  setThumbnailUrlInput("");
                   setThumbnailError("");
                   if (thumbnailInputRef.current) thumbnailInputRef.current.value = "";
                 }}

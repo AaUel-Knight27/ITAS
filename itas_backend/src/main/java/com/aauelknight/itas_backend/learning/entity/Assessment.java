@@ -53,6 +53,9 @@ public class Assessment {
     @Column(name = "max_attempts", nullable = false)
     private Integer maxAttempts;
 
+    @Column(name = "is_final_exam", nullable = false)
+    private boolean isFinalExam;
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 

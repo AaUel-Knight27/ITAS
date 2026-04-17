@@ -54,6 +54,11 @@ spring:
 app:
   frontend-url: ${APP_FRONTEND_URL}
   upload-dir: ${APP_UPLOAD_DIR}
+  sso:
+    enabled: ${SSO_ENABLED:false}
+    provider-url: ${SSO_PROVIDER_URL:https://sso.itas.gov.et/auth}
+    client-id: ${SSO_CLIENT_ID:itas-portal}
+    callback-url: ${FRONTEND_URL:http://localhost:3000}/auth/sso/callback
 
   email:
     enabled: ${APP_EMAIL_ENABLED}
@@ -63,3 +68,10 @@ app:
   jwt:
     secret: ${APP_JWT_SECRET:${JWT_SECRET:U3ByaW5nQm9vdDNKYXZhMjVKd3RTZWNyZXRLZXlGb3JQb3J0YWxMbXNfU3VwZXJTZWN1cmVfMjAyNg==}}
     expiration-ms: ${APP_JWT_EXPIRATION_MS:${JWT_EXPIRATION_MS:86400000}}
+
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:your-cloud-name}
+  api-key: ${CLOUDINARY_API_KEY:your-api-key}
+  api-secret: ${CLOUDINARY_API_SECRET:your-api-secret}
+  enabled: ${CLOUDINARY_ENABLED:true}
+  folder: ${CLOUDINARY_FOLDER:itas-portal}

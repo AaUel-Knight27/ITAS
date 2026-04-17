@@ -8,6 +8,8 @@ import com.aauelknight.itas_backend.learning.dto.response.AssessmentQuestionDto;
 import com.aauelknight.itas_backend.learning.dto.request.QuestionRequest;
 import com.aauelknight.itas_backend.learning.dto.response.AssessmentResultDto;
 import com.aauelknight.itas_backend.learning.dto.response.CertificateDto;
+import com.aauelknight.itas_backend.courses.entity.Course;
+import com.aauelknight.itas_backend.courses.repository.CourseRepository;
 import com.aauelknight.itas_backend.learning.entity.Assessment;
 import com.aauelknight.itas_backend.learning.entity.AssessmentAttempt;
 import com.aauelknight.itas_backend.learning.entity.AssessmentQuestion;
@@ -18,6 +20,7 @@ import com.aauelknight.itas_backend.exception.ResourceNotFoundException;
 import com.aauelknight.itas_backend.learning.repository.AssessmentAttemptRepository;
 import com.aauelknight.itas_backend.learning.repository.AssessmentQuestionRepository;
 import com.aauelknight.itas_backend.learning.repository.AssessmentRepository;
+import com.aauelknight.itas_backend.learning.repository.CertificateRepository;
 import com.aauelknight.itas_backend.lecture.repository.LectureRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -27,12 +30,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
+@Slf4j
 public class AssessmentService {
 
     private final AssessmentRepository assessmentRepository;
@@ -40,6 +45,8 @@ public class AssessmentService {
     private final AssessmentAttemptRepository assessmentAttemptRepository;
     private final EnrollmentService enrollmentService;
     private final CertificateService certificateService;
+    private final CertificateRepository certificateRepository;
+    private final CourseRepository courseRepository;
     private final ObjectMapper objectMapper;
     private final LectureRepository lectureRepository;
 
@@ -48,6 +55,8 @@ public class AssessmentService {
                              AssessmentAttemptRepository assessmentAttemptRepository,
                              EnrollmentService enrollmentService,
                              CertificateService certificateService,
+                             CertificateRepository certificateRepository,
+                             CourseRepository courseRepository,
                              ObjectMapper objectMapper,
                              LectureRepository lectureRepository) {
         this.assessmentRepository = assessmentRepository;
@@ -55,12 +64,18 @@ public class AssessmentService {
         this.assessmentAttemptRepository = assessmentAttemptRepository;
         this.enrollmentService = enrollmentService;
         this.certificateService = certificateService;
+        this.certificateRepository = certificateRepository;
+        this.courseRepository = courseRepository;
         this.objectMapper = objectMapper;
         this.lectureRepository = lectureRepository;
     }
 
     @Transactional
     public AssessmentDto createAssessment(AssessmentCreateRequest request) {
+        validateCreateRequest(request);
+        if (request.getLectureId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "lectureId is required");
+        }
         Lecture lecture = lectureRepository.findById(request.getLectureId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Lecture not found"));
         if (lecture.getType() != LectureType.QUIZ) {
@@ -74,19 +89,28 @@ public class AssessmentService {
                 .title(request.getTitle())
                 .passingScore(request.getPassingScore())
                 .maxAttempts(request.getMaxAttempts())
+                .isFinalExam(false)
                 .build();
-        Assessment saved = assessmentRepository.save(assessment);
+        return toDto(assessmentRepository.save(assessment));
+    }
 
-        return AssessmentDto.builder()
-                .id(saved.getId())
-                .courseId(saved.getCourse().getId())
-                .sectionId(saved.getSection() != null ? saved.getSection().getId() : null)
-                .title(saved.getTitle())
-                .passingScore(saved.getPassingScore())
-                .maxAttempts(saved.getMaxAttempts())
-                .createdAt(saved.getCreatedAt())
-                .questions(List.of())
+    @Transactional
+    public AssessmentDto createAssessment(Long courseId, AssessmentCreateRequest request) {
+        validateCreateRequest(request);
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+
+        Assessment assessment = Assessment.builder()
+                .course(course)
+                .section(null)
+                .lecture(null)
+                .title(request.getTitle())
+                .passingScore(request.getPassingScore())
+                .maxAttempts(request.getMaxAttempts())
+                .isFinalExam(Boolean.TRUE.equals(request.getFinalExam()))
                 .build();
+
+        return toDto(assessmentRepository.save(assessment));
     }
 
     @Transactional
@@ -160,15 +184,14 @@ public class AssessmentService {
 
     @Transactional(readOnly = true)
     public AssessmentDto getByCourseId(Long courseId) {
-        List<Assessment> assessments = assessmentRepository.findByCourseId(courseId);
+        return getFinalExam(courseId);
+    }
 
-        if (assessments.isEmpty()) {
-            throw new ResourceNotFoundException("No assessment found for course: " + courseId);
-        }
-
-        return toDto(assessments.stream()
-                .max(Comparator.comparing(Assessment::getId))
-                .orElseThrow());
+    @Transactional(readOnly = true)
+    public AssessmentDto getFinalExam(Long courseId) {
+        Assessment assessment = assessmentRepository.findFirstByCourseIdAndIsFinalExamTrueOrderByCreatedAtDesc(courseId)
+                .orElseThrow(() -> new ResourceNotFoundException("No final assessment found for course: " + courseId));
+        return toDto(assessment);
     }
 
     @Transactional
@@ -235,9 +258,19 @@ public class AssessmentService {
         CertificateDto certificate = null;
         if (passed) {
             User user = enrollmentService.getUserById(userId);
-            enrollmentService.markComplete(userId, courseId);
-            if (user.isEligibleForCertificate()) {
-                certificate = certificateService.generate(userId, courseId);
+            if (assessment.isFinalExam()) {
+                enrollmentService.markComplete(userId, courseId);
+                if (user.isEligibleForCertificate()) {
+                    boolean exists = certificateRepository.findByUserIdAndCourseId(user.getId(), courseId).isPresent();
+                    if (!exists) {
+                        certificate = certificateService.generate(userId, courseId);
+                        log.info("Certificate auto-generated for user {} course {}", user.getId(), courseId);
+                    } else {
+                        certificate = certificateService.getByUserAndCourse(userId, courseId);
+                    }
+                }
+            } else {
+                certificate = certificateService.getByUserAndCourse(userId, courseId);
             }
         }
         return toResultDto(saved, assessment, questionResults, correctCount, attemptsRemaining, certificate);
@@ -293,6 +326,18 @@ public class AssessmentService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Assessment not found"));
     }
 
+    private void validateCreateRequest(AssessmentCreateRequest request) {
+        if (request.getTitle() == null || request.getTitle().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title is required");
+        }
+        if (request.getPassingScore() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "passingScore is required");
+        }
+        if (request.getMaxAttempts() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "maxAttempts is required");
+        }
+    }
+
     private AssessmentDto toDto(Assessment assessment) {
         List<AssessmentQuestion> questions = assessmentQuestionRepository.findByAssessmentIdOrderByIdAsc(assessment.getId());
 
@@ -301,6 +346,7 @@ public class AssessmentService {
                 .courseId(assessment.getCourse().getId())
                 .sectionId(assessment.getSection() != null ? assessment.getSection().getId() : null)
                 .title(assessment.getTitle())
+                .finalExam(assessment.isFinalExam())
                 .passingScore(assessment.getPassingScore())
                 .maxAttempts(assessment.getMaxAttempts())
                 .createdAt(assessment.getCreatedAt())

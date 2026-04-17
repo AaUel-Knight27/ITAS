@@ -181,6 +181,18 @@ export async function uploadCourseThumbnail(courseId: number | string, file: Fil
   return unwrap(response.data);
 }
 
+export async function saveCourseThumbnailUrl(courseId: number | string, url: string): Promise<Partial<Course>> {
+  const response = await api.post<Partial<Course> | ApiResponse<Partial<Course>>>(
+    `${COURSES_BASE}/${courseId}/thumbnail`,
+    null,
+    {
+      params: { url },
+    }
+  );
+
+  return unwrap(response.data);
+}
+
 export async function addSection(courseId: number | string, title: string, orderIndex: number): Promise<CourseSection> {
   const response = await api.post<CourseSection | ApiResponse<CourseSection>>(
     `${COURSES_BASE}/${courseId}/sections`,
@@ -268,10 +280,14 @@ export async function uploadLectureFile(
   sectionId: number | string,
   lectureId: number | string,
   file: File,
+  type?: string,
   onProgress?: (percent: number) => void
 ): Promise<Lecture> {
   const formData = new FormData();
   formData.append("file", file);
+  if (type) {
+    formData.append("type", type);
+  }
 
   const response = await api.post<Lecture | ApiResponse<Lecture>>(
     `${COURSES_BASE}/${courseId}/sections/${sectionId}/lectures/${lectureId}/upload`,
@@ -282,6 +298,27 @@ export async function uploadLectureFile(
       onUploadProgress: (event) => {
         if (!event.total || !onProgress) return;
         onProgress(Math.round((event.loaded / event.total) * 100));
+      },
+    }
+  );
+
+  return normalizeLecture(unwrap(response.data));
+}
+
+export async function saveLectureFileUrl(
+  courseId: number | string,
+  sectionId: number | string,
+  lectureId: number | string,
+  url: string,
+  type?: string
+): Promise<Lecture> {
+  const response = await api.post<Lecture | ApiResponse<Lecture>>(
+    `${COURSES_BASE}/${courseId}/sections/${sectionId}/lectures/${lectureId}/upload`,
+    null,
+    {
+      params: {
+        url,
+        type: type ?? "VIDEO",
       },
     }
   );

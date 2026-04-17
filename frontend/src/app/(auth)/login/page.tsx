@@ -24,6 +24,12 @@ export default function LoginPage() {
   const { t, isAmharic } = useLanguage();
   const [authError, setAuthError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [ssoConfig, setSsoConfig] = useState<{
+    enabled: boolean;
+    providerUrl: string;
+    clientId?: string;
+    callbackUrl?: string;
+  } | null>(null);
 
   const loginSchema = useMemo(
     () =>
@@ -51,6 +57,24 @@ export default function LoginPage() {
       router.replace(getRoleHomePath(session.user.role ?? ""));
     }
   }, [status, session, router]);
+
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    if (!apiUrl) {
+      setSsoConfig({ enabled: false, providerUrl: "" });
+      return;
+    }
+
+    fetch(`${apiUrl}/auth/sso/config`)
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error("Failed to load SSO config");
+        }
+        return response.json();
+      })
+      .then((data) => setSsoConfig(data))
+      .catch(() => setSsoConfig({ enabled: false, providerUrl: "" }));
+  }, []);
 
   const onSubmit = async (values: LoginFormValues) => {
     setAuthError(null);
@@ -142,6 +166,9 @@ export default function LoginPage() {
             <p className={`mt-2 text-muted-foreground ${isAmharic ? "ethiopic-text" : ""}`}>
               {t("auth.sign_in_continue")}
             </p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Government staff can continue with SSO when it is enabled for this environment.
+            </p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -208,6 +235,33 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {ssoConfig?.enabled ? (
+            <div className="mt-4">
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-background px-2 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  window.location.href = ssoConfig.providerUrl;
+                }}
+                className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+                Continue with SSO
+                <span className="ml-1 text-xs text-blue-400">(Government Login)</span>
+              </button>
+            </div>
+          ) : null}
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">

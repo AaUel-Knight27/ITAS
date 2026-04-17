@@ -7,14 +7,15 @@ import com.aauelknight.itas_backend.courses.dto.response.CourseSectionDto;
 import com.aauelknight.itas_backend.courses.dto.request.CourseSectionRequest;
 import com.aauelknight.itas_backend.lecture.dto.response.LectureDto;
 import com.aauelknight.itas_backend.lecture.dto.request.LectureRequest;
-import com.aauelknight.itas_backend.exception.ResourceNotFoundException;
+import com.aauelknight.itas_backend.learning.dto.request.AssessmentCreateRequest;
+import com.aauelknight.itas_backend.learning.dto.response.AssessmentDto;
 import com.aauelknight.itas_backend.auth.entity.User;
-import com.aauelknight.itas_backend.storage.FileStorageService;
+import com.aauelknight.itas_backend.storage.CloudinaryService;
 import jakarta.validation.Valid;
 import com.aauelknight.itas_backend.courses.service.CourseService;
+import com.aauelknight.itas_backend.learning.service.AssessmentService;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.HttpStatus;
@@ -41,11 +42,15 @@ import org.springframework.web.server.ResponseStatusException;
 public class CourseController {
 
     private final CourseService courseService;
-    private final FileStorageService fileStorageService;
+    private final CloudinaryService cloudinaryService;
+    private final AssessmentService assessmentService;
 
-    public CourseController(CourseService courseService, FileStorageService fileStorageService) {
+    public CourseController(CourseService courseService,
+                            CloudinaryService cloudinaryService,
+                            AssessmentService assessmentService) {
         this.courseService = courseService;
-        this.fileStorageService = fileStorageService;
+        this.cloudinaryService = cloudinaryService;
+        this.assessmentService = assessmentService;
     }
 
     @GetMapping
@@ -173,22 +178,63 @@ public class CourseController {
         courseService.deleteLecture(id, sectionId, lectureId);
     }
 
-    @PostMapping(
-            value = "/{courseId}/sections/{sectionId}/lectures/{lectureId}/upload",
-            consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PostMapping("/{courseId}/final-exam")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<AssessmentDto> createFinalExam(@PathVariable Long courseId,
+                                                         @Valid @RequestBody AssessmentCreateRequest request) {
+        request.setFinalExam(true);
+        request.setSectionId(null);
+        request.setLectureId(null);
+        return ResponseEntity.ok(assessmentService.createAssessment(courseId, request));
+    }
+
+    @GetMapping("/{courseId}/final-exam")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AssessmentDto> getFinalExam(@PathVariable Long courseId) {
+        return ResponseEntity.ok(assessmentService.getFinalExam(courseId));
+    }
+
+    @PostMapping("/{courseId}/sections/{sectionId}/lectures/{lectureId}/upload")
     @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN','SYSTEM_ADMIN')")
     public ResponseEntity<LectureDto> uploadLectureFile(@PathVariable Long courseId,
             @PathVariable Long sectionId,
             @PathVariable Long lectureId,
-            @RequestParam("file") MultipartFile file) {
-        return ResponseEntity.ok(courseService.uploadLectureFile(courseId, sectionId, lectureId, file));
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "url", required = false) String url,
+            @RequestParam(value = "type", required = false) String type) {
+        if (url != null && !url.isBlank()) {
+            if (!cloudinaryService.isValidUrl(url)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid URL");
+            }
+            return ResponseEntity.ok(
+                    courseService.updateLectureFile(courseId, sectionId, lectureId, url.trim(), type));
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Either file or url is required");
+        }
+
+        return ResponseEntity.ok(courseService.uploadLectureFile(courseId, sectionId, lectureId, file, type));
     }
 
     @PostMapping("/{id}/thumbnail")
-    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN','SYSTEM_ADMIN')")
     public ResponseEntity<Map<String, String>> uploadThumbnail(@PathVariable Long id,
-            @RequestParam("file") MultipartFile file) {
-        String thumbnailUrl = courseService.uploadThumbnail(id, file);
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "url", required = false) String url) {
+        String thumbnailUrl;
+        if (url != null && !url.isBlank()) {
+            if (!cloudinaryService.isValidUrl(url)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid URL format");
+            }
+            thumbnailUrl = url.trim();
+            courseService.updateThumbnail(id, thumbnailUrl);
+        } else if (file != null && !file.isEmpty()) {
+            thumbnailUrl = courseService.uploadThumbnail(id, file);
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Either file or url is required");
+        }
+
         return ResponseEntity.ok(Map.of("thumbnailUrl", thumbnailUrl));
     }
 

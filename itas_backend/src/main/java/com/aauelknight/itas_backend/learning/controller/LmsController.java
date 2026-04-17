@@ -71,6 +71,14 @@ public class LmsController {
         return ResponseEntity.ok(Map.of("unlocked", unlocked));
     }
 
+    @GetMapping("/course/{courseId}/final-exam/unlocked")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, Boolean>> isFinalExamUnlocked(@PathVariable Long courseId,
+                                                                    Authentication authentication) {
+        boolean unlocked = enrollmentService.isFinalExamUnlocked(requireUserId(authentication), courseId);
+        return ResponseEntity.ok(Map.of("unlocked", unlocked));
+    }
+
     @GetMapping("/my-completions/{courseId}")
     @PreAuthorize("isAuthenticated()")
     public List<CompletionDto> getMyCompletions(@PathVariable Long courseId,

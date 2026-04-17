@@ -177,6 +177,35 @@ public class EnrollmentService {
         return true;
     }
 
+    @Transactional(readOnly = true)
+    public boolean isFinalExamUnlocked(Long userId, Long courseId) {
+        Course course = courseRepository.findByIdWithSectionsAndLectures(courseId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Course not found"));
+
+        List<CourseSection> sections = course.getSections()
+                .stream()
+                .sorted(Comparator.comparing(CourseSection::getOrderIndex))
+                .toList();
+
+        for (CourseSection section : sections) {
+            if (!isSectionUnlocked(userId, courseId, section.getId())) {
+                return false;
+            }
+
+            for (Lecture lecture : section.getLectures()) {
+                if (lecture.getType() == LectureType.QUIZ) {
+                    continue;
+                }
+                boolean done = lectureCompletionRepository.existsByUserIdAndLectureId(userId, lecture.getId());
+                if (!done) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     @Transactional
     public CourseProgressDto calculateProgress(Long userId, Long courseId) {
         CourseEnrollment enrollment = enrollmentRepository.findByUserIdAndCourseId(userId, courseId)
@@ -360,4 +389,3 @@ public class EnrollmentService {
                 .orElse(null);
     }
 }
-

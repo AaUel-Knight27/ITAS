@@ -12,6 +12,7 @@ import {
   deleteAssessmentQuestion,
   deleteLecture,
   deleteSection,
+  saveLectureFileUrl,
   updateLecture,
   updateSection,
   uploadLectureFile,
@@ -97,6 +98,10 @@ function hasLectureFile(lecture: Lecture) {
   return Boolean(lecture.videoUrl || lecture.pdfUrl || lecture.contentUrl);
 }
 
+function getLectureAssetUrl(lecture: Lecture) {
+  return lecture.videoUrl ?? lecture.pdfUrl ?? lecture.contentUrl ?? "";
+}
+
 function formatTranslation(template: string, values: Record<string, string | number>) {
   return Object.entries(values).reduce(
     (message, [key, value]) => message.replaceAll(`{${key}}`, String(value)),
@@ -110,6 +115,8 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
   const [editingSectionTitle, setEditingSectionTitle] = useState("");
   const [uploadMap, setUploadMap] = useState<Record<string, UploadState>>({});
+  const [lectureUploadMode, setLectureUploadMode] = useState<Record<string, "file" | "url">>({});
+  const [lectureUrlInput, setLectureUrlInput] = useState<Record<string, string>>({});
   const [builderError, setBuilderError] = useState<string | null>(null);
   const [quizConfig, setQuizConfig] = useState(DEFAULT_QUIZ);
   const [assessmentId, setAssessmentId] = useState<number | string | null>(null);
@@ -353,6 +360,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     sectionId: number | string,
     lectureId: number | string,
     file: File,
+    type?: string,
     onProgress?: (percent: number) => void
   ) {
     console.log("Starting upload:", {
@@ -374,7 +382,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     const url = `/courses/${courseId}/sections/${sectionId}/lectures/${lectureId}/upload`;
     console.log("Upload URL:", url);
 
-    const updated = await uploadLectureFile(courseId, sectionId, lectureId, file, (percent) => {
+    const updated = await uploadLectureFile(courseId, sectionId, lectureId, file, type, (percent) => {
       console.log("Upload progress:", percent);
       setUploadProgress(percent);
       onProgress?.(percent);
@@ -415,6 +423,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
             section.id,
             newLecture.id,
             selectedFile,
+            addLectureForm.type,
             (percent) => {
               setUploadProgress(percent);
             }
@@ -522,7 +531,7 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     try {
       setBuilderError(null);
       setUploadMap((prev) => ({ ...prev, [String(lecture.id)]: { progress: 0, isUploading: true } }));
-      const updated = await uploadLectureAsset(course.id, sectionId, lecture.id, file, (progress) => {
+      const updated = await uploadLectureAsset(course.id, sectionId, lecture.id, file, lecture.type, (progress) => {
         setUploadMap((prev) => ({ ...prev, [String(lecture.id)]: { progress, isUploading: true } }));
       });
       if (updated) {
@@ -537,6 +546,27 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
       }
     } catch (error: any) {
       setBuilderError(getUploadErrorMessage(error));
+    } finally {
+      setUploadMap((prev) => ({ ...prev, [String(lecture.id)]: { progress: 100, isUploading: false } }));
+    }
+  }
+
+  async function handleSaveLectureUrl(sectionId: number | string, lecture: Lecture, url: string) {
+    try {
+      setBuilderError(null);
+      setUploadMap((prev) => ({ ...prev, [String(lecture.id)]: { progress: 0, isUploading: true } }));
+      const updated = await saveLectureFileUrl(course.id, sectionId, lecture.id, url, lecture.type);
+      updateCourse((next) => {
+        next.sections = (next.sections ?? []).map((section) => ({
+          ...section,
+          lectures: (section.lectures ?? [])
+            .filter((item): item is Lecture => item != null)
+            .map((item) => (String(item.id) === String(lecture.id) ? { ...item, ...updated } : item)),
+        }));
+      });
+      setLectureUrlInput((prev) => ({ ...prev, [String(lecture.id)]: "" }));
+    } catch (error: any) {
+      setBuilderError(getErrorMessage(error));
     } finally {
       setUploadMap((prev) => ({ ...prev, [String(lecture.id)]: { progress: 100, isUploading: false } }));
     }
@@ -933,16 +963,91 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                     ext: activeLecture.type === "PDF" ? ".pdf" : ".mp4",
                   })}
                 </p>
-                <input
-                  type="file"
-                  accept={activeLecture.type === "PDF" ? ".pdf" : ".mp4"}
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file || !activeSection) return;
-                    void handleUpload(activeSection.id, activeLecture, file, activeLecture.type === "PDF" ? ".pdf" : ".mp4");
-                  }}
-                  className="mt-2 text-sm"
-                />
+                <div className="mt-3 flex rounded-lg border border-slate-300 p-1 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLectureUploadMode((prev) => ({ ...prev, [String(activeLecture.id)]: "file" }))
+                    }
+                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
+                      (lectureUploadMode[String(activeLecture.id)] ?? "file") === "file"
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setLectureUploadMode((prev) => ({ ...prev, [String(activeLecture.id)]: "url" }))
+                    }
+                    className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium ${
+                      (lectureUploadMode[String(activeLecture.id)] ?? "file") === "url"
+                        ? "bg-blue-600 text-white"
+                        : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    Paste URL
+                  </button>
+                </div>
+                {(lectureUploadMode[String(activeLecture.id)] ?? "file") === "file" ? (
+                  <input
+                    type="file"
+                    accept={activeLecture.type === "PDF" ? ".pdf" : ".mp4"}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      if (!file || !activeSection) return;
+                      void handleUpload(
+                        activeSection.id,
+                        activeLecture,
+                        file,
+                        activeLecture.type === "PDF" ? ".pdf" : ".mp4"
+                      );
+                    }}
+                    className="mt-3 text-sm"
+                  />
+                ) : (
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      type="url"
+                      value={lectureUrlInput[String(activeLecture.id)] ?? ""}
+                      onChange={(event) =>
+                        setLectureUrlInput((prev) => ({ ...prev, [String(activeLecture.id)]: event.target.value }))
+                      }
+                      placeholder={
+                        activeLecture.type === "PDF"
+                          ? "https://example.com/file.pdf"
+                          : "https://res.cloudinary.com/... or YouTube/Vimeo URL"
+                      }
+                      className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" && activeSection) {
+                          void handleSaveLectureUrl(
+                            activeSection.id,
+                            activeLecture,
+                            lectureUrlInput[String(activeLecture.id)] ?? ""
+                          );
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      disabled={!activeSection || !(lectureUrlInput[String(activeLecture.id)] ?? "").trim()}
+                      onClick={() => {
+                        if (!activeSection) return;
+                        void handleSaveLectureUrl(
+                          activeSection.id,
+                          activeLecture,
+                          (lectureUrlInput[String(activeLecture.id)] ?? "").trim()
+                        );
+                      }}
+                      className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+                    >
+                      Save URL
+                    </button>
+                  </div>
+                )}
                 {uploadMap[String(activeLecture.id)]?.isUploading ? (
                   <div className="mt-2">
                     <div className="h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
@@ -953,16 +1058,10 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                     </div>
                   </div>
                 ) : null}
-                {activeLecture.contentUrl ? (
-                  <p className="mt-2 text-xs text-slate-600 dark:text-slate-400">{t("admin.uploaded")}: {activeLecture.contentUrl}</p>
-                ) : null}
-                {activeLecture.thumbnailUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={getFileUrl(activeLecture.thumbnailUrl) ?? ""}
-                    alt={activeLecture.title}
-                    className="mt-2 h-16 w-28 rounded object-cover"
-                  />
+                {getLectureAssetUrl(activeLecture) ? (
+                  <div className="mt-2 rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300">
+                    {t("admin.uploaded")}: {getLectureAssetUrl(activeLecture)}
+                  </div>
                 ) : null}
               </div>
             ) : null}

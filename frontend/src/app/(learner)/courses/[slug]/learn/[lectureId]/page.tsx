@@ -120,6 +120,13 @@ type CourseProgressState = {
   sectionProgresses: SectionProgressEntry[];
 };
 
+type FinalExamState = {
+  id: number;
+  title: string;
+  passingScore: number;
+  finalExam?: boolean;
+};
+
 function byOrder<T extends { orderIndex: number }>(items: T[]) {
   return [...items].sort((a, b) => a.orderIndex - b.orderIndex);
 }
@@ -178,6 +185,9 @@ export default function LearnLecturePage() {
   const [autoPlayLectureId, setAutoPlayLectureId] = useState<string | null>(null);
   const [sectionUnlockMap, setSectionUnlockMap] = useState<Record<number, boolean>>({});
   const [courseProgress, setCourseProgress] = useState<CourseProgressState | null>(null);
+  const [finalExamUnlocked, setFinalExamUnlocked] = useState(false);
+  const [finalExam, setFinalExam] = useState<FinalExamState | null>(null);
+  const [showFinalExam, setShowFinalExam] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
   const [toast, setToast] = useState("");
 
@@ -235,6 +245,26 @@ export default function LearnLecturePage() {
   const completedCount = courseProgress?.completedLectures ?? completedIds.size;
   const totalLessonsCount = courseProgress?.totalLectures ?? totalLectures;
   const courseProgressPct = Math.round(courseProgress?.progressPercent ?? (totalLectures > 0 ? (completedIds.size * 100) / totalLectures : 0));
+
+  const loadFinalExamState = useCallback(async (courseId: number, progressData?: CourseProgressState | null) => {
+    if (!progressData || progressData.progressPercent < 100) {
+      setFinalExamUnlocked(false);
+      setFinalExam(null);
+      return;
+    }
+
+    try {
+      const [unlockResponse, examResponse] = await Promise.all([
+        api.get<{ unlocked: boolean }>(`/lms/course/${courseId}/final-exam/unlocked`),
+        api.get<FinalExamState>(`/courses/${courseId}/final-exam`),
+      ]);
+      setFinalExamUnlocked(Boolean(unlockResponse.data?.unlocked));
+      setFinalExam(examResponse.data ?? null);
+    } catch {
+      setFinalExamUnlocked(false);
+      setFinalExam(null);
+    }
+  }, []);
 
   const stopCountdown = useCallback(() => {
     if (countdownRef.current) {
@@ -451,9 +481,12 @@ export default function LearnLecturePage() {
           unlockMap[sectionProgress.sectionId] = sectionProgress.unlocked;
         });
         setSectionUnlockMap(unlockMap);
+        await loadFinalExamState(Number(courseData.id), progressData);
       } catch {
         setCourseProgress(null);
         setSectionUnlockMap({});
+        setFinalExamUnlocked(false);
+        setFinalExam(null);
       }
 
       const savedNotes = window.localStorage.getItem(getCourseNotesStorageKey(userId, courseData.id));
@@ -481,7 +514,7 @@ export default function LearnLecturePage() {
     } finally {
       setLoading(false);
     }
-  }, [lectureIdParam, slug, userId]);
+  }, [lectureIdParam, loadFinalExamState, slug, userId]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -514,6 +547,9 @@ export default function LearnLecturePage() {
     setProgressMap({});
     setDisplayProgress({});
     setCourseProgress(null);
+    setFinalExamUnlocked(false);
+    setFinalExam(null);
+    setShowFinalExam(false);
     setSectionUnlockMap({});
     setNotes("");
     setActiveLecture(null);
@@ -697,6 +733,7 @@ export default function LearnLecturePage() {
           });
           setSectionUnlockMap(unlockMap);
           unlockMapForNext = unlockMap;
+          await loadFinalExamState(Number(courseRef.current.id), progressData);
         } catch {
           // Keep the learning flow usable even if progress refresh fails.
         }
@@ -738,7 +775,7 @@ export default function LearnLecturePage() {
     } finally {
       setCompleting(false);
     }
-  }, [completing, sectionUnlockMap, startCountdown]);
+  }, [completing, loadFinalExamState, sectionUnlockMap, startCountdown, userId]);
 
   const handleVideoProgress = useCallback(
     (currentTime: number, duration: number) => {
@@ -942,13 +979,11 @@ export default function LearnLecturePage() {
             <div className="mx-1 mb-1 mt-3">
               <div className="rounded-xl border border-green-700 bg-green-900/20 px-4 py-3 text-center">
                 <p className="mb-2 text-sm font-semibold text-green-400">🎉 Course Complete!</p>
-                <button
-                  type="button"
-                  onClick={() => router.push("/certificates")}
-                  className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700"
-                >
-                  View My Certificate
-                </button>
+                <p className="text-xs text-green-100/80">
+                  {finalExam
+                    ? "All learning content is complete. Your final exam is shown below."
+                    : "All learning content is complete. A final exam can be added by an administrator."}
+                </p>
               </div>
             </div>
           ) : null}
@@ -1066,6 +1101,43 @@ export default function LearnLecturePage() {
               </div>
             );
           })}
+
+          {courseProgressPct === 100 && finalExam ? (
+            <div
+              className={`mx-3 mb-3 mt-3 rounded-xl border p-3 ${
+                finalExamUnlocked
+                  ? "border-yellow-400 bg-yellow-50 text-yellow-900 dark:bg-yellow-900/20 dark:text-white"
+                  : "border-gray-700 bg-gray-800/30 opacity-60"
+              }`}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-lg">{finalExamUnlocked ? "ðŸ“‹" : "ðŸ”’"}</span>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-yellow-600 dark:text-yellow-400">
+                    Final Exam
+                  </p>
+                  <p className="text-sm font-medium">{finalExam.title}</p>
+                </div>
+              </div>
+
+              {finalExamUnlocked ? (
+                <div>
+                  <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                    Pass â‰¥ {finalExam.passingScore}% to earn your certificate
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowFinalExam(true)}
+                    className="w-full rounded-lg bg-yellow-500 py-2 text-sm font-semibold text-yellow-900 transition-colors hover:bg-yellow-400"
+                  >
+                    Start Final Exam
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">Complete all sections to unlock</p>
+              )}
+            </div>
+          ) : null}
         </div>
       </aside>
 
@@ -1356,6 +1428,31 @@ export default function LearnLecturePage() {
         <div className="pointer-events-none absolute bottom-4 left-1/2 -translate-x-1/2 select-none text-xs text-gray-700">
           ← → navigate lessons · B toggle sidebar
         </div>
+        {showFinalExam && finalExam ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/90 p-4">
+            <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-gray-700 bg-gray-900">
+              <div className="flex items-center justify-between border-b border-gray-700 p-4">
+                <h2 className="font-semibold text-white">Final Exam: {finalExam.title}</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowFinalExam(false)}
+                  className="text-gray-500 hover:text-white"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="p-4">
+                <QuizPlayer
+                  courseId={Number(course?.id)}
+                  lectureId={Number(finalExam.id)}
+                  onComplete={() => {
+                    setShowFinalExam(false);
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
         <CompletionCheck show={showCompletion} onDone={() => setShowCompletion(false)} />
         {toast ? (
           <div className="fixed bottom-20 left-1/2 z-50 -translate-x-1/2 rounded-xl border border-gray-700 bg-gray-800 px-5 py-3 text-sm text-white shadow-xl transition-opacity">

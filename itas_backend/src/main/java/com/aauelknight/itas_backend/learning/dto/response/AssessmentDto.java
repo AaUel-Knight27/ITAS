@@ -19,6 +19,7 @@ public class AssessmentDto {
     private Long courseId;
     private Long sectionId;
     private String title;
+    private Boolean finalExam;
     private Double passingScore;
     private Integer maxAttempts;
     private LocalDateTime createdAt;

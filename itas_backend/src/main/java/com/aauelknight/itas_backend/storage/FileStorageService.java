@@ -131,6 +131,9 @@ public class FileStorageService {
         if (filePath == null || filePath.isBlank()) {
             return;
         }
+        if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+            return;
+        }
         try {
             String normalized = filePath.replace("\\", "/").replaceFirst("^/+", "");
             if (normalized.startsWith("uploads/")) {

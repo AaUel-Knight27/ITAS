@@ -17,6 +17,7 @@ import com.aauelknight.itas_backend.lecture.entity.Lecture;
 import com.aauelknight.itas_backend.lecture.entity.LectureType;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.exception.ResourceNotFoundException;
+import com.aauelknight.itas_backend.storage.CloudinaryService;
 import com.aauelknight.itas_backend.storage.FileStorageService;
 import com.aauelknight.itas_backend.util.SlugGenerator;
 import com.aauelknight.itas_backend.courses.repository.CategoryRepository;
@@ -52,6 +53,7 @@ public class CourseService {
     private final LectureRepository lectureRepository;
     private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
+    private final CloudinaryService cloudinaryService;
 
     public CourseService(CourseRepository courseRepository,
                          CategoryRepository categoryRepository,
@@ -59,7 +61,8 @@ public class CourseService {
                          CourseSectionRepository courseSectionRepository,
                          LectureRepository lectureRepository,
                          UserRepository userRepository,
-                         FileStorageService fileStorageService) {
+                         FileStorageService fileStorageService,
+                         CloudinaryService cloudinaryService) {
         this.courseRepository = courseRepository;
         this.categoryRepository = categoryRepository;
         this.enrollmentRepository = enrollmentRepository;
@@ -67,6 +70,7 @@ public class CourseService {
         this.lectureRepository = lectureRepository;
         this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
+        this.cloudinaryService = cloudinaryService;
     }
 
     public List<CourseDto> getAllPublished(Long userId) {
@@ -459,59 +463,27 @@ public class CourseService {
     }
 
     @Transactional
-    public LectureDto uploadLectureFile(Long courseId, Long sectionId, Long lectureId, MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+    public LectureDto uploadLectureFile(Long courseId, Long sectionId, Long lectureId, MultipartFile file, String type) {
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is empty");
         }
 
-        long maxSize = 100L * 1024 * 1024;
-        if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException(
-                    "File size exceeds 100MB limit. Actual size: " + (file.getSize() / (1024 * 1024)) + "MB");
-        }
+        String normalizedType = normalizeLectureAssetType(type, file);
+        validateLectureUpload(file, normalizedType);
 
-        String contentType = file.getContentType();
-        String filename = file.getOriginalFilename() != null
-                ? file.getOriginalFilename().toLowerCase()
-                : "";
+        String subfolder = switch (normalizedType) {
+            case "VIDEO" -> "videos";
+            case "PDF" -> "pdfs";
+            default -> "files";
+        };
+        String resourceType = switch (normalizedType) {
+            case "VIDEO" -> "video";
+            case "PDF" -> "raw";
+            default -> "raw";
+        };
 
-        boolean isVideo = (contentType != null && contentType.startsWith("video/"))
-                || filename.endsWith(".mp4")
-                || filename.endsWith(".webm")
-                || filename.endsWith(".mov");
-
-        boolean isPdf = "application/pdf".equals(contentType) || filename.endsWith(".pdf");
-
-        if (!isVideo && !isPdf) {
-            throw new IllegalArgumentException(
-                    "Invalid file type: " + contentType
-                            + ". Only video files (MP4, WebM, MOV) and PDF files are accepted.");
-        }
-
-        Lecture lecture = lectureRepository.findById(lectureId)
-                .orElseThrow(() -> new ResourceNotFoundException("Lecture not found: " + lectureId));
-        validateLectureHierarchy(courseId, sectionId, lecture);
-
-        // Clean up old files if they exist
-        if (isPdf && lecture.getPdfUrl() != null) {
-            fileStorageService.deleteFile(lecture.getPdfUrl());
-        } else if (isVideo && lecture.getVideoUrl() != null) {
-            fileStorageService.deleteFile(lecture.getVideoUrl());
-        }
-
-        String filePath = fileStorageService.storeLectureFile(courseId, sectionId, lectureId, file);
-
-        if (isPdf) {
-            lecture.setPdfUrl(filePath);
-            lecture.setVideoUrl(null); // Optional: decide if you want to keep both or replace
-            lecture.setType(LectureType.PDF);
-        } else {
-            lecture.setVideoUrl(filePath);
-            lecture.setPdfUrl(null);
-            lecture.setType(LectureType.VIDEO);
-        }
-
-        return toLectureDto(lectureRepository.save(lecture));
+        String fileUrl = cloudinaryService.uploadFile(file, subfolder, resourceType);
+        return updateLectureFile(courseId, sectionId, lectureId, fileUrl, normalizedType);
     }
 
     @Transactional
@@ -540,7 +512,7 @@ public class CourseService {
             throw new IllegalArgumentException("Thumbnail must be under 5MB");
         }
 
-        String thumbnailUrl = fileStorageService.storeThumbnail(id, file);
+        String thumbnailUrl = cloudinaryService.uploadImage(file, "thumbnails");
         updateThumbnail(id, thumbnailUrl);
         return thumbnailUrl;
     }
@@ -554,6 +526,39 @@ public class CourseService {
         }
         course.setThumbnailUrl(url);
         return toCourseSummaryDto(courseRepository.save(course), null);
+    }
+
+    @Transactional
+    public LectureDto updateLectureFile(Long courseId, Long sectionId, Long lectureId, String url, String type) {
+        Lecture lecture = getLecture(sectionId, lectureId);
+        validateLectureHierarchy(courseId, sectionId, lecture);
+
+        String normalizedType = normalizeLectureAssetType(type, null);
+        switch (normalizedType) {
+            case "VIDEO" -> {
+                if (lecture.getVideoUrl() != null && !lecture.getVideoUrl().equals(url)) {
+                    fileStorageService.deleteFile(lecture.getVideoUrl());
+                }
+                lecture.setVideoUrl(url);
+                lecture.setPdfUrl(null);
+                lecture.setType(LectureType.VIDEO);
+            }
+            case "PDF" -> {
+                if (lecture.getPdfUrl() != null && !lecture.getPdfUrl().equals(url)) {
+                    fileStorageService.deleteFile(lecture.getPdfUrl());
+                }
+                lecture.setPdfUrl(url);
+                lecture.setVideoUrl(null);
+                lecture.setType(LectureType.PDF);
+            }
+            case "TEXT", "ARTICLE" -> {
+                lecture.setContent(url);
+                lecture.setType(LectureType.TEXT);
+            }
+            default -> lecture.setContent(url);
+        }
+
+        return toLectureDto(lectureRepository.save(lecture));
     }
 
     @Transactional
@@ -617,6 +622,47 @@ public class CourseService {
         if (!lecture.getSection().getId().equals(sectionId)
                 || !lecture.getSection().getCourse().getId().equals(courseId)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Lecture not found");
+        }
+    }
+
+    private String normalizeLectureAssetType(String type, MultipartFile file) {
+        if (type != null && !type.isBlank()) {
+            return type.trim().toUpperCase();
+        }
+
+        if (file == null) {
+            return "VIDEO";
+        }
+
+        String contentType = file.getContentType();
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        boolean isPdf = "application/pdf".equals(contentType) || filename.endsWith(".pdf");
+        return isPdf ? "PDF" : "VIDEO";
+    }
+
+    private void validateLectureUpload(MultipartFile file, String type) {
+        long maxSize = 100L * 1024 * 1024;
+        if (file.getSize() > maxSize) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "File size exceeds 100MB limit. Actual size: " + (file.getSize() / (1024 * 1024)) + "MB");
+        }
+
+        String contentType = file.getContentType();
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        boolean valid = switch (type) {
+            case "VIDEO" -> (contentType != null && contentType.startsWith("video/"))
+                    || filename.endsWith(".mp4")
+                    || filename.endsWith(".webm")
+                    || filename.endsWith(".mov");
+            case "PDF" -> "application/pdf".equals(contentType) || filename.endsWith(".pdf");
+            default -> true;
+        };
+
+        if (!valid) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invalid file type for " + type + ": " + contentType);
         }
     }
 
