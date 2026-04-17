@@ -10,8 +10,10 @@ import SearchBar from "@/components/search/SearchBar";
 import LanguageToggle from "@/components/ui/LanguageToggle";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useLanguage } from "@/context/LanguageContext";
+import { courseCache } from "@/lib/courseCache";
 import { getNavLinks } from "@/lib/navLinks";
 import { canAccessCourses, normalizeRole } from "@/lib/roles";
+import { clearUserStorage } from "@/lib/userStorage";
 
 const ROLE_BADGE_COLORS: Record<string, string> = {
   TAXPAYER: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
@@ -65,6 +67,11 @@ export default function Navbar() {
   };
 
   const handleSignOut = async () => {
+    const userId = session?.user?.id;
+    if (userId) {
+      clearUserStorage(String(userId));
+    }
+    courseCache.clear();
     await signOut({ callbackUrl: "/login" });
   };
 

@@ -24,6 +24,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { useLanguage } from "@/context/LanguageContext";
+import { courseCache } from "@/lib/courseCache";
 import {
   canAccessCourses,
   canGetCertificate,
@@ -35,6 +36,7 @@ import {
   isWebAdminRole,
   normalizeRole,
 } from "@/lib/roles";
+import { clearUserStorage } from "@/lib/userStorage";
 
 type NavItem = {
   label: string;
@@ -244,6 +246,15 @@ export default function Sidebar() {
     window.dispatchEvent(new CustomEvent("sidebar-toggle", { detail: { collapsed: newState } }));
   };
 
+  const handleSignOut = async () => {
+    const userId = session?.user?.id;
+    if (userId) {
+      clearUserStorage(String(userId));
+    }
+    courseCache.clear();
+    await signOut({ callbackUrl: "/login" });
+  };
+
   if (!session?.user) {
     return null;
   }
@@ -341,7 +352,7 @@ export default function Sidebar() {
 
       <div className="border-t border-sidebar-border p-3">
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => void handleSignOut()}
           className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10 ${
             collapsed ? "justify-center" : ""
           }`}

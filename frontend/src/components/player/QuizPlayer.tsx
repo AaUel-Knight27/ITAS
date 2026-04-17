@@ -1,6 +1,7 @@
 "use client";
 
 import confetti from "canvas-confetti";
+import { useRouter } from "next/navigation";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useLanguage } from "@/context/LanguageContext";
@@ -164,6 +165,7 @@ function ResultScreen({
   onRetryWrong,
   onReview,
   onComplete,
+  isFinalExam = false,
   t,
 }: {
   result: AttemptResult;
@@ -171,8 +173,10 @@ function ResultScreen({
   onRetryWrong: () => void;
   onReview: () => void;
   onComplete: () => void;
+  isFinalExam?: boolean;
   t: (key: string) => string;
 }) {
+  const router = useRouter();
   const wrongCount = result.incorrectAnswers || 0;
 
   useEffect(() => {
@@ -235,10 +239,16 @@ function ResultScreen({
           {result.passed ? (
             <button
               type="button"
-              onClick={onComplete}
+              onClick={() => {
+                if (isFinalExam && result.passed) {
+                  router.push("/certificates");
+                  return;
+                }
+                onComplete();
+              }}
               className="w-full rounded-xl bg-green-600 py-3 font-semibold text-white transition-colors hover:bg-green-700"
             >
-              {t("quiz.continue_learning")}
+              {isFinalExam && result.passed ? "🏆 View My Certificate" : t("quiz.continue_learning")}
             </button>
           ) : null}
 
@@ -368,6 +378,7 @@ const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }:
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [questionResults, setQuestionResults] = useState<Record<number, boolean>>({});
+  const [isFinalExam, setIsFinalExam] = useState(false);
 
   const isRetryModeRef = useRef(false);
   const baseAnswersRef = useRef<Record<number, string>>({});
@@ -383,6 +394,7 @@ const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }:
       try {
         const lectureResponse = await api.get<Assessment>(`/lms/assessment/lecture/${lectureId}`);
         data = lectureResponse.data;
+        setIsFinalExam(false);
       } catch (lectureError: unknown) {
         const maybeStatus =
           typeof lectureError === "object" && lectureError !== null && "response" in lectureError
@@ -394,6 +406,7 @@ const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }:
 
         const courseResponse = await api.get<Assessment>(`/lms/assessment/course/${courseId}`);
         data = courseResponse.data;
+        setIsFinalExam(true);
       }
 
       if (!data) {
@@ -585,6 +598,7 @@ const QuizPlayer = memo(function QuizPlayer({ courseId, lectureId, onComplete }:
         onRetryWrong={handleRetryWrong}
         onReview={() => setMode("review")}
         onComplete={() => onComplete?.()}
+        isFinalExam={isFinalExam}
         t={t}
       />
     );

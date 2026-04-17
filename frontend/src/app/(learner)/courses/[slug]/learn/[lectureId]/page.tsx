@@ -12,6 +12,7 @@ import api, { progressApi } from "@/lib/api";
 import { getCourseBySlug } from "@/lib/api/courses";
 import { CACHE_KEYS, courseCache } from "@/lib/courseCache";
 import { canAccessCourses } from "@/lib/roles";
+import { getCourseNotesStorageKey, getVideoProgressStorageKey } from "@/lib/userStorage";
 import { getFileUrl } from "@/lib/utils";
 import type { Course, CourseSection, Lecture, VideoProgress } from "@/types";
 
@@ -153,14 +154,11 @@ function formatTimestamp(seconds: number) {
   return `${minutes}:${String(secs).padStart(2, "0")}`;
 }
 
-function getLocalProgressKey(courseId: string | number) {
-  return `video_progress_local_${courseId}`;
-}
-
 export default function LearnLecturePage() {
   const params = useParams<{ slug: string; lectureId: string }>();
   const router = useRouter();
   const { data: session, status } = useSession();
+  const userId = String(session?.user?.id ?? "anonymous");
 
   const slug = params?.slug ?? "";
   const lectureIdParam = params?.lectureId ?? "";
@@ -196,6 +194,8 @@ export default function LearnLecturePage() {
   const saveInProgressRef = useRef(false);
   const lastSavedPositionRef = useRef<Record<string, number>>({});
   const roleCheckedRef = useRef(false);
+  const prevUserIdRef = useRef(userId);
+  const handledUserChangeRef = useRef(false);
   const [accessDenied, setAccessDenied] = useState(false);
 
   const sections = useMemo(() => byOrder(course?.sections ?? []), [course?.sections]);
@@ -263,16 +263,20 @@ export default function LearnLecturePage() {
         return;
       }
 
-      const key = getLocalProgressKey(courseRef.current.id);
-      const existing = window.localStorage.getItem(key);
-      const parsed: LocalProgressMap = existing ? JSON.parse(existing) : {};
-      parsed[lectureId] = {
-        lastPosition: Math.round(currentTime),
-        lastWatchedAt: formatTimestamp(currentTime),
-      };
-      window.localStorage.setItem(key, JSON.stringify(parsed));
+      try {
+        const key = getVideoProgressStorageKey(userId, courseRef.current.id);
+        const existing = window.localStorage.getItem(key);
+        const parsed: LocalProgressMap = existing ? JSON.parse(existing) : {};
+        parsed[lectureId] = {
+          lastPosition: Math.round(currentTime),
+          lastWatchedAt: formatTimestamp(currentTime),
+        };
+        window.localStorage.setItem(key, JSON.stringify(parsed));
+      } catch {
+        // Ignore local persistence failures.
+      }
     },
-    []
+    [userId]
   );
 
   useEffect(() => {
@@ -396,25 +400,29 @@ export default function LearnLecturePage() {
         };
       });
 
-      const localProgressRaw = window.localStorage.getItem(getLocalProgressKey(courseData.id));
-      const localProgress: LocalProgressMap = localProgressRaw ? JSON.parse(localProgressRaw) : {};
-      Object.entries(localProgress).forEach(([lectureId, entry]) => {
-        const existing = nextProgressMap[lectureId];
-        if (!existing || entry.lastPosition > existing.lastPosition) {
-          nextProgressMap[lectureId] = {
-            percentage: existing?.percentage ?? 0,
-            lastPosition: entry.lastPosition,
-            lastWatchedAt: entry.lastWatchedAt,
-            updatedAt: existing?.updatedAt,
-          };
-        }
-      });
+      try {
+        const localProgressRaw = window.localStorage.getItem(getVideoProgressStorageKey(userId, courseData.id));
+        const localProgress: LocalProgressMap = localProgressRaw ? JSON.parse(localProgressRaw) : {};
+        Object.entries(localProgress).forEach(([lectureId, entry]) => {
+          const existing = nextProgressMap[lectureId];
+          if (!existing || entry.lastPosition > existing.lastPosition) {
+            nextProgressMap[lectureId] = {
+              percentage: existing?.percentage ?? 0,
+              lastPosition: entry.lastPosition,
+              lastWatchedAt: entry.lastWatchedAt,
+              updatedAt: existing?.updatedAt,
+            };
+          }
+        });
+      } catch {
+        // Ignore invalid local progress state and continue with server data.
+      }
       progressRef.current = nextProgressMap;
       setProgressMap(nextProgressMap);
       setDisplayProgress(nextProgressMap);
 
       try {
-        const completionsCacheKey = CACHE_KEYS.completions(Number(courseData.id));
+        const completionsCacheKey = CACHE_KEYS.completions(userId, Number(courseData.id));
         let completionData = courseCache.get<Array<{ lectureId: number | string }>>(completionsCacheKey);
         if (!completionData) {
           const completionResponse = await api.get<Array<{ lectureId: number | string }>>(
@@ -429,7 +437,7 @@ export default function LearnLecturePage() {
       }
 
       try {
-        const progressCacheKey = CACHE_KEYS.courseProgress(Number(courseData.id));
+        const progressCacheKey = CACHE_KEYS.courseProgress(userId, Number(courseData.id));
         let progressData = courseCache.get<CourseProgressState>(progressCacheKey);
         if (!progressData) {
           const progressResponse = await progressApi.getCourseProgress(Number(courseData.id));
@@ -448,7 +456,7 @@ export default function LearnLecturePage() {
         setSectionUnlockMap({});
       }
 
-      const savedNotes = window.localStorage.getItem(`course_notes_${courseData.id}`);
+      const savedNotes = window.localStorage.getItem(getCourseNotesStorageKey(userId, courseData.id));
       setNotes(savedNotes ?? "");
 
       const requestedLecture = lectures.find((lecture) => String(lecture.id) === lectureIdParam) ?? null;
@@ -473,7 +481,7 @@ export default function LearnLecturePage() {
     } finally {
       setLoading(false);
     }
-  }, [lectureIdParam, slug]);
+  }, [lectureIdParam, slug, userId]);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -496,7 +504,35 @@ export default function LearnLecturePage() {
   }, [router, session, status]);
 
   useEffect(() => {
+    if (prevUserIdRef.current === userId) {
+      return;
+    }
+
+    prevUserIdRef.current = userId;
+    handledUserChangeRef.current = true;
+    setCompletedIds(new Set());
+    setProgressMap({});
+    setDisplayProgress({});
+    setCourseProgress(null);
+    setSectionUnlockMap({});
+    setNotes("");
+    setActiveLecture(null);
+    setShowCompletion(false);
+    setAutoPlayLectureId(null);
+    stopCountdown();
+
+    if (status === "authenticated" && !accessDenied) {
+      void fetchCourse();
+    }
+  }, [accessDenied, fetchCourse, status, stopCountdown, userId]);
+
+  useEffect(() => {
     if (status !== "authenticated" || accessDenied) {
+      return;
+    }
+
+    if (handledUserChangeRef.current) {
+      handledUserChangeRef.current = false;
       return;
     }
 
@@ -653,7 +689,7 @@ export default function LearnLecturePage() {
           const progressResponse = await progressApi.getCourseProgress(Number(courseRef.current.id));
           const progressData = progressResponse.data as CourseProgressState;
           setCourseProgress(progressData);
-          courseCache.set(CACHE_KEYS.courseProgress(Number(courseRef.current.id)), progressData, 60 * 1000);
+          courseCache.set(CACHE_KEYS.courseProgress(userId, Number(courseRef.current.id)), progressData, 60 * 1000);
 
           const unlockMap: Record<number, boolean> = {};
           progressData.sectionProgresses?.forEach((sectionProgress) => {
@@ -665,7 +701,7 @@ export default function LearnLecturePage() {
           // Keep the learning flow usable even if progress refresh fails.
         }
 
-        const completionCacheKey = CACHE_KEYS.completions(Number(courseRef.current.id));
+        const completionCacheKey = CACHE_KEYS.completions(userId, Number(courseRef.current.id));
         const existingCompletions = courseCache.get<Array<{ lectureId: number | string }>>(completionCacheKey);
         if (existingCompletions) {
           const alreadyExists = existingCompletions.some((item) => String(item.lectureId) === lectureKey);
@@ -764,10 +800,10 @@ export default function LearnLecturePage() {
     (value: string) => {
       setNotes(value);
       if (course) {
-        window.localStorage.setItem(`course_notes_${course.id}`, value);
+        window.localStorage.setItem(getCourseNotesStorageKey(userId, course.id), value);
       }
     },
-    [course]
+    [course, userId]
   );
 
   const insertTimestamp = useCallback(() => {
@@ -788,12 +824,12 @@ export default function LearnLecturePage() {
       });
 
       if (course) {
-        window.localStorage.setItem(`course_notes_${course.id}`, nextValue);
+        window.localStorage.setItem(getCourseNotesStorageKey(userId, course.id), nextValue);
       }
 
       return nextValue;
     });
-  }, [course]);
+  }, [course, userId]);
 
   const continueWatching = useCallback(() => {
     if (!resumeAt) {
@@ -902,6 +938,20 @@ export default function LearnLecturePage() {
             </p>
             <p className="mt-1 text-xs text-gray-500">You're {courseProgressPct}% done 🎯</p>
           </div>
+          {courseProgressPct === 100 ? (
+            <div className="mx-1 mb-1 mt-3">
+              <div className="rounded-xl border border-green-700 bg-green-900/20 px-4 py-3 text-center">
+                <p className="mb-2 text-sm font-semibold text-green-400">🎉 Course Complete!</p>
+                <button
+                  type="button"
+                  onClick={() => router.push("/certificates")}
+                  className="w-full rounded-lg bg-green-600 py-2 text-sm font-medium text-white hover:bg-green-700"
+                >
+                  View My Certificate
+                </button>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="border-b border-gray-800 px-3 pb-2 pt-1">
@@ -1174,7 +1224,7 @@ export default function LearnLecturePage() {
                       </div>
                     ) : activeLecture.videoUrl || activeLecture.contentUrl ? (
                       <VideoPlayer
-                        key={`video-${activeLecture.id}`}
+                        key={`${userId}-${activeLecture.id}`}
                         ref={playerRef}
                         src={getFileUrl(activeLecture.videoUrl ?? activeLecture.contentUrl) ?? ""}
                         lectureId={Number(activeLecture.id)}
@@ -1205,9 +1255,11 @@ export default function LearnLecturePage() {
 
               {lectureType === "PDF" ? (
                 <PdfViewer
+                  key={`${userId}-${activeLecture.id}`}
                   url={getFileUrl(activeLecture.pdfUrl ?? activeLecture.contentUrl) ?? ""}
                   title={activeLecture.title}
                   lectureId={Number(activeLecture.id)}
+                  userId={userId}
                   onComplete={() => void handleMarkComplete()}
                 />
               ) : null}

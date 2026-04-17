@@ -53,8 +53,8 @@ export const courseCache = new CourseCache();
 
 export const CACHE_KEYS = {
   course: (slug: string) => `course:${slug}`,
-  courseProgress: (courseId: number) => `progress:${courseId}`,
-  completions: (courseId: number) => `completions:${courseId}`,
+  courseProgress: (userId: string, courseId: number) => `progress:${userId}:${courseId}`,
+  completions: (userId: string, courseId: number) => `completions:${userId}:${courseId}`,
   categories: () => "categories",
   courses: () => "courses:all",
 };

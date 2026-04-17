@@ -27,6 +27,7 @@ interface Props {
   url: string;
   title: string;
   lectureId?: number;
+  userId?: string;
   onComplete?: () => void;
 }
 
@@ -53,7 +54,7 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
-const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }: Props) {
+const PdfViewer = memo(function PdfViewer({ url, title, lectureId, userId = "anonymous", onComplete }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRefs = useRef(new Map<number, HTMLCanvasElement>());
   const textLayerRefs = useRef(new Map<number, HTMLDivElement>());
@@ -84,12 +85,18 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, onComplete }:
   const [pageInput, setPageInput] = useState("1");
 
   const highlightStorageKey = useMemo(
-    () => (lectureId ? `pdf_highlights_${lectureId}` : `pdf_highlights_${url}`),
-    [lectureId, url]
+    () =>
+      lectureId
+        ? `pdf_highlights_${userId}_${lectureId}`
+        : `pdf_highlights_${userId}_${url}`,
+    [lectureId, url, userId]
   );
   const progressStorageKey = useMemo(
-    () => (lectureId ? `pdf_progress_${lectureId}` : `pdf_progress_${url}`),
-    [lectureId, url]
+    () =>
+      lectureId
+        ? `pdf_progress_${userId}_${lectureId}`
+        : `pdf_progress_${userId}_${url}`,
+    [lectureId, url, userId]
   );
 
   const persistProgress = useCallback(

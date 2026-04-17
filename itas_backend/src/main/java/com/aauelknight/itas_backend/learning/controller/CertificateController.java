@@ -42,7 +42,12 @@ public class CertificateController {
 
     @GetMapping("/certificate/user/{userId}")
     @PreAuthorize("hasAnyRole('TAX_AGENT','MOR_STAFF','MANAGER')")
-    public ResponseEntity<List<CertificateDto>> getUserCertificates(@PathVariable Long userId) {
+    public ResponseEntity<List<CertificateDto>> getUserCertificates(@PathVariable Long userId,
+                                                                    Authentication authentication) {
+        Long authenticatedUserId = requireUserId(authentication);
+        if (!authenticatedUserId.equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
         return ResponseEntity.ok(certificateService.getByUser(userId));
     }
 

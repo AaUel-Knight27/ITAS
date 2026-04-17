@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Noto_Sans_Ethiopic } from "next/font/google";
+import { Geist_Mono, Montserrat, Noto_Sans_Ethiopic } from "next/font/google";
 import "./globals.css";
 
 import RootChrome from "@/components/ui/RootChrome";
 import { ToastNotification } from "@/components/ui/ToastNotification";
 import { Providers } from "./providers";
 
-const geistSans = Geist({
+const montserrat = Montserrat({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -37,9 +39,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
+        <html lang="en" className="scroll-smooth" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSansEthiopic.variable} bg-background text-foreground antialiased`}
+        className={`${montserrat.variable} ${geistMono.variable} ${notoSansEthiopic.variable} bg-background text-foreground antialiased`}
       >
         <Providers>
           <RootChrome>{children}</RootChrome>

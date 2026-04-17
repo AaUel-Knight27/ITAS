@@ -2,6 +2,8 @@ import { getSession } from "next-auth/react";
 import axios from "axios";
 
 import { API_BASE } from "../config";
+import { courseCache } from "../courseCache";
+import { clearAllUserStorage, clearUserStorage } from "../userStorage";
 
 type AxiosConfigWithSuppressedStatuses = {
   suppressErrorStatuses?: number[];
@@ -39,7 +41,7 @@ api.interceptors.request.use(async (config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (typeof window !== "undefined" && axios.isAxiosError(error)) {
       const configWithSuppressedStatuses = error.config as AxiosConfigWithSuppressedStatuses | undefined;
       const suppressedStatuses = Array.isArray(configWithSuppressedStatuses?.suppressErrorStatuses)
@@ -48,6 +50,14 @@ api.interceptors.response.use(
       const shouldSuppress = suppressedStatuses.includes(error.response?.status ?? -1);
 
       if (error.response?.status === 401) {
+        courseCache.clear();
+        const session = await getSession().catch(() => null);
+        const userId = session?.user?.id;
+        if (userId) {
+          clearUserStorage(String(userId));
+        } else {
+          clearAllUserStorage();
+        }
         if (window.location.pathname !== "/login") {
           window.location.href = "/login";
         }
