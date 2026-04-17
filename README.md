@@ -556,30 +556,6 @@ To view the full schema, see `itas_backend/src/main/resources/db/migration/`.
 
 ---
 
-## Screenshots
-
-> Add screenshots of your running application here.
-
-```
-docs/screenshots/
-├── login.png
-├── learner-dashboard.png
-├── course-catalog.png
-├── video-player.png
-├── pdf-viewer.png
-├── quiz-player.png
-├── quiz-result.png
-├── certificate.png
-├── verify-page.png
-├── ai-summary.png
-├── ai-search.png
-├── course-builder.png
-├── admin-dashboard.png
-└── analytics.png
-```
-
----
-
 ## Deployment
 
 ### Backend (production)
@@ -618,16 +594,6 @@ NEXTAUTH_SECRET=same-as-backend-jwt-secret
 OPENROUTER_API_KEY=sk-or-v1-your-key
 NEXT_PUBLIC_APP_URL=https://your-frontend-domain.com
 ```
-
-### Recommended hosting
-
-| Service | Tier | Cost |
-|---------|------|------|
-| **Railway** | Starter | ~$5/month (backend + DB) |
-| **Vercel** | Hobby | Free (frontend) |
-| **Render** | Free | Free (backend, sleeps after 15min) |
-| **Supabase** | Free | Free (PostgreSQL) |
-
 ---
 
 ## Contributing
