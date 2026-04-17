@@ -3,6 +3,7 @@ import com.aauelknight.itas_backend.notifications.dto.request.AnnouncementDto;
 import com.aauelknight.itas_backend.notifications.dto.request.AnnouncementRequest;
 import com.aauelknight.itas_backend.notifications.dto.request.CampaignDto;
 import com.aauelknight.itas_backend.notifications.dto.request.NotificationRequest;
+import com.aauelknight.itas_backend.notifications.dto.request.SingleNotificationRequest;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.auth.repository.UserRepository;
 import java.util.List;
@@ -14,8 +15,10 @@ import com.aauelknight.itas_backend.notifications.repository.NotificationCampaig
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @RequiredArgsConstructor
@@ -51,6 +54,59 @@ public class NotificationService {
         }
 
         return toCampaignDto(campaign);
+    }
+
+    @Transactional
+    public void sendToSingleUser(Long userId,
+                                 SingleNotificationRequest req,
+                                 String sentByUsername) {
+        User recipient = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "User not found: " + userId));
+
+        if (recipient.getEmail() == null || recipient.getEmail().isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "User has no email address");
+        }
+
+        User sender = userRepository.findByUsername(sentByUsername)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Sender not found: " + sentByUsername));
+
+        NotificationCampaign campaign = NotificationCampaign.builder()
+                .title(req.getSubject())
+                .message(req.getMessage())
+                .audienceType("SINGLE_USER")
+                .sendNow(true)
+                .status("SENT")
+                .createdBy(sender)
+                .build();
+        campaignRepository.save(campaign);
+
+        String firstName = recipient.getFirstName() != null ? recipient.getFirstName() : "";
+        String lastName = recipient.getLastName() != null ? recipient.getLastName() : "";
+        String fullName = (firstName + " " + lastName).trim();
+        if (fullName.isBlank()) {
+            fullName = recipient.getUsername();
+        }
+
+        String htmlBody = emailService.buildNotificationEmail(
+                fullName,
+                req.getSubject(),
+                req.getMessage());
+
+        emailService.sendEmail(
+                recipient.getEmail(),
+                "[ITAS Portal] " + req.getSubject(),
+                htmlBody);
+
+        log.info("Single notification sent to user {} ({}) by {}",
+                userId,
+                recipient.getEmail(),
+                sentByUsername);
     }
 
     @Transactional(readOnly = true)
@@ -156,11 +212,13 @@ public class NotificationService {
     }
 
     private CampaignDto toCampaignDto(NotificationCampaign c) {
-        long deliveryCount = getRecipients(c.getAudienceType()).stream()
-                .map(User::getEmail)
-                .filter(email -> email != null && !email.isBlank())
-                .distinct()
-                .count();
+        long deliveryCount = "SINGLE_USER".equalsIgnoreCase(c.getAudienceType())
+                ? 1
+                : getRecipients(c.getAudienceType()).stream()
+                        .map(User::getEmail)
+                        .filter(email -> email != null && !email.isBlank())
+                        .distinct()
+                        .count();
 
         return CampaignDto.builder()
                 .id(c.getId())

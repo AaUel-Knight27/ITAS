@@ -26,11 +26,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
             + "LEFT JOIN FETCH u.role "
             + "WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%')) "
             + "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')) "
-            + "OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :q, '%'))",
+            + "OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :q, '%')) "
+            + "OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :q, '%')) "
+            + "OR CAST(u.id AS string) LIKE CONCAT('%', :q, '%') "
+            + "ORDER BY u.firstName ASC, u.lastName ASC, u.username ASC",
             countQuery = "SELECT COUNT(u) FROM User u "
                     + "WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :q, '%')) "
                     + "OR LOWER(u.email) LIKE LOWER(CONCAT('%', :q, '%')) "
-                    + "OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :q, '%'))")
+                    + "OR LOWER(u.firstName) LIKE LOWER(CONCAT('%', :q, '%')) "
+                    + "OR LOWER(u.lastName) LIKE LOWER(CONCAT('%', :q, '%')) "
+                    + "OR CAST(u.id AS string) LIKE CONCAT('%', :q, '%')")
     Page<User> searchUsers(@Param("q") String q, Pageable pageable);
 
     @Query(value = "SELECT u FROM User u "

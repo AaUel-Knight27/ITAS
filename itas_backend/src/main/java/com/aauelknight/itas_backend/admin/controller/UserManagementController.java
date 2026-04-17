@@ -1,5 +1,7 @@
 package com.aauelknight.itas_backend.admin.controller;
+import com.aauelknight.itas_backend.admin.dto.response.UserSearchDto;
 import com.aauelknight.itas_backend.admin.dto.response.UserDto;
+import com.aauelknight.itas_backend.admin.service.UserManagementService;
 import com.aauelknight.itas_backend.auth.entity.Role;
 import com.aauelknight.itas_backend.auth.entity.User;
 import com.aauelknight.itas_backend.auth.repository.RoleRepository;
@@ -25,13 +27,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/admin/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('WEB_ADMIN')")
 public class UserManagementController {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final UserManagementService userManagementService;
 
     @GetMapping
+    @PreAuthorize("hasRole('WEB_ADMIN')")
     public ResponseEntity<Page<UserDto>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -52,7 +55,23 @@ public class UserManagementController {
         return ResponseEntity.ok(users.map(this::toDto));
     }
 
+    @GetMapping("/search")
+    @PreAuthorize("hasAnyRole('COMMUNICATION','WEB_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<List<UserSearchDto>> searchUsers(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "10") int limit) {
+        String query = q != null ? q.trim() : "";
+        boolean numericSearch = query.matches("\\d+");
+
+        if ((!numericSearch && query.length() < 2) || query.isBlank()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        return ResponseEntity.ok(userManagementService.searchUsers(query, limit));
+    }
+
     @PutMapping("/{id}/role")
+    @PreAuthorize("hasRole('WEB_ADMIN')")
     public ResponseEntity<UserDto> changeRole(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
@@ -67,6 +86,7 @@ public class UserManagementController {
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('WEB_ADMIN')")
     public ResponseEntity<UserDto> toggleStatus(
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
@@ -83,6 +103,7 @@ public class UserManagementController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('WEB_ADMIN')")
     public ResponseEntity<?> deleteUser(@PathVariable Long id) {
         if (!userRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
@@ -92,6 +113,7 @@ public class UserManagementController {
     }
 
     @PostMapping("/{id}/reset-password")
+    @PreAuthorize("hasRole('WEB_ADMIN')")
     public ResponseEntity<?> resetPassword(@PathVariable Long id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found: " + id));

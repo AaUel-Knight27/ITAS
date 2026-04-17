@@ -51,6 +51,11 @@ export interface NotificationRequest {
   scheduledAt?: string;
 }
 
+export interface SingleNotificationRequest {
+  subject: string;
+  message: string;
+}
+
 export interface FaqDto {
   id: number;
   question: string;
@@ -186,6 +191,16 @@ export interface UserDto {
   roleName: string;
   status: string;
   createdAt: string;
+}
+
+export interface UserSearchDto {
+  id: number;
+  username: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  fullName: string;
 }
 
 export interface PagedResponse<T> {

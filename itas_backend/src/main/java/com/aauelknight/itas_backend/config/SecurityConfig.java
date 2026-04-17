@@ -225,6 +225,11 @@ public class SecurityConfig {
                         ).hasAnyRole("TAXPAYER", "TAX_AGENT", "MOR_STAFF", "MANAGER")
 
                         .requestMatchers(
+                                HttpMethod.GET,
+                                "/admin/users/search"
+                        ).hasAnyRole("COMMUNICATION", "WEB_ADMIN", "SYSTEM_ADMIN")
+
+                        .requestMatchers(
                                 "/admin/users/**"
                         ).hasRole("WEB_ADMIN")
 
@@ -242,6 +247,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.GET, "/analytics/**"
                         ).hasAnyRole("MANAGER", "WEB_ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/notifications/send/user/*"
+                        ).hasAnyRole("COMMUNICATION", "WEB_ADMIN", "SYSTEM_ADMIN")
 
                         .requestMatchers(
                                 HttpMethod.POST,

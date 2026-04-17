@@ -21,6 +21,7 @@ import type {
   RoleChangeRequest,
   QuizPassRateDto,
   RoleCountDto,
+  SingleNotificationRequest,
   ContextualHelpDto,
   SearchFilterDto,
   SearchResponseDto,
@@ -30,6 +31,7 @@ import type {
   SyncRequestDto,
   SyncStatsDto,
   UserDto,
+  UserSearchDto,
   WebinarDto,
   WebinarRequest,
 } from "./types";
@@ -87,7 +89,15 @@ export const webinarApi = {
 export const communicationApi = {
   sendNotification: (data: NotificationRequest) => api.post<CampaignDto>("/notifications/send", data),
 
+  sendSingleUserNotification: (userId: number, data: SingleNotificationRequest) =>
+    api.post<{ message: string; recipientId: number }>(`/notifications/send/user/${userId}`, data),
+
   getCampaigns: () => api.get<CampaignDto[]>("/notifications/campaigns"),
+
+  searchUsers: (q: string, limit = 10) =>
+    api.get<UserSearchDto[]>("/admin/users/search", {
+      params: { q, limit },
+    }),
 
   getAllFaqs: () => api.get<FaqDto[]>("/faq"),
 
