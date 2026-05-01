@@ -1,40 +1,69 @@
-target/
-build/
-!.mvn/wrapper/maven-wrapper.jar
-!.gradle/wrapper/gradle-wrapper.jar
-.mvn/
-mvnw
-mvnw.cmd
-.gradle/
-gradlew
-gradlew.bat
-itas_backend/pom.xml
-/logs/
-*.log
-*.log.*
-*.tmp
-*.swp
+# =========================
+# IDEs and Editors
+# =========================
 .idea/
 *.iml
 *.iws
 *.ipr
-uploads/
 .vscode/
 *.code-workspace
-.env
-.env.local
-.env.*.local
-itas_backend/src/main/resources/application-dev.yml
+.DS_Store
+*.swp
+*.tmp
+
+# =========================
+# Build Outputs & Caches
+# =========================
+target/
+build/
+out/
+dist/
+/logs/
+*.log
+*.log.*
+*.class
 *.jar
 *.war
 *.ear
-*.class
+
+# =========================
+# Maven & Gradle
+# =========================
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+.gradle/
+!.gradle/wrapper/gradle-wrapper.jar
+# Often committed, but keeping original ignore behavior
+mvnw
+mvnw.cmd
+gradlew
+gradlew.bat
+
+# =========================
+# Node.js & Next.js (Frontend)
+# =========================
 node_modules/
 .next/
-out/
-.next/
-.next/dev/cache/
-*.env.local
+coverage/
+.npm/
+*.tsbuildinfo
+
+# =========================
+# Environment Variables
+# =========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.env
-.DS_Store
+*.env.local
+
+# =========================
+# Project Specific
+# =========================
+uploads/
+itas_backend/pom.xml
 itas_backend/qodana.yaml
+itas_backend/src/main/resources/application-dev.yml
+detached-test.log
