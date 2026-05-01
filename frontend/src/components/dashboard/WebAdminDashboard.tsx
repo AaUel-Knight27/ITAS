@@ -1,5 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
+
+import { BarChart3, BookOpen, FolderOpen, Link2, Megaphone, Users, Video } from "lucide-react";
+
 import CommunicationDashboard from "@/components/dashboard/CommunicationDashboard";
 import ContentAdminDashboard from "@/components/dashboard/ContentAdminDashboard";
 import ManagerDashboard from "@/components/dashboard/ManagerDashboard";
@@ -23,14 +27,14 @@ type Props = {
   initialSection?: Section;
 };
 
-const SECTIONS: { id: Section; label: string; icon: string }[] = [
-  { id: "overview", label: "Overview", icon: "📊" },
-  { id: "users", label: "User Management", icon: "👥" },
-  { id: "courses", label: "Course Management", icon: "📚" },
-  { id: "webinars", label: "Webinar Management", icon: "🎥" },
-  { id: "communications", label: "Communications", icon: "📢" },
-  { id: "logs", label: "System Logs", icon: "🗂️" },
-  { id: "integrations", label: "Integrations", icon: "🔗" },
+const SECTIONS: { id: Section; label: string; icon: ReactNode }[] = [
+  { id: "overview", label: "Overview", icon: <BarChart3 className="h-5 w-5" /> },
+  { id: "users", label: "User Management", icon: <Users className="h-5 w-5" /> },
+  { id: "courses", label: "Course Management", icon: <BookOpen className="h-5 w-5" /> },
+  { id: "webinars", label: "Webinar Management", icon: <Video className="h-5 w-5" /> },
+  { id: "communications", label: "Communications", icon: <Megaphone className="h-5 w-5" /> },
+  { id: "logs", label: "System Logs", icon: <FolderOpen className="h-5 w-5" /> },
+  { id: "integrations", label: "Integrations", icon: <Link2 className="h-5 w-5" /> },
 ];
 
 export default function WebAdminDashboard({ initialSection = "overview" }: Props) {
@@ -62,7 +66,7 @@ export default function WebAdminDashboard({ initialSection = "overview" }: Props
                     : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 }`}
               >
-                <span className="text-base">{section.icon}</span>
+                <span className="shrink-0">{section.icon}</span>
                 {section.label}
               </button>
             ))}
@@ -76,7 +80,7 @@ export default function WebAdminDashboard({ initialSection = "overview" }: Props
         <main className="flex-1 overflow-auto">
           <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{current?.icon}</span>
+              <span className="shrink-0">{current?.icon}</span>
               <div>
                 <h1 className="text-lg font-bold text-gray-900">{current?.label}</h1>
                 <p className="text-xs text-gray-500">

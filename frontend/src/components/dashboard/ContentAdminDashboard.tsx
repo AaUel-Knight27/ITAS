@@ -1,5 +1,6 @@
 "use client";
 
+import { Archive, BookOpen, CheckCircle2, Clock, FolderArchive, RotateCcw, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -19,11 +20,11 @@ const STATUS_STYLES = {
   ARCHIVED: "bg-gray-100 text-gray-500",
 } as const;
 
-const STATUS_LABELS = {
-  PUBLISHED: "✓ Published",
-  DRAFT: "⏳ Draft",
-  ARCHIVED: "🗂 Archived",
-} as const;
+const STATUS_LABELS: Record<string, React.ReactNode> = {
+  PUBLISHED: <><CheckCircle2 className="inline h-3 w-3" /> Published</>,
+  DRAFT: <><Clock className="inline h-3 w-3" /> Draft</>,
+  ARCHIVED: <><Archive className="inline h-3 w-3" /> Archived</>,
+};
 
 export default function ContentAdminDashboard() {
   const router = useRouter();
@@ -183,25 +184,25 @@ export default function ContentAdminDashboard() {
           {
             label: "Total Courses",
             value: activeCourses.length + totalArchived,
-            icon: "📚",
+            icon: <BookOpen className="h-6 w-6" />,
             color: "text-blue-600",
           },
           {
             label: "Published",
             value: totalPublished,
-            icon: "✅",
+            icon: <CheckCircle2 className="h-6 w-6" />,
             color: "text-green-600",
           },
           {
             label: "Drafts",
             value: totalDraft,
-            icon: "⏳",
+            icon: <Clock className="h-6 w-6" />,
             color: "text-yellow-600",
           },
           {
             label: "Archived",
             value: totalArchived,
-            icon: "🗂",
+            icon: <Archive className="h-6 w-6" />,
             color: "text-gray-500",
             onClick: () => setActiveTab("archived" as Tab),
           },
@@ -261,14 +262,14 @@ export default function ContentAdminDashboard() {
           placeholder={activeTab === "active" ? "Search active courses..." : "Search archived courses..."}
           className="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         {search ? (
           <button
             type="button"
             onClick={() => setSearch("")}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-gray-400 hover:text-gray-600"
           >
-            ×
+            <X className="h-5 w-5" />
           </button>
         ) : null}
       </div>
@@ -284,7 +285,7 @@ export default function ContentAdminDashboard() {
 
       {activeTab === "archived" && archivedCourses.length > 0 ? (
         <div className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-          🗂 Archived courses are hidden from learners. Restore a course to make it available again as a draft.
+          <Archive className="mr-2 inline h-4 w-4" /> Archived courses are hidden from learners. Restore a course to make it available again as a draft.
         </div>
       ) : null}
 
@@ -298,7 +299,7 @@ export default function ContentAdminDashboard() {
         <div className="py-16 text-center text-gray-500">
           {activeTab === "archived" ? (
             <>
-              <p className="mb-3 text-4xl">🗂</p>
+              <div className="mb-3 flex justify-center text-gray-400"><FolderArchive className="h-12 w-12" /></div>
               <p className="text-lg font-medium">No archived courses</p>
               <p className="mt-1 text-sm">Archive a course to hide it from learners</p>
             </>
@@ -311,7 +312,7 @@ export default function ContentAdminDashboard() {
             </>
           ) : (
             <>
-              <p className="mb-3 text-4xl">📚</p>
+              <div className="mb-3 flex justify-center text-gray-400"><BookOpen className="h-12 w-12" /></div>
               <p className="text-lg font-medium">No courses yet</p>
               <button
                 type="button"
@@ -354,7 +355,7 @@ export default function ContentAdminDashboard() {
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600">
-                          <span className="text-xs text-white">📚</span>
+                          <BookOpen className="h-4 w-4 text-white" />
                         </div>
                       )}
                     </div>
@@ -394,7 +395,7 @@ export default function ContentAdminDashboard() {
                             disabled={actionLoading === course.id}
                             className="rounded-lg border border-green-200 px-3 py-1.5 text-xs text-green-600 hover:bg-green-50 disabled:opacity-50"
                           >
-                            {actionLoading === course.id ? "..." : "↩ Restore"}
+                            {actionLoading === course.id ? "..." : <><RotateCcw className="inline h-3 w-3" /> Restore</>}
                           </button>
                           <button
                             type="button"
@@ -439,7 +440,7 @@ export default function ContentAdminDashboard() {
                             disabled={actionLoading === course.id}
                             className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-100 disabled:opacity-50"
                           >
-                            {actionLoading === course.id ? "..." : "🗂 Archive"}
+                            {actionLoading === course.id ? "..." : <><Archive className="inline h-3 w-3" /> Archive</>}
                           </button>
                           <button
                             type="button"

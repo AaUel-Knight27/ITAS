@@ -1,6 +1,6 @@
 "use client";
 
-import { Paperclip, X } from "lucide-react";
+import { FileText, Paperclip, Video, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -77,10 +77,10 @@ function byOrder<T extends { orderIndex: number }>(items: T[]) {
 
 function lectureTypeIcon(type?: string) {
   const normalized = (type ?? "VIDEO").toUpperCase();
-  if (normalized === "VIDEO") return "🎬";
-  if (normalized === "PDF") return "📄";
-  if (normalized === "TEXT") return "📝";
-  if (normalized === "QUIZ") return "❓";
+  if (normalized === "VIDEO") return "VID";
+  if (normalized === "PDF") return "PDF";
+  if (normalized === "TEXT") return "TXT";
+  if (normalized === "QUIZ") return "QZ";
   return "•";
 }
 
@@ -732,10 +732,10 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
                     >
                       {lectureTypeIcon(lecture.type)} {lecture.title}
                       {lecture.type === "VIDEO" && lecture.videoUrl ? (
-                        <span className="ml-1 text-xs text-gray-400">🎬</span>
+                        <span className="ml-1 text-xs text-gray-400"><Video className="inline h-3 w-3" /></span>
                       ) : null}
                       {lecture.type === "PDF" && lecture.pdfUrl ? (
-                        <span className="ml-1 text-xs text-gray-400">📄</span>
+                        <span className="ml-1 text-xs text-gray-400"><FileText className="inline h-3 w-3" /></span>
                       ) : null}
                     </button>
                     <button

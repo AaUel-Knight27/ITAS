@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, Calendar, CheckCircle2, PlayCircle, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -54,9 +55,9 @@ export default function TaxpayerDashboard() {
       {error && <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard label="Total Enrolled" value={total} icon="📚" color="text-blue-600" />
-        <StatCard label="In Progress" value={inProgress} icon="▶️" color="text-yellow-600" />
-        <StatCard label="Completed" value={completed} icon="✅" color="text-green-600" />
+        <StatCard label="Total Enrolled" value={total} icon={<BookOpen className="h-8 w-8 text-blue-500" />} color="text-blue-600" />
+        <StatCard label="In Progress" value={inProgress} icon={<PlayCircle className="h-8 w-8 text-yellow-500" />} color="text-yellow-600" />
+        <StatCard label="Completed" value={completed} icon={<CheckCircle2 className="h-8 w-8 text-green-500" />} color="text-green-600" />
       </div>
 
       {lastActive && (
@@ -133,8 +134,8 @@ export default function TaxpayerDashboard() {
                 className="rounded-xl border border-gray-200 bg-white p-4 text-left transition-shadow hover:shadow-sm"
               >
                 <p className="line-clamp-1 text-sm font-medium text-gray-900">{webinar.title}</p>
-                <p className="mt-1 text-xs text-gray-500">
-                  📅{" "}
+                <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+                  <Calendar className="h-3 w-3" />
                   {new Date(webinar.scheduledAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
@@ -142,8 +143,8 @@ export default function TaxpayerDashboard() {
                     minute: "2-digit",
                   })}
                 </p>
-                <p className="mt-0.5 text-xs text-gray-400">
-                  👥 {webinar.registeredCount}
+                <p className="mt-0.5 flex items-center gap-1 text-xs text-gray-400">
+                  <Users className="h-3 w-3" /> {webinar.registeredCount}
                   {webinar.maxAttendees ? ` / ${webinar.maxAttendees}` : ""} registered
                 </p>
               </button>

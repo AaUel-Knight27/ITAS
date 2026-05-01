@@ -1,0 +1,51 @@
+server:
+  port: 8084
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: itas-webinar-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/portal_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:yourpassword}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: webinar_schema
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    default-schema: webinar_schema
+    schemas: webinar_schema
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_USERNAME:noreply@itas.gov.et}
+    password: ${GMAIL_APP_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+  email:
+    from: ${GMAIL_USERNAME:noreply@itas.gov.et}
+    from-name: "ITAS Portal"
+    enabled: ${EMAIL_ENABLED:true}
+
+services:
+  auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  health:
+    mail:
+      enabled: false

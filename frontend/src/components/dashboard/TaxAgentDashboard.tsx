@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, CheckCircle2, FileText, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -52,12 +53,12 @@ export default function TaxAgentDashboard() {
       {error && <div className="mb-6 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Enrolled" value={total} icon="📚" color="text-blue-600" />
-        <StatCard label="Completed" value={completed} icon="✅" color="text-green-600" />
+        <StatCard label="Total Enrolled" value={total} icon={<BookOpen className="h-8 w-8 text-blue-500" />} color="text-blue-600" />
+        <StatCard label="Completed" value={completed} icon={<CheckCircle2 className="h-8 w-8 text-green-500" />} color="text-green-600" />
         <StatCard
           label="Certificates Earned"
           value={certCount}
-          icon="🏆"
+          icon={<Trophy className="h-8 w-8 text-yellow-500" />}
           color="text-yellow-600"
           clickable={certCount > 0}
           onClick={() => {
@@ -66,7 +67,7 @@ export default function TaxAgentDashboard() {
             }
           }}
         />
-        <StatCard label="Quiz Pass Rate" value={passRate} icon="📝" color="text-purple-600" />
+        <StatCard label="Quiz Pass Rate" value={passRate} icon={<FileText className="h-8 w-8 text-purple-500" />} color="text-purple-600" />
       </div>
 
       {lastActive && (

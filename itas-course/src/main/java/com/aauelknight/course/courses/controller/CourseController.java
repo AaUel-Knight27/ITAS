@@ -1,0 +1,286 @@
+package com.aauelknight.course.courses.controller;
+import com.aauelknight.course.courses.dto.response.CategoryDto;
+import com.aauelknight.course.courses.dto.request.CourseCreateRequest;
+import com.aauelknight.course.courses.dto.response.CourseDto;
+import com.aauelknight.course.courses.dto.request.CourseRequest;
+import com.aauelknight.course.courses.dto.response.CourseSectionDto;
+import com.aauelknight.course.courses.dto.request.CourseSectionRequest;
+import com.aauelknight.course.lecture.dto.response.LectureDto;
+import com.aauelknight.course.lecture.dto.request.LectureRequest;
+import com.aauelknight.course.learning.dto.request.AssessmentCreateRequest;
+import com.aauelknight.course.learning.dto.response.AssessmentDto;
+import com.aauelknight.course.storage.CloudinaryService;
+import jakarta.validation.Valid;
+import com.aauelknight.course.courses.service.CourseService;
+import com.aauelknight.course.learning.service.AssessmentService;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+import java.util.Map;
+import org.springframework.web.server.ResponseStatusException;
+
+@RestController
+@RequestMapping("/courses")
+@Slf4j
+public class CourseController {
+
+    private final CourseService courseService;
+    private final CloudinaryService cloudinaryService;
+    private final AssessmentService assessmentService;
+
+    public CourseController(CourseService courseService,
+                            CloudinaryService cloudinaryService,
+                            AssessmentService assessmentService) {
+        this.courseService = courseService;
+        this.cloudinaryService = cloudinaryService;
+        this.assessmentService = assessmentService;
+    }
+
+    @GetMapping
+    @PreAuthorize("hasAnyRole('TAXPAYER','CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN','WEB_ADMIN','TAX_AGENT','MOR_STAFF','MANAGER')")
+    public ResponseEntity<List<CourseDto>> getAllCourses(
+            @RequestParam(required = false) Boolean admin,
+            @RequestParam(required = false) Boolean includeArchived,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        boolean isWebAdmin = hasRole(userDetails, "ROLE_WEB_ADMIN");
+        boolean isAdmin = isWebAdmin
+                || hasRole(userDetails, "ROLE_CONTENT_ADMIN")
+                || hasRole(userDetails, "ROLE_TRAINING_ADMIN")
+                || hasRole(userDetails, "ROLE_SYSTEM_ADMIN");
+
+        if (Boolean.TRUE.equals(includeArchived)) {
+            if (!isWebAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only WEB_ADMIN can include archived courses");
+            }
+            return ResponseEntity.ok(courseService.getAllAdminCourses());
+        }
+
+        if (Boolean.TRUE.equals(admin)) {
+            if (!isAdmin) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only admins can request admin courses");
+            }
+            return ResponseEntity.ok(courseService.getAllCoursesAdmin());
+        }
+
+        return ResponseEntity.ok(courseService.getAllPublishedForUser(userDetails.getUsername()));
+    }
+
+    @GetMapping("/categories")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<CategoryDto>> getAllCategories() {
+        return ResponseEntity.ok(courseService.getAllCategories());
+    }
+
+    @GetMapping("/{slug}")
+    @PreAuthorize("hasAnyRole('TAXPAYER','TAX_AGENT','MOR_STAFF','MANAGER','CONTENT_ADMIN')")
+    public CourseDto getCourseBySlug(@PathVariable String slug, Authentication authentication) {
+        return courseService.getBySlug(slug, extractUserId(authentication));
+    }
+
+    @GetMapping("/id/{id}")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public CourseDto getCourseById(@PathVariable Long id) {
+        return courseService.getCourse(id);
+    }
+
+    @GetMapping("/archived")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN')")
+    public ResponseEntity<List<CourseDto>> getArchived() {
+        return ResponseEntity.ok(courseService.getArchivedCourses());
+    }
+
+    @PostMapping
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<CourseDto> createCourse(@Valid @RequestBody CourseCreateRequest request) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(courseService.createCourse(request));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<CourseDto> updateCourse(@PathVariable Long id,
+            @Valid @RequestBody CourseRequest request) {
+        return ResponseEntity.ok(courseService.updateCourse(id, request));
+    }
+
+    @PatchMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<CourseDto> patchCourse(@PathVariable Long id,
+            @RequestBody Map<String, Object> updates) {
+        return ResponseEntity.ok(courseService.patchCourse(id, updates));
+    }
+
+    @PostMapping("/{id}/sections")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public CourseSectionDto addSection(@PathVariable Long id, @Valid @RequestBody CourseSectionRequest request) {
+        return courseService.addSection(id, request);
+    }
+
+    @PutMapping({ "/{id}/sections/{sectionId}", "/{id}/sections/{sectionId}/" })
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<CourseSectionDto> updateSection(@PathVariable Long id,
+            @PathVariable Long sectionId,
+            @Valid @RequestBody CourseSectionRequest request) {
+        return ResponseEntity.ok(courseService.updateSection(id, sectionId, request));
+    }
+
+    @DeleteMapping("/{id}/sections/{sectionId}")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public void deleteSection(@PathVariable Long id, @PathVariable Long sectionId) {
+        courseService.deleteSection(id, sectionId);
+    }
+
+    @PostMapping("/{id}/sections/{sectionId}/lectures")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public LectureDto addLecture(@PathVariable Long id,
+            @PathVariable Long sectionId,
+            @Valid @RequestBody LectureRequest request) {
+        return courseService.addLecture(id, sectionId, request);
+    }
+
+    @PutMapping({ "/{id}/sections/{sectionId}/lectures/{lectureId}",
+            "/{id}/sections/{sectionId}/lectures/{lectureId}/" })
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<LectureDto> updateLecture(@PathVariable Long id,
+            @PathVariable Long sectionId,
+            @PathVariable Long lectureId,
+            @Valid @RequestBody LectureRequest request) {
+        return ResponseEntity.ok(courseService.updateLecture(id, sectionId, lectureId, request));
+    }
+
+    @DeleteMapping("/{id}/sections/{sectionId}/lectures/{lectureId}")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public void deleteLecture(@PathVariable Long id,
+            @PathVariable Long sectionId,
+            @PathVariable Long lectureId) {
+        courseService.deleteLecture(id, sectionId, lectureId);
+    }
+
+    @PostMapping("/{courseId}/final-exam")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<AssessmentDto> createFinalExam(@PathVariable Long courseId,
+                                                         @Valid @RequestBody AssessmentCreateRequest request) {
+        request.setFinalExam(true);
+        request.setSectionId(null);
+        request.setLectureId(null);
+        return ResponseEntity.ok(assessmentService.createAssessment(courseId, request));
+    }
+
+    @GetMapping("/{courseId}/final-exam")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<AssessmentDto> getFinalExam(@PathVariable Long courseId) {
+        return ResponseEntity.ok(assessmentService.getFinalExam(courseId));
+    }
+
+    @PostMapping("/{courseId}/sections/{sectionId}/lectures/{lectureId}/upload")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<LectureDto> uploadLectureFile(@PathVariable Long courseId,
+            @PathVariable Long sectionId,
+            @PathVariable Long lectureId,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "url", required = false) String url,
+            @RequestParam(value = "type", required = false) String type) {
+        if (url != null && !url.isBlank()) {
+            if (!cloudinaryService.isValidUrl(url)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid URL");
+            }
+            return ResponseEntity.ok(
+                    courseService.updateLectureFile(courseId, sectionId, lectureId, url.trim(), type));
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Either file or url is required");
+        }
+
+        return ResponseEntity.ok(courseService.uploadLectureFile(courseId, sectionId, lectureId, file, type));
+    }
+
+    @PostMapping("/{id}/thumbnail")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN','SYSTEM_ADMIN')")
+    public ResponseEntity<Map<String, String>> uploadThumbnail(@PathVariable Long id,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "url", required = false) String url) {
+        String thumbnailUrl;
+        if (url != null && !url.isBlank()) {
+            if (!cloudinaryService.isValidUrl(url)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid URL format");
+            }
+            thumbnailUrl = url.trim();
+            courseService.updateThumbnail(id, thumbnailUrl);
+        } else if (file != null && !file.isEmpty()) {
+            thumbnailUrl = courseService.uploadThumbnail(id, file);
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Either file or url is required");
+        }
+
+        return ResponseEntity.ok(Map.of("thumbnailUrl", thumbnailUrl));
+    }
+
+    @PutMapping("/{id}/publish")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN')")
+    public ResponseEntity<CourseDto> publish(@PathVariable Long id) {
+        return ResponseEntity.ok(courseService.publishCourse(id));
+    }
+
+    @PutMapping("/{id}/unpublish")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN')")
+    public ResponseEntity<CourseDto> unpublish(@PathVariable Long id) {
+        return ResponseEntity.ok(courseService.unpublishCourse(id));
+    }
+
+    @PutMapping("/{id}/archive")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN')")
+    public ResponseEntity<CourseDto> archive(@PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(courseService.archiveCourse(id, userDetails.getUsername()));
+    }
+
+    @PutMapping("/{id}/restore")
+    @PreAuthorize("hasAnyRole('CONTENT_ADMIN','TRAINING_ADMIN','WEB_ADMIN')")
+    public ResponseEntity<CourseDto> restore(@PathVariable Long id) {
+        return ResponseEntity.ok(courseService.restoreCourse(id));
+    }
+
+    private boolean hasRole(UserDetails userDetails, String role) {
+        return userDetails.getAuthorities().stream()
+                .anyMatch(authority -> role.equals(authority.getAuthority()));
+    }
+
+    private Long extractUserId(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        Object details = authentication.getDetails();
+        if (details instanceof Long userId) {
+            return userId;
+        }
+        if (details instanceof String userIdText && !userIdText.isBlank()) {
+            return Long.parseLong(userIdText);
+        }
+        return null;
+    }
+}
+
+
+

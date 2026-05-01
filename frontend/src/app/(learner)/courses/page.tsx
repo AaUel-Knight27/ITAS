@@ -281,7 +281,7 @@ export default function CoursesPage() {
           isSearchActive ? (
             <div className="rounded-xl border-2 border-dashed border-border bg-card/50">
               <EmptyState
-                icon="🔍"
+                icon={<Search className="h-8 w-8 text-gray-400" />}
                 title={t("courses.no_courses_found")}
                 description={t("courses.adjust_filters")}
                 action={{

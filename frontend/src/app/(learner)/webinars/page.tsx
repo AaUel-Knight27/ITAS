@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, Calendar, Target } from "lucide-react";
 import { useEffect, useState } from "react";
 import { webinarApi } from "@/lib/api";
 import { getErrorMessage } from "@/lib/errors";
@@ -95,8 +96,8 @@ export default function WebinarsPage() {
 
       {myUpcomingCount > 0 ? (
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-5 py-4">
-          <span className="text-2xl" aria-hidden="true">
-            🎯
+          <span className="text-2xl text-blue-500" aria-hidden="true">
+            <Target className="h-6 w-6" />
           </span>
           <div>
             <p className="text-sm font-medium text-blue-900">
@@ -153,7 +154,7 @@ export default function WebinarsPage() {
         </div>
       ) : displayList.length === 0 ? (
         <div className="py-16 text-center text-gray-500">
-          <p className="mb-4 text-4xl">{activeTab === "upcoming" ? "📅" : "📚"}</p>
+          <div className="mb-4 flex justify-center text-gray-400">{activeTab === "upcoming" ? <Calendar className="h-12 w-12" /> : <BookOpen className="h-12 w-12" />}</div>
           <p className="text-lg font-medium">
             {activeTab === "upcoming" ? "No upcoming webinars" : "No past webinars"}
           </p>

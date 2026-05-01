@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable react/no-unescaped-entities */
 
+import { Award, Edit3, Flame, Rocket, Star, Target } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -962,23 +963,23 @@ export default function LearnLecturePage() {
             </div>
             <p className="mt-1 text-xs text-gray-500">
               {courseProgressPct === 0
-                ? "Let's get started! 🚀"
+                ? <><span className="flex items-center gap-1">Let's get started! <Rocket className="h-3 w-3 text-blue-500" /></span></>
                 : courseProgressPct < 25
-                  ? `You're ${courseProgressPct}% done - keep going! 💪`
+                  ? <><span className="flex items-center gap-1">You're {courseProgressPct}% done - keep going! <Flame className="h-3 w-3 text-orange-500" /></span></>
                   : courseProgressPct < 50
-                    ? `You're ${courseProgressPct}% done - great start! ⭐`
+                    ? <><span className="flex items-center gap-1">You're {courseProgressPct}% done - great start! <Star className="h-3 w-3 text-yellow-500" /></span></>
                     : courseProgressPct < 75
-                      ? `You're ${courseProgressPct}% done - halfway there! 🔥`
+                      ? <><span className="flex items-center gap-1">You're {courseProgressPct}% done - halfway there! <Flame className="h-3 w-3 text-orange-500" /></span></>
                       : courseProgressPct < 100
-                        ? `You're ${courseProgressPct}% done - almost there! 🎯`
-                        : "Course complete! 🎉"}
+                        ? <><span className="flex items-center gap-1">You're {courseProgressPct}% done - almost there! <Target className="h-3 w-3 text-red-500" /></span></>
+                        : <><span className="flex items-center gap-1">Course complete! <Award className="h-3 w-3 text-green-500" /></span></>}
             </p>
-            <p className="mt-1 text-xs text-gray-500">You're {courseProgressPct}% done 🎯</p>
+            <p className="mt-1 flex items-center gap-1 text-xs text-gray-500">You're {courseProgressPct}% done <Target className="h-3 w-3 text-red-500" /></p>
           </div>
           {courseProgressPct === 100 ? (
             <div className="mx-1 mb-1 mt-3">
               <div className="rounded-xl border border-green-700 bg-green-900/20 px-4 py-3 text-center">
-                <p className="mb-2 text-sm font-semibold text-green-400">🎉 Course Complete!</p>
+                <p className="mb-2 flex items-center justify-center gap-1 text-sm font-semibold text-green-400"><Award className="h-4 w-4" /> Course Complete!</p>
                 <p className="text-xs text-green-100/80">
                   {finalExam
                     ? "All learning content is complete. Your final exam is shown below."
@@ -1203,7 +1204,7 @@ export default function LearnLecturePage() {
                 onClick={insertTimestamp}
                 className="rounded-lg border border-gray-700 px-3 py-1.5 text-xs text-gray-400 hover:bg-gray-800"
               >
-                📝 Note
+                <><Edit3 className="inline h-3 w-3" /> Note</>
               </button>
             ) : null}
 
@@ -1369,7 +1370,7 @@ export default function LearnLecturePage() {
                 />
               </div>
               <div className="flex shrink-0 items-center justify-between border-b border-gray-800 px-4 py-3">
-                <p className="text-sm font-medium text-white">📝 My Notes</p>
+                <p className="flex items-center gap-1 text-sm font-medium text-white"><Edit3 className="h-4 w-4" /> My Notes</p>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

@@ -1,5 +1,9 @@
 "use client";
 
+import type { ReactNode } from "react";
+
+import { Bell, CircleHelp, FileText, Megaphone, User } from "lucide-react";
+
 import AnnouncementsTab from "@/components/communication/AnnouncementsTab";
 import FaqTab from "@/components/communication/FaqTab";
 import HelpArticlesTab from "@/components/communication/HelpArticlesTab";
@@ -9,12 +13,12 @@ import { usePersistedTab } from "@/hooks/usePersistedTab";
 
 type Tab = "notifications" | "single" | "faq" | "announcements" | "help";
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "notifications", label: "Push Notifications", icon: "📣" },
-  { id: "single", label: "Single User", icon: "👤" },
-  { id: "faq", label: "FAQ Management", icon: "❓" },
-  { id: "announcements", label: "Announcements", icon: "📢" },
-  { id: "help", label: "Help Articles", icon: "📝" },
+const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
+  { id: "notifications", label: "Push Notifications", icon: <Bell className="h-4 w-4" /> },
+  { id: "single", label: "Single User", icon: <User className="h-4 w-4" /> },
+  { id: "faq", label: "FAQ Management", icon: <CircleHelp className="h-4 w-4" /> },
+  { id: "announcements", label: "Announcements", icon: <Megaphone className="h-4 w-4" /> },
+  { id: "help", label: "Help Articles", icon: <FileText className="h-4 w-4" /> },
 ];
 
 export default function CommunicationDashboard() {

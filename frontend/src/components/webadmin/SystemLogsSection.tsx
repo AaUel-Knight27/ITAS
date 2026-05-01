@@ -1,5 +1,6 @@
 "use client";
 
+import { Download } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { systemLogsApi } from "@/lib/api";
@@ -127,7 +128,7 @@ export default function SystemLogsSection() {
           disabled={exporting}
           className="ml-auto rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
         >
-          {exporting ? "Exporting..." : "⬇ Export CSV"}
+          {exporting ? "Exporting..." : <><Download className="inline h-3 w-3" /> Export CSV</>}
         </button>
       </div>
 

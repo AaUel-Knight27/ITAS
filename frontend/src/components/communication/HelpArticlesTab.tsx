@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { helpApi, type HelpArticleRequest } from "@/lib/api";
@@ -181,7 +182,7 @@ export default function HelpArticlesTab() {
                   </div>
                   <p className="text-sm font-medium text-gray-900">{article.title}</p>
                   <p className="mt-0.5 line-clamp-2 text-xs text-gray-500">{article.content}</p>
-                  <p className="mt-1 text-xs text-gray-400">👁 {article.viewCount} views</p>
+                  <p className="mt-1 flex items-center gap-1 text-xs text-gray-400"><Eye className="h-3 w-3" /> {article.viewCount} views</p>
                 </div>
                 <div className="shrink-0 flex gap-2">
                   <button

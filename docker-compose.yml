@@ -1,0 +1,152 @@
+version: '3.9'
+
+services:
+
+  postgres:
+    image: postgres:17
+    container_name: itas-postgres
+    environment:
+      POSTGRES_DB: portal_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-yourpassword}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  itas-auth:
+    build: ./itas-auth
+    container_name: itas-auth
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/portal_db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:-yourpassword}
+      JWT_SECRET: ${JWT_SECRET:-itas-dev-secret-change-in-production-minimum-32-chars}
+      GMAIL_USERNAME: ${GMAIL_USERNAME}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  itas-course:
+    build: ./itas-course
+    container_name: itas-course
+    ports:
+      - "8082:8082"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/portal_db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:-yourpassword}
+      AUTH_SERVICE_URL: http://itas-auth:8081
+      LEARNING_SERVICE_URL: http://itas-learning:8083
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+
+  itas-learning:
+    build: ./itas-learning
+    container_name: itas-learning
+    ports:
+      - "8083:8083"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/portal_db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:-yourpassword}
+      AUTH_SERVICE_URL: http://itas-auth:8081
+      COURSE_SERVICE_URL: http://itas-course:8082
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      GMAIL_USERNAME: ${GMAIL_USERNAME}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+
+  itas-webinar:
+    build: ./itas-webinar
+    container_name: itas-webinar
+    ports:
+      - "8084:8084"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/portal_db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:-yourpassword}
+      AUTH_SERVICE_URL: http://itas-auth:8081
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      GMAIL_USERNAME: ${GMAIL_USERNAME}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  itas-notification:
+    build: ./itas-notification
+    container_name: itas-notification
+    ports:
+      - "8085:8085"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/portal_db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:-yourpassword}
+      AUTH_SERVICE_URL: http://itas-auth:8081
+      GMAIL_USERNAME: ${GMAIL_USERNAME}
+      GMAIL_APP_PASSWORD: ${GMAIL_APP_PASSWORD}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  itas-admin:
+    build: ./itas-admin
+    container_name: itas-admin
+    ports:
+      - "8086:8086"
+    environment:
+      DATABASE_URL: jdbc:postgresql://postgres:5432/portal_db
+      DATABASE_USERNAME: postgres
+      DATABASE_PASSWORD: ${DB_PASSWORD:-yourpassword}
+      AUTH_SERVICE_URL: http://itas-auth:8081
+      COURSE_SERVICE_URL: http://itas-course:8082
+      LEARNING_SERVICE_URL: http://itas-learning:8083
+      WEBINAR_SERVICE_URL: http://itas-webinar:8084
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  itas-gateway:
+    build: ./itas-gateway
+    container_name: itas-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-itas-dev-secret-change-in-production-minimum-32-chars}
+      AUTH_SERVICE_URL: http://itas-auth:8081
+      COURSE_SERVICE_URL: http://itas-course:8082
+      LEARNING_SERVICE_URL: http://itas-learning:8083
+      WEBINAR_SERVICE_URL: http://itas-webinar:8084
+      NOTIFY_SERVICE_URL: http://itas-notification:8085
+      ADMIN_SERVICE_URL: http://itas-admin:8086
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      - itas-auth
+      - itas-course
+      - itas-learning
+      - itas-webinar
+      - itas-notification
+      - itas-admin
+
+volumes:
+  postgres_data:
+  uploads_data:

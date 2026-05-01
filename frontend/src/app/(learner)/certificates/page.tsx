@@ -1,5 +1,6 @@
 "use client";
 
+import { Award, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -47,7 +48,7 @@ export default function CertificatesPage() {
     try {
       const res = await learnerApi.shareCertificate(cert.id);
       const email = res.data?.email || "your email";
-      success(`✉️ Certificate link sent to ${email}`);
+      success(<div className="flex items-center gap-2"><Mail className="h-4 w-4" /> <span>Certificate link sent to {email}</span></div>);
     } catch (responseError) {
       showError(getErrorMessage(responseError));
     }
@@ -88,7 +89,7 @@ export default function CertificatesPage() {
         </div>
       ) : certificates.length === 0 ? (
         <EmptyState
-          icon="🏆"
+          icon={<Award className="h-12 w-12 text-gray-400" />}
           title={t("certs.none_title")}
           description={t("certs.none_desc")}
           action={{
@@ -105,7 +106,7 @@ export default function CertificatesPage() {
             >
               <div>
                 <div className="mb-2 flex items-center gap-2">
-                  <span className="text-2xl">Award</span>
+                  <span className="text-gray-500"><Award className="h-6 w-6 text-yellow-500" /></span>
                   <h3 className={`line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white ${isAmharic ? "ethiopic-text" : ""}`}>
                     {cert.courseTitle}
                   </h3>
@@ -130,7 +131,7 @@ export default function CertificatesPage() {
                     onClick={() => void handleShare(cert)}
                     className="flex items-center gap-1.5 rounded-lg border border-blue-200 px-4 py-2 text-xs font-medium text-blue-600 transition-colors hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-900/20"
                   >
-                    <span className={isAmharic ? "ethiopic-text" : undefined}>✉️ Email Link</span>
+                    <span className={`flex items-center gap-1.5 ${isAmharic ? "ethiopic-text" : ""}`}><Mail className="h-3 w-3" /> Email Link</span>
                   </button>
 
                   <button

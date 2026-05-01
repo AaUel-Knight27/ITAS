@@ -1,3 +1,7 @@
+import type { ReactNode } from "react";
+
+import { Award, BookOpen, FileText, PlayCircle } from "lucide-react";
+
 import type { ActivityLogDto } from "@/lib/types";
 
 interface Props {
@@ -12,11 +16,11 @@ const ACTIVITY_COLORS: Record<string, string> = {
   CERTIFICATE_DOWNLOAD: "bg-yellow-100 text-yellow-700",
 };
 
-const ACTIVITY_ICONS: Record<string, string> = {
-  VIDEO_WATCH: "▶️",
-  QUIZ_ATTEMPT: "📝",
-  COURSE_ENROLL: "📚",
-  CERTIFICATE_DOWNLOAD: "🏆",
+const ACTIVITY_ICONS: Record<string, ReactNode> = {
+  VIDEO_WATCH: <PlayCircle className="h-3 w-3" />,
+  QUIZ_ATTEMPT: <FileText className="h-3 w-3" />,
+  COURSE_ENROLL: <BookOpen className="h-3 w-3" />,
+  CERTIFICATE_DOWNLOAD: <Award className="h-3 w-3" />,
 };
 
 export default function RecentActivityTable({ data, lastUpdated }: Props) {

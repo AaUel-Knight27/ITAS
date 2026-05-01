@@ -1,7 +1,9 @@
+import type { ReactNode } from "react";
+
 interface Props {
   label: string;
   value: string | number;
-  icon: string;
+  icon: ReactNode;
   color: string;
   onClick?: () => void;
   clickable?: boolean;

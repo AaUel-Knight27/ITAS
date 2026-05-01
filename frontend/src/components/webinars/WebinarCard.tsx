@@ -1,5 +1,7 @@
 "use client";
 
+import { Calendar, Clock, ExternalLink, Users } from "lucide-react";
+
 import type { WebinarDto } from "@/lib/types";
 
 interface Props {
@@ -66,7 +68,7 @@ export default function WebinarCard({ webinar, isRegistered, onRegister, registe
       <div className="mb-4 space-y-1.5">
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <span className="text-base" aria-hidden="true">
-            📅
+            <Calendar className="h-4 w-4" />
           </span>
           <span>{formatDate(webinar.scheduledAt)}</span>
         </div>
@@ -74,7 +76,7 @@ export default function WebinarCard({ webinar, isRegistered, onRegister, registe
         {webinar.durationMinutes ? (
           <div className="flex items-center gap-2 text-sm text-gray-600">
             <span className="text-base" aria-hidden="true">
-              ⏱
+              <Clock className="h-4 w-4" />
             </span>
             <span>{formatDuration(webinar.durationMinutes)}</span>
           </div>
@@ -82,7 +84,7 @@ export default function WebinarCard({ webinar, isRegistered, onRegister, registe
 
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <span className="text-base" aria-hidden="true">
-            👥
+            <Users className="h-4 w-4" />
           </span>
           <span>
             {webinar.registeredCount} registered
@@ -96,7 +98,7 @@ export default function WebinarCard({ webinar, isRegistered, onRegister, registe
         {webinar.meetingLink && isRegistered ? (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-base" aria-hidden="true">
-              🔗
+              <ExternalLink className="h-4 w-4" />
             </span>
             <a
               href={webinar.meetingLink}

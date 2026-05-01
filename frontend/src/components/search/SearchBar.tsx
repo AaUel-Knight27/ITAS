@@ -1,5 +1,6 @@
 "use client";
 
+import { Search } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -124,7 +125,7 @@ export default function SearchBar({
     <div ref={containerRef} className={`relative ${compact ? "w-56" : "w-full max-w-xl"}`}>
       <div className="relative">
         <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-          🔍
+          <Search className="h-4 w-4" />
         </span>
         <input
           ref={inputRef}
@@ -176,7 +177,7 @@ export default function SearchBar({
                 index === activeSuggestion ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
               }`}
             >
-              <span className="text-xs text-gray-400">🔍</span>
+              <Search className="h-3 w-3 text-gray-400" />
               <span>{highlightMatch(suggestion, query)}</span>
             </button>
           ))}

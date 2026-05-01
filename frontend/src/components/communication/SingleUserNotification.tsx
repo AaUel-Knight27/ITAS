@@ -1,5 +1,6 @@
 "use client";
 
+import { Mail, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { communicationApi } from "@/lib/api";
@@ -132,7 +133,7 @@ export default function SingleUserNotification() {
   if (sentRecipient) {
     return (
       <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="mb-3 text-5xl">✉️</div>
+        <Mail className="mx-auto mb-3 h-12 w-12 text-green-500" />
         <h3 className="mb-1 text-lg font-semibold text-green-600 dark:text-green-400">Email Sent!</h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Notification delivered to <strong>{sentRecipient.email}</strong>
@@ -221,7 +222,7 @@ export default function SingleUserNotification() {
               }}
               className="shrink-0 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
             >
-              ✕
+              <X className="h-4 w-4" />
             </button>
           </div>
         ) : null}
@@ -285,7 +286,7 @@ export default function SingleUserNotification() {
             Sending...
           </>
         ) : (
-          <>✉️ Send Email Notification</>
+          <><Mail className="inline h-4 w-4" /> Send Email Notification</>
         )}
       </button>
     </div>

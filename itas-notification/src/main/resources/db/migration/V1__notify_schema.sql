@@ -1,0 +1,45 @@
+CREATE SCHEMA IF NOT EXISTS notify_schema;
+SET search_path TO notify_schema;
+
+CREATE TABLE IF NOT EXISTS notification_campaigns (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(300) NOT NULL,
+    message TEXT NOT NULL,
+    audience_type VARCHAR(50),
+    status VARCHAR(30) NOT NULL DEFAULT 'SENT',
+    created_by VARCHAR(100),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS announcements (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(300) NOT NULL,
+    content TEXT NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_by VARCHAR(100),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS faqs (
+    id BIGSERIAL PRIMARY KEY,
+    question TEXT NOT NULL,
+    answer TEXT NOT NULL,
+    category VARCHAR(100),
+    order_index INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS help_articles (
+    id BIGSERIAL PRIMARY KEY,
+    title VARCHAR(300) NOT NULL,
+    content TEXT NOT NULL,
+    page_id VARCHAR(100),
+    field_id VARCHAR(100),
+    category VARCHAR(100),
+    tags VARCHAR(500),
+    is_published BOOLEAN NOT NULL DEFAULT TRUE,
+    view_count INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

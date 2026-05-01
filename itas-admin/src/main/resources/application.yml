@@ -1,0 +1,36 @@
+server:
+  port: 8086
+
+spring:
+  config:
+    import: optional:file:.env[.properties]
+  application:
+    name: itas-admin-service
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/portal_db}
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:yourpassword}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: admin_schema
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    default-schema: admin_schema
+    schemas: admin_schema
+
+services:
+  auth-url: ${AUTH_SERVICE_URL:http://localhost:8081}
+  course-url: ${COURSE_SERVICE_URL:http://localhost:8082}
+  learning-url: ${LEARNING_SERVICE_URL:http://localhost:8083}
+  webinar-url: ${WEBINAR_SERVICE_URL:http://localhost:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

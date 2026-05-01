@@ -1,5 +1,6 @@
 "use client";
 
+import { Loader2, Search, SearchX, X } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 interface Lecture {
@@ -143,7 +144,7 @@ const CourseSearch = memo(function CourseSearch({ courseTitle, lectures, onSelec
         onClick={open}
         className="flex w-full items-center gap-2 rounded-xl border border-gray-700 bg-gray-800/50 px-3 py-2.5 text-sm text-gray-400 transition-all duration-200 hover:border-gray-600 hover:bg-gray-800"
       >
-        <span>🔍</span>
+        <Search className="h-4 w-4 text-gray-400" />
         <span className="flex-1 text-left text-sm">Search lessons...</span>
         <span className="rounded border border-gray-700 px-1.5 py-0.5 font-mono text-xs text-gray-600">Ctrl K</span>
       </button>
@@ -153,7 +154,7 @@ const CourseSearch = memo(function CourseSearch({ courseTitle, lectures, onSelec
   return (
     <div className="relative">
       <div className="flex items-center gap-2 rounded-xl border border-blue-600 bg-gray-800 px-3 py-2.5 ring-1 ring-blue-600/30">
-        <span className="shrink-0 text-sm text-gray-400">{status === "loading" ? "⟳" : "🔍"}</span>
+        <span className="shrink-0 text-sm text-gray-400">{status === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}</span>
         <input
           ref={inputRef}
           value={query}
@@ -166,7 +167,7 @@ const CourseSearch = memo(function CourseSearch({ courseTitle, lectures, onSelec
           onClick={reset}
           className="shrink-0 text-sm text-gray-500 transition-colors hover:text-gray-300"
         >
-          ✕
+          <X className="h-4 w-4" />
         </button>
       </div>
 
@@ -195,7 +196,7 @@ const CourseSearch = memo(function CourseSearch({ courseTitle, lectures, onSelec
 
           {status === "done" && results.length === 0 ? (
             <div className="px-4 py-5 text-center">
-              <p className="mb-1 text-xl">🤔</p>
+              <SearchX className="h-6 w-6 text-gray-400" />
               <p className="text-sm text-gray-400">No matches found</p>
               <p className="mt-0.5 text-xs text-gray-600">Try different keywords</p>
             </div>

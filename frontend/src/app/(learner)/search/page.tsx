@@ -1,5 +1,6 @@
 "use client";
 
+import { Frown, Search } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -174,13 +175,13 @@ function SearchPageContent() {
             </div>
           ) : !query ? (
             <div className="py-16 text-center text-gray-500">
-              <p className="mb-4 text-4xl">🔍</p>
+              <Search className="mx-auto mb-4 h-12 w-12 text-gray-400" />
               <p className="text-lg font-medium">Search for courses</p>
               <p className="mt-1 text-sm">Enter a topic, course name, or keyword above</p>
             </div>
           ) : totalShown === 0 ? (
             <div className="py-16 text-center text-gray-500">
-              <p className="mb-4 text-4xl">😕</p>
+              <Frown className="mx-auto mb-4 h-12 w-12 text-gray-400" />
               <p className="text-lg font-medium">No results for "{query}"</p>
               <p className="mb-4 mt-1 text-sm">Try different keywords or browse the course catalog</p>
               <button

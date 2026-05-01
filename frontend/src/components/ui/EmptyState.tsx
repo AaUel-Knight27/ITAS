@@ -1,7 +1,11 @@
+import type { ReactNode } from "react";
+
+import { Inbox } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
 
 interface Props {
-  icon?: string;
+  icon?: ReactNode;
   title: string;
   description?: string;
   action?: {
@@ -15,7 +19,7 @@ interface Props {
 }
 
 export default function EmptyState({
-  icon = "📭",
+  icon = <Inbox className="h-10 w-10 text-gray-400" />,
   title,
   description,
   action,
@@ -23,7 +27,7 @@ export default function EmptyState({
 }: Props) {
   return (
     <div className="mx-auto flex max-w-sm flex-col items-center justify-center px-6 py-16 text-center">
-      <div className="mb-4 animate-bounce-slow text-5xl">{icon}</div>
+      <div className="mb-4">{icon}</div>
 
       <h3 className="mb-2 text-lg font-semibold text-foreground">{title}</h3>
 

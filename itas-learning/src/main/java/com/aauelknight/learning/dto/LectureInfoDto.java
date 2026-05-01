@@ -1,0 +1,22 @@
+package com.aauelknight.learning.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class LectureInfoDto {
+
+    private Long id;
+    private String title;
+    private String type;
+    private Integer orderIndex;
+    private Long sectionId;
+    private Long courseId;
+    private Boolean preview;
+    private String videoUrl;
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { FileText, Video } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import { versionApi } from "@/lib/api";
@@ -202,7 +203,7 @@ export default function VersionHistoryPanel({
               </div>
             ) : (
               <div className="text-gray-500">
-                <p className="text-sm">{lectureType === "VIDEO" ? "🎬 Click to select video" : "📄 Click to select PDF"}</p>
+                <p className="flex items-center gap-1 text-sm">{lectureType === "VIDEO" ? <><Video className="inline h-4 w-4" /> Click to select video</> : <><FileText className="inline h-4 w-4" /> Click to select PDF</>}</p>
                 <p className="mt-1 text-xs">{lectureType === "VIDEO" ? "MP4, WebM, OGG" : "PDF only"}</p>
               </div>
             )}

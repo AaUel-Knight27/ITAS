@@ -1,5 +1,6 @@
 "use client";
 
+import { BookOpen, CircleHelp, Eye, Search, SearchX } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { helpApi } from "@/lib/api";
@@ -76,7 +77,7 @@ export default function HelpSidebar({ pageId, isOpen, onClose }: Props) {
       >
         <div className="flex items-center justify-between border-b border-gray-200 bg-blue-600 px-5 py-4">
           <div className="flex items-center gap-2">
-            <span className="text-lg text-white">❓</span>
+            <CircleHelp className="h-5 w-5 text-white" />
             <div>
               <h2 className="text-sm font-semibold text-white">Help Center</h2>
               <p className="text-xs capitalize text-blue-200">{pageId.replace(/-/g, " ")}</p>
@@ -93,7 +94,7 @@ export default function HelpSidebar({ pageId, isOpen, onClose }: Props) {
 
         <div className="border-b border-gray-100 px-4 py-3">
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">🔍</span>
+            <Search className="absolute left-3 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400" />
             <input
               type="text"
               value={searchQuery}
@@ -138,7 +139,7 @@ export default function HelpSidebar({ pageId, isOpen, onClose }: Props) {
               ) : null}
 
               <div className="mt-4 border-t border-gray-100 pt-4 text-xs text-gray-400">
-                <p>👁 {selected.viewCount} views</p>
+                <p className="flex items-center gap-1"><Eye className="inline h-3 w-3" /> {selected.viewCount} views</p>
                 <p className="mt-0.5">Updated: {new Date(selected.updatedAt).toLocaleDateString()}</p>
               </div>
             </div>
@@ -152,7 +153,7 @@ export default function HelpSidebar({ pageId, isOpen, onClose }: Props) {
             <div className="mt-8 p-5 text-center text-gray-500">
               {searchQuery ? (
                 <>
-                  <p className="mb-2 text-2xl">🔍</p>
+                  <SearchX className="mx-auto mb-2 h-6 w-6 text-gray-400" />
                   <p className="text-sm font-medium">No results for "{searchQuery}"</p>
                   <button
                     type="button"
@@ -167,7 +168,7 @@ export default function HelpSidebar({ pageId, isOpen, onClose }: Props) {
                 </>
               ) : (
                 <>
-                  <p className="mb-2 text-2xl">📖</p>
+                  <BookOpen className="mx-auto mb-2 h-6 w-6 text-gray-400" />
                   <p className="text-sm font-medium">No help articles yet</p>
                   <p className="mt-1 text-xs">for this page</p>
                 </>
