@@ -91,14 +91,15 @@ content, schedule webinars, send notifications, and view analytics.
 
 ## Tech Stack
 
-### Backend (`itas_backend/`)
+### Backend (Microservices)
 
 | Layer | Technology |
 |-------|-----------|
-| Language | Java 25 |
-| Framework | Spring Boot 3.4.3 |
+| Architecture | Microservices (7 independent services) |
+| Language | Java 21+ |
+| Framework | Spring Boot 3.4.3 & Spring Cloud Gateway |
 | Security | Spring Security 6.4.3 + JWT (jjwt 0.12.7) |
-| Database | PostgreSQL 18 |
+| Database | PostgreSQL 17 |
 | ORM | Hibernate 6.6.8 / Spring Data JPA |
 | Migrations | Flyway 10.20.1 |
 | PDF | iText 7.2.5 |
@@ -135,25 +136,16 @@ content, schedule webinars, send notifications, and view analytics.
 
 ```
 itas/
-├── itas_backend/                    # Spring Boot backend
-│   ├── src/main/java/com/aauelknight/itas_backend/
-│   │   ├── shared/
-│   │   │   ├── config/              # SecurityConfig, CorsConfig, FileStorageConfig
-│   │   │   ├── security/            # JwtUtil, JwtAuthFilter, TokenBlacklistService
-│   │   │   ├── exception/           # GlobalExceptionHandler
-│   │   │   └── storage/             # FileStorageService
-│   │   └── modules/
-│   │       ├── auth/                # AuthController, User, Role, UserRepository
-│   │       ├── courses/             # CourseController, CourseService, SearchService
-│   │       ├── learning/            # LmsController, AssessmentService, CertificateService
-│   │       ├── notifications/       # NotificationService, EmailService, AnnouncementController
-│   │       ├── webinars/            # WebinarController, WebinarService
-│   │       └── admin/               # AnalyticsController, UserManagementController
-│   ├── src/main/resources/
-│   │   ├── db/migration/            # Flyway SQL migrations (V1 - V24)
-│   │   └── application.yml          # Application configuration
-│   ├── uploads/                     # Uploaded files (videos, PDFs, thumbnails, certificates)
-│   └── pom.xml
+├── itas-gateway/            # API Gateway (Port 8080)
+├── itas-auth/               # Authentication & User Management (Port 8081)
+├── itas-course/             # Course Catalog & Content Management (Port 8082)
+├── itas-learning/           # Progress, Quizzes, Certificates (Port 8083)
+├── itas-webinar/            # Live Webinar Scheduling (Port 8084)
+├── itas-notification/       # Email Campaigns & Announcements (Port 8085)
+├── itas-admin/              # Analytics & System Admin (Port 8086)
+├── frontend/                # Next.js 14 Web Portal (Port 3000)
+├── docker-compose.yml       # Production/Local Docker orchestration
+└── start-all.bat            # Windows startup script
 │
 ├── frontend/                        # Next.js 14 frontend
 │   ├── src/
@@ -215,36 +207,41 @@ git clone https://github.com/your-username/itas-portal.git
 cd itas-portal
 ```
 
-### 2. Set up PostgreSQL
+### 2. Set up PostgreSQL (via Docker)
 
-```sql
--- Run in psql or pgAdmin
-CREATE DATABASE portal_db;
-```
-
-### 3. Configure and start the backend
+The easiest way to start the database is using the provided Docker Compose file:
 
 ```bash
-cd itas_backend
+docker-compose up -d postgres
+```
+*(This automatically provisions the `portal_db` database)*
+
+### 3. Configure and start the Microservices
+
+Set your required environment variables (e.g. in your system or via a `.env` file):
+- `DB_PASSWORD`, `JWT_SECRET`, `GMAIL_USERNAME`, `GMAIL_APP_PASSWORD`
+- `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+
+**On Windows:**
+You can start all services at once using the provided batch script:
+```cmd
+start-all.bat
 ```
 
-Copy the example config and fill in your values:
-
+**On Linux/Mac (or manually):**
+Run each service in its own terminal:
 ```bash
-# Edit src/main/resources/application.yml
-# Set your PostgreSQL password, Gmail credentials, JWT secret
+cd itas-auth && ./mvnw spring-boot:run
+cd itas-course && ./mvnw spring-boot:run
+cd itas-learning && ./mvnw spring-boot:run
+cd itas-webinar && ./mvnw spring-boot:run
+cd itas-notification && ./mvnw spring-boot:run
+cd itas-admin && ./mvnw spring-boot:run
+cd itas-gateway && ./mvnw spring-boot:run
 ```
 
-Run the backend:
-
-```bash
-./mvnw spring-boot:run
-```
-
-Flyway automatically creates all 24 database tables on first startup.
-The seeder creates all 8 demo user accounts.
-
-Backend starts at: **http://localhost:8080/api/v1**
+Flyway automatically creates all necessary database tables on startup.
+The backend API Gateway starts at: **http://localhost:8080/api/v1**
 
 ### 4. Configure and start the frontend
 
@@ -294,23 +291,19 @@ NEXT_PUBLIC_APP_NAME=ITAS Taxpayer Portal
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-### Backend (`src/main/resources/application.yml`)
+### Backend (Environment Variables)
 
-```yaml
-spring:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/portal_db
-    username: postgres
-    password: YOUR_POSTGRES_PASSWORD
+The microservices rely heavily on environment variables (passed via OS or Docker Compose). Ensure these are set:
 
-  mail:
-    username: YOUR_GMAIL@gmail.com
-    password: YOUR_GMAIL_APP_PASSWORD  # 16-char app password
-
-app:
-  jwt:
-    secret: YOUR_JWT_SECRET_MINIMUM_32_CHARS
-  frontend-url: http://localhost:3000
+```bash
+DB_PASSWORD=your_postgres_password
+JWT_SECRET=YOUR_JWT_SECRET_MINIMUM_32_CHARS
+GMAIL_USERNAME=YOUR_GMAIL@gmail.com
+GMAIL_APP_PASSWORD=YOUR_GMAIL_APP_PASSWORD
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+FRONTEND_URL=http://localhost:3000
 ```
 
 ---
@@ -558,25 +551,26 @@ To view the full schema, see `itas_backend/src/main/resources/db/migration/`.
 
 ## Deployment
 
-### Backend (production)
+### Full Stack via Docker Compose (Recommended)
+
+The entire project is dockerized and can be deployed with a single command:
 
 ```bash
-cd itas_backend
+# Ensure your environment variables are configured
+docker-compose up -d --build
+```
+This will start PostgreSQL and all 7 microservices, networking them together seamlessly.
+
+### Manual Backend Deployment (Production)
+
+To build and deploy individual services manually:
+
+```bash
+cd itas-[service-name]
 ./mvnw clean package -DskipTests
-java -jar target/itas_backend-0.0.1-SNAPSHOT.jar
+java -jar target/itas-[service-name]-0.0.1-SNAPSHOT.jar
 ```
-
-Set production environment variables:
-```bash
-DATABASE_URL=jdbc:postgresql://your-db-host:5432/portal_db
-DATABASE_USERNAME=postgres
-DATABASE_PASSWORD=strong-password
-JWT_SECRET=strong-32-char-secret
-GMAIL_USERNAME=notifications@yourdomain.com
-GMAIL_APP_PASSWORD=xxxx-xxxx-xxxx-xxxx
-FRONTEND_URL=https://your-frontend-domain.com
-EMAIL_ENABLED=true
-```
+*Ensure all required environment variables are set in the production environment before running the `.jar` files.*
 
 ### Frontend (production)
 
