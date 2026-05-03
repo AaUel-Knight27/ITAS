@@ -15,7 +15,6 @@ import com.aauelknight.course.learning.entity.CourseEnrollment;
 import com.aauelknight.course.courses.entity.CourseSection;
 import com.aauelknight.course.lecture.entity.Lecture;
 import com.aauelknight.course.lecture.entity.LectureType;
-import com.aauelknight.course.auth.entity.User;
 import com.aauelknight.course.exception.ResourceNotFoundException;
 import com.aauelknight.course.storage.CloudinaryService;
 import com.aauelknight.course.storage.FileStorageService;
@@ -25,7 +24,6 @@ import com.aauelknight.course.courses.repository.CourseRepository;
 import com.aauelknight.course.courses.repository.CourseSectionRepository;
 import com.aauelknight.course.learning.repository.EnrollmentRepository;
 import com.aauelknight.course.lecture.repository.LectureRepository;
-import com.aauelknight.course.auth.repository.UserRepository;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -41,6 +39,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
 
 @Service
 @Slf4j
@@ -51,7 +51,6 @@ public class CourseService {
     private final EnrollmentRepository enrollmentRepository;
     private final CourseSectionRepository courseSectionRepository;
     private final LectureRepository lectureRepository;
-    private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
     private final CloudinaryService cloudinaryService;
 
@@ -60,7 +59,6 @@ public class CourseService {
                          EnrollmentRepository enrollmentRepository,
                          CourseSectionRepository courseSectionRepository,
                          LectureRepository lectureRepository,
-                         UserRepository userRepository,
                          FileStorageService fileStorageService,
                          CloudinaryService cloudinaryService) {
         this.courseRepository = courseRepository;
@@ -68,7 +66,6 @@ public class CourseService {
         this.enrollmentRepository = enrollmentRepository;
         this.courseSectionRepository = courseSectionRepository;
         this.lectureRepository = lectureRepository;
-        this.userRepository = userRepository;
         this.fileStorageService = fileStorageService;
         this.cloudinaryService = cloudinaryService;
     }
@@ -100,10 +97,15 @@ public class CourseService {
     }
 
     @Transactional(readOnly = true)
-    public List<CourseDto> getAllPublishedForUser(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
-        String userRole = user.getRole() != null ? user.getRole().getName() : "";
+    public List<CourseDto> getAllPublishedForUser(UserDetails userDetails) {
+        String role = "";
+        if (userDetails != null && userDetails.getAuthorities() != null && !userDetails.getAuthorities().isEmpty()) {
+            role = userDetails.getAuthorities().iterator().next().getAuthority();
+            if (role.startsWith("ROLE_")) {
+                role = role.substring(5);
+            }
+        }
+        final String userRole = role;
         List<Course> all = courseRepository.findAllPublished();
 
         return all.stream()
@@ -125,16 +127,13 @@ public class CourseService {
     }
 
     @Transactional
-    public CourseDto archiveCourse(Long courseId, String username) {
+    public CourseDto archiveCourse(Long courseId, Long userId) {
         Course course = getCourseEntity(courseId);
-
-        User archivedBy = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
         course.setStatus("ARCHIVED");
         course.setPublished(false);
         course.setArchivedAt(LocalDateTime.now());
-        course.setArchivedBy(archivedBy);
+        course.setArchivedBy(userId);
 
         return toCourseDetailDto(courseRepository.save(course), null);
     }
@@ -411,7 +410,6 @@ public class CourseService {
     @Transactional
     public void deleteSection(Long courseId, Long sectionId) {
         CourseSection section = getSection(courseId, sectionId);
-        // Clean up files for each lecture in the section
         if (section.getLectures() != null) {
             for (Lecture lecture : section.getLectures()) {
                 if (lecture.getVideoUrl() != null) {
@@ -455,7 +453,6 @@ public class CourseService {
     public void deleteLecture(Long courseId, Long sectionId, Long lectureId) {
         Lecture lecture = getLecture(sectionId, lectureId);
         validateLectureHierarchy(courseId, sectionId, lecture);
-        // Clean up video file if exists
         if (lecture.getVideoUrl() != null) {
             fileStorageService.deleteFile(lecture.getVideoUrl());
         }
@@ -520,7 +517,6 @@ public class CourseService {
     @Transactional
     public CourseDto updateThumbnail(Long courseId, String url) {
         Course course = getCourseEntity(courseId);
-        // Clean up old thumbnail file if it's internal
         if (course.getThumbnailUrl() != null && !course.getThumbnailUrl().equals(url)) {
             fileStorageService.deleteFile(course.getThumbnailUrl());
         }
@@ -774,6 +770,3 @@ public class CourseService {
     }
 
 }
-
-
-

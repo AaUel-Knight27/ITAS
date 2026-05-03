@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { GLOBAL_STORAGE_KEYS } from "@/lib/userStorage";
 
 export type Language = "en" | "am";
 
@@ -371,7 +372,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("itas-language");
+      const saved = localStorage.getItem(GLOBAL_STORAGE_KEYS.LANGUAGE);
       const nextLanguage = saved === "am" || saved === "en" ? saved : "en";
       setLanguageState(nextLanguage);
       syncDocumentLanguage(nextLanguage);
@@ -383,7 +384,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
     try {
-      localStorage.setItem("itas-language", lang);
+      localStorage.setItem(GLOBAL_STORAGE_KEYS.LANGUAGE, lang);
     } catch {
       // Ignore storage failures.
     }

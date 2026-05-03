@@ -3,12 +3,10 @@ import com.aauelknight.course.courses.dto.request.ContentVersionDto;
 import com.aauelknight.course.courses.entity.ContentVersion;
 import com.aauelknight.course.lecture.entity.Lecture;
 import com.aauelknight.course.lecture.entity.LectureType;
-import com.aauelknight.course.auth.entity.User;
 import com.aauelknight.course.exception.ResourceNotFoundException;
 import com.aauelknight.course.storage.FileStorageService;
 import com.aauelknight.course.courses.repository.ContentVersionRepository;
 import com.aauelknight.course.lecture.repository.LectureRepository;
-import com.aauelknight.course.auth.repository.UserRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,6 @@ public class ContentVersionService {
 
     private final ContentVersionRepository versionRepository;
     private final LectureRepository lectureRepository;
-    private final UserRepository userRepository;
     private final FileStorageService fileStorageService;
 
     @Transactional(readOnly = true)
@@ -45,15 +42,12 @@ public class ContentVersionService {
                                               Long lectureId,
                                               MultipartFile file,
                                               String changeNotes,
-                                              String username) {
+                                              Long userId) {
         Lecture lecture = lectureRepository.findWithSectionAndCourseById(lectureId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lecture not found: " + lectureId));
 
         validateHierarchy(lecture, courseId, sectionId);
         validateUploadableType(lecture);
-
-        User uploadedBy = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
         String currentFilePath = lecture.getType() == LectureType.VIDEO
                 ? lecture.getVideoUrl()
@@ -68,7 +62,7 @@ public class ContentVersionService {
                         .filePath(currentFilePath)
                         .fileType(lecture.getType().name())
                         .changeNotes("Initial version")
-                        .uploadedBy(uploadedBy)
+                        .uploadedBy(userId)
                         .build());
             }
         }
@@ -83,7 +77,7 @@ public class ContentVersionService {
                 .fileType(lecture.getType().name())
                 .fileSize(file.getSize())
                 .changeNotes(changeNotes)
-                .uploadedBy(uploadedBy)
+                .uploadedBy(userId)
                 .build());
 
         if (lecture.getType() == LectureType.VIDEO) {
@@ -97,7 +91,7 @@ public class ContentVersionService {
     }
 
     @Transactional
-    public ContentVersionDto rollbackToVersion(Long lectureId, Long versionId, String username) {
+    public ContentVersionDto rollbackToVersion(Long lectureId, Long versionId, Long userId) {
         Lecture lecture = lectureRepository.findWithSectionAndCourseById(lectureId)
                 .orElseThrow(() -> new ResourceNotFoundException("Lecture not found: " + lectureId));
 
@@ -147,13 +141,10 @@ public class ContentVersionService {
                 .fileSize(version.getFileSize())
                 .changeNotes(version.getChangeNotes())
                 .uploadedByUsername(version.getUploadedBy() != null
-                        ? version.getUploadedBy().getUsername()
+                        ? String.valueOf(version.getUploadedBy())
                         : "System")
                 .createdAt(version.getCreatedAt().toString())
                 .isCurrent(version.getFilePath().equals(currentFilePath))
                 .build();
     }
 }
-
-
-

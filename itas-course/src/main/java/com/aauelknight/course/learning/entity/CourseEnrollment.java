@@ -19,8 +19,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import com.aauelknight.course.auth.entity.User;
 import com.aauelknight.course.courses.entity.Course;
+
 @Entity
 @Table(name = "course_enrollments", schema = "learning_schema")
 @Getter
@@ -34,9 +34,8 @@ public class CourseEnrollment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
@@ -75,6 +74,3 @@ public class CourseEnrollment {
         }
     }
 }
-
-
-

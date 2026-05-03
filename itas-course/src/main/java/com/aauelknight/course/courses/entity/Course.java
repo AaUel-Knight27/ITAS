@@ -29,7 +29,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.BatchSize;
-import com.aauelknight.course.auth.entity.User;
+
 @Entity
 @Table(name = "courses")
 @Getter
@@ -88,9 +88,8 @@ public class Course {
     @Transient
     private String searchVector;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "archived_by")
-    private User archivedBy;
+    @Column(name = "archived_by")
+    private Long archivedBy;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)

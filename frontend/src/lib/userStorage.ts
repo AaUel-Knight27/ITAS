@@ -1,3 +1,8 @@
+export const GLOBAL_STORAGE_KEYS = {
+  LANGUAGE: "itas-language",
+  SIDEBAR_COLLAPSED: "sidebar-collapsed",
+} as const;
+
 const USER_SCOPED_STORAGE_PREFIXES = [
   "video_progress_local_",
   "pdf_highlights_",

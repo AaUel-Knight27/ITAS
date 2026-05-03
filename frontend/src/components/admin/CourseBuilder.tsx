@@ -363,33 +363,13 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
     type?: string,
     onProgress?: (percent: number) => void
   ) {
-    console.log("Starting upload:", {
-      courseId,
-      sectionId,
-      lectureId,
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type,
-    });
-
     const formData = new FormData();
     formData.append("file", file);
 
-    for (const [key, val] of formData.entries()) {
-      console.log("FormData entry:", key, val);
-    }
-
-    const url = `/courses/${courseId}/sections/${sectionId}/lectures/${lectureId}/upload`;
-    console.log("Upload URL:", url);
-
     const updated = await uploadLectureFile(courseId, sectionId, lectureId, file, type, (percent) => {
-      console.log("Upload progress:", percent);
       setUploadProgress(percent);
       onProgress?.(percent);
     });
-
-    console.log("Upload response:", updated);
-    console.log("videoUrl from response:", updated?.videoUrl);
 
     return updated;
   }
@@ -411,8 +391,6 @@ export default function CourseBuilder({ course, onCourseChange }: CourseBuilderP
         orderIndex: addLectureForm.orderIndex ?? 0,
         isPreview: addLectureForm.isPreview ?? false,
       });
-      console.log("Lecture created:", newLecture);
-      console.log("Lecture id:", newLecture.id);
       let finalLecture = newLecture;
       if (requiresFile && selectedFile) {
         setUploading(true);

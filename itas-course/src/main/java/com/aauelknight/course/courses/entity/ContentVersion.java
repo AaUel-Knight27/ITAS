@@ -15,7 +15,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import com.aauelknight.course.auth.entity.User;
+
 @Entity
 @Table(name = "content_versions")
 @Data
@@ -47,9 +47,8 @@ public class ContentVersion {
     @Column(name = "change_notes", columnDefinition = "TEXT")
     private String changeNotes;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "uploaded_by")
-    private User uploadedBy;
+    @Column(name = "uploaded_by")
+    private Long uploadedBy;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -59,6 +58,3 @@ public class ContentVersion {
         createdAt = LocalDateTime.now();
     }
 }
-
-
-

@@ -1,5 +1,10 @@
 server:
   port: 8083
+  shutdown: graceful
+
+spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
 
 spring:
   config:
@@ -10,6 +15,9 @@ spring:
     url: ${DATABASE_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/portal_db}}
     username: ${DATABASE_USERNAME:${SPRING_DATASOURCE_USERNAME:postgres}}
     password: ${DATABASE_PASSWORD:${SPRING_DATASOURCE_PASSWORD:yourpassword}}
+    hikari:
+      max-pool-size: 5
+      minimum-idle: 1
   jpa:
     open-in-view: false
     hibernate:

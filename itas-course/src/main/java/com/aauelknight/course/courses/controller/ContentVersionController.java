@@ -6,8 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -40,7 +39,7 @@ public class ContentVersionController {
                                                            @PathVariable Long lectureId,
                                                            @RequestParam("file") MultipartFile file,
                                                            @RequestParam(value = "changeNotes", required = false) String changeNotes,
-                                                           @AuthenticationPrincipal UserDetails userDetails) {
+                                                           Authentication authentication) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(contentVersionService.uploadNewVersion(
                         courseId,
@@ -48,7 +47,7 @@ public class ContentVersionController {
                         lectureId,
                         file,
                         changeNotes,
-                        userDetails.getUsername()));
+                        extractUserId(authentication)));
     }
 
     @PutMapping("/{versionId}/rollback")
@@ -57,13 +56,24 @@ public class ContentVersionController {
                                                       @PathVariable Long sectionId,
                                                       @PathVariable Long lectureId,
                                                       @PathVariable Long versionId,
-                                                      @AuthenticationPrincipal UserDetails userDetails) {
+                                                      Authentication authentication) {
         return ResponseEntity.ok(contentVersionService.rollbackToVersion(
                 lectureId,
                 versionId,
-                userDetails.getUsername()));
+                extractUserId(authentication)));
+    }
+
+    private Long extractUserId(Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+        Object details = authentication.getDetails();
+        if (details instanceof Long userId) {
+            return userId;
+        }
+        if (details instanceof String userIdText && !userIdText.isBlank()) {
+            return Long.parseLong(userIdText);
+        }
+        return null;
     }
 }
-
-
-

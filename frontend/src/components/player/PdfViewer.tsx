@@ -3,6 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useProtectedMediaUrl } from "@/hooks/useProtectedMediaUrl";
+import { getPdfHighlightsStorageKey, getPdfProgressStorageKey } from "@/lib/userStorage";
 
 interface TocItem {
   title: string;
@@ -85,17 +86,11 @@ const PdfViewer = memo(function PdfViewer({ url, title, lectureId, userId = "ano
   const [pageInput, setPageInput] = useState("1");
 
   const highlightStorageKey = useMemo(
-    () =>
-      lectureId
-        ? `pdf_highlights_${userId}_${lectureId}`
-        : `pdf_highlights_${userId}_${url}`,
+    () => getPdfHighlightsStorageKey(userId, lectureId || url),
     [lectureId, url, userId]
   );
   const progressStorageKey = useMemo(
-    () =>
-      lectureId
-        ? `pdf_progress_${userId}_${lectureId}`
-        : `pdf_progress_${userId}_${url}`,
+    () => getPdfProgressStorageKey(userId, lectureId || url),
     [lectureId, url, userId]
   );
 

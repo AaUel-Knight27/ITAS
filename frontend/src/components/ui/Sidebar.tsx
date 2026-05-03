@@ -36,7 +36,7 @@ import {
   isWebAdminRole,
   normalizeRole,
 } from "@/lib/roles";
-import { clearUserStorage } from "@/lib/userStorage";
+import { clearUserStorage, GLOBAL_STORAGE_KEYS } from "@/lib/userStorage";
 
 type NavItem = {
   label: string;
@@ -233,7 +233,7 @@ export default function Sidebar() {
 
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem("sidebar-collapsed");
+    const stored = localStorage.getItem(GLOBAL_STORAGE_KEYS.SIDEBAR_COLLAPSED);
     if (stored === "true") {
       setCollapsed(true);
     }
@@ -242,7 +242,7 @@ export default function Sidebar() {
   const handleCollapse = () => {
     const newState = !collapsed;
     setCollapsed(newState);
-    localStorage.setItem("sidebar-collapsed", String(newState));
+    localStorage.setItem(GLOBAL_STORAGE_KEYS.SIDEBAR_COLLAPSED, String(newState));
     window.dispatchEvent(new CustomEvent("sidebar-toggle", { detail: { collapsed: newState } }));
   };
 
@@ -388,7 +388,7 @@ export function SidebarSpacer({ collapsed }: { collapsed?: boolean }) {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem("sidebar-collapsed");
+      const stored = localStorage.getItem(GLOBAL_STORAGE_KEYS.SIDEBAR_COLLAPSED);
       setIsCollapsed(stored === "true");
     } catch {
       // Ignore localStorage access issues.
@@ -402,7 +402,7 @@ export function SidebarSpacer({ collapsed }: { collapsed?: boolean }) {
     };
 
     const handleStorage = (event: StorageEvent) => {
-      if (event.key === "sidebar-collapsed") {
+      if (event.key === GLOBAL_STORAGE_KEYS.SIDEBAR_COLLAPSED) {
         setIsCollapsed(event.newValue === "true");
       }
     };

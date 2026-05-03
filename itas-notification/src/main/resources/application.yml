@@ -1,7 +1,10 @@
 server:
   port: 8085
+  shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   config:
     import: optional:file:.env[.properties]
   application:
@@ -10,6 +13,9 @@ spring:
     url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/portal_db}
     username: ${DATABASE_USERNAME:postgres}
     password: ${DATABASE_PASSWORD:yourpassword}
+    hikari:
+      max-pool-size: 5
+      minimum-idle: 1
   jpa:
     open-in-view: false
     hibernate:

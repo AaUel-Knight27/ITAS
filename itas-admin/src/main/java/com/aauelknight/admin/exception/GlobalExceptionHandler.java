@@ -1,39 +1,41 @@
 package com.aauelknight.admin.exception;
 
-import java.time.LocalDateTime;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> handleResponseStatus(ResponseStatusException ex) {
-        return buildResponse(HttpStatus.valueOf(ex.getStatusCode().value()), ex.getReason());
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
-        return buildResponse(HttpStatus.FORBIDDEN, "Access denied");
+    public ResponseEntity<Map<String, Object>>
+            handleResponseStatus(
+                ResponseStatusException ex,
+                HttpServletRequest request) {
+        return ResponseEntity
+            .status(ex.getStatusCode())
+            .body(Map.of(
+                "status", ex.getStatusCode().value(),
+                "error", ex.getReason() != null
+                    ? ex.getReason() : "Error",
+                "message", ex.getMessage(),
+                "path", request.getRequestURI()));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "An unexpected error occurred");
-    }
-
-    private ResponseEntity<Map<String, Object>> buildResponse(HttpStatus status, String message) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("status", status.value());
-        body.put("error", status.getReasonPhrase());
-        body.put("message", message);
-        body.put("timestamp", LocalDateTime.now().toString());
-        return ResponseEntity.status(status).body(body);
+    public ResponseEntity<Map<String, Object>>
+            handleGeneral(
+                Exception ex,
+                HttpServletRequest request) {
+        return ResponseEntity
+            .status(500)
+            .body(Map.of(
+                "status", 500,
+                "error", "Internal Server Error",
+                "message", "An unexpected error occurred",
+                "path", request.getRequestURI()));
     }
 }
